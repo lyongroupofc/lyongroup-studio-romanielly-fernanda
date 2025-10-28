@@ -46,6 +46,7 @@ export type Database = {
       }
       agendamentos: {
         Row: {
+          bot_conversa_id: string | null
           cliente_nome: string
           cliente_telefone: string
           created_at: string | null
@@ -53,6 +54,7 @@ export type Database = {
           horario: string
           id: string
           observacoes: string | null
+          origem: string | null
           profissional_id: string | null
           profissional_nome: string | null
           servico_id: string | null
@@ -60,6 +62,7 @@ export type Database = {
           status: string | null
         }
         Insert: {
+          bot_conversa_id?: string | null
           cliente_nome: string
           cliente_telefone: string
           created_at?: string | null
@@ -67,6 +70,7 @@ export type Database = {
           horario: string
           id?: string
           observacoes?: string | null
+          origem?: string | null
           profissional_id?: string | null
           profissional_nome?: string | null
           servico_id?: string | null
@@ -74,6 +78,7 @@ export type Database = {
           status?: string | null
         }
         Update: {
+          bot_conversa_id?: string | null
           cliente_nome?: string
           cliente_telefone?: string
           created_at?: string | null
@@ -81,6 +86,7 @@ export type Database = {
           horario?: string
           id?: string
           observacoes?: string | null
+          origem?: string | null
           profissional_id?: string | null
           profissional_nome?: string | null
           servico_id?: string | null
@@ -88,6 +94,13 @@ export type Database = {
           status?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "agendamentos_bot_conversa_id_fkey"
+            columns: ["bot_conversa_id"]
+            isOneToOne: false
+            referencedRelation: "bot_conversas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agendamentos_profissional_id_fkey"
             columns: ["profissional_id"]
@@ -103,6 +116,113 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bot_config: {
+        Row: {
+          chave: string
+          id: string
+          updated_at: string | null
+          valor: Json
+        }
+        Insert: {
+          chave: string
+          id?: string
+          updated_at?: string | null
+          valor?: Json
+        }
+        Update: {
+          chave?: string
+          id?: string
+          updated_at?: string | null
+          valor?: Json
+        }
+        Relationships: []
+      }
+      bot_conversas: {
+        Row: {
+          contexto: Json | null
+          created_at: string | null
+          id: string
+          telefone: string
+          ultimo_contato: string | null
+        }
+        Insert: {
+          contexto?: Json | null
+          created_at?: string | null
+          id?: string
+          telefone: string
+          ultimo_contato?: string | null
+        }
+        Update: {
+          contexto?: Json | null
+          created_at?: string | null
+          id?: string
+          telefone?: string
+          ultimo_contato?: string | null
+        }
+        Relationships: []
+      }
+      bot_mensagens: {
+        Row: {
+          conteudo: string
+          conversa_id: string | null
+          id: string
+          telefone: string
+          timestamp: string | null
+          tipo: string
+        }
+        Insert: {
+          conteudo: string
+          conversa_id?: string | null
+          id?: string
+          telefone: string
+          timestamp?: string | null
+          tipo: string
+        }
+        Update: {
+          conteudo?: string
+          conversa_id?: string | null
+          id?: string
+          telefone?: string
+          timestamp?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_mensagens_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "bot_conversas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_sessao: {
+        Row: {
+          created_at: string | null
+          dados_sessao: Json | null
+          id: string
+          qr_code: string | null
+          status: string
+          ultima_atividade: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          dados_sessao?: Json | null
+          id?: string
+          qr_code?: string | null
+          status?: string
+          ultima_atividade?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          dados_sessao?: Json | null
+          id?: string
+          qr_code?: string | null
+          status?: string
+          ultima_atividade?: string | null
+        }
+        Relationships: []
       }
       pagamentos: {
         Row: {

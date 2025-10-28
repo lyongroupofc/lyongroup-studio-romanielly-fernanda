@@ -6,6 +6,7 @@ import {
   Scissors,
   Users,
   DollarSign,
+  MessageCircle,
   LogOut,
   Menu,
 } from "lucide-react";
@@ -28,6 +29,7 @@ const AdminLayout = () => {
     { icon: Scissors, label: "Serviços", path: "/admin/servicos" },
     { icon: Users, label: "Profissionais", path: "/admin/profissionais" },
     { icon: DollarSign, label: "Faturamento", path: "/admin/faturamento" },
+    { icon: MessageCircle, label: "Bot WhatsApp", path: "/admin/bot-whatsapp" },
   ];
 
   return (

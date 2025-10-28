@@ -13,6 +13,7 @@ import Agenda from "./pages/admin/Agenda";
 import Servicos from "./pages/admin/Servicos";
 import Profissionais from "./pages/admin/Profissionais";
 import Faturamento from "./pages/admin/Faturamento";
+import BotWhatsApp from "./pages/admin/BotWhatsApp";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="servicos" element={<Servicos />} />
             <Route path="profissionais" element={<Profissionais />} />
             <Route path="faturamento" element={<Faturamento />} />
+            <Route path="bot-whatsapp" element={<BotWhatsApp />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
