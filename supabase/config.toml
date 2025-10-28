@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.whatsapp-reminders]
 verify_jwt = false
+
+[functions.limpar-dados-teste]
+verify_jwt = false
