@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, Calendar, Eye, EyeOff } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar, Eye, EyeOff, CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +12,9 @@ import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { usePagamentos } from "@/hooks/usePagamentos";
 import { format } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 const Faturamento = () => {
   const [showTotal, setShowTotal] = useState(true);
@@ -22,6 +25,8 @@ const Faturamento = () => {
   const [metodoSelecionado, setMetodoSelecionado] = useState<string>("PIX");
   const [valorEditado, setValorEditado] = useState<string>("");
   const [observacoes, setObservacoes] = useState<string>("");
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
+  const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
 
   const agendamentosPendentes = agendamentos.filter(
     (ag) => !pagamentos.some((pag) => pag.agendamento_id === ag.id)
@@ -64,22 +69,63 @@ const Faturamento = () => {
     .filter((p) => p.data && p.data.startsWith(mesAtual))
     .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
 
-  // Preparar dados para o gráfico (últimos 7 dias)
-  const ultimosDias = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
-    return format(date, "yyyy-MM-dd");
-  });
+  const anoAtual = format(new Date(), "yyyy");
+  const faturamentoAno = pagamentos
+    .filter((p) => p.data && p.data.startsWith(anoAtual))
+    .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
 
-  const dadosGrafico = ultimosDias.map((data) => {
-    const faturamentoDia = pagamentos
-      .filter((p) => p.data === data)
-      .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
-    return {
-      dia: format(new Date(data), "dd/MM"),
-      valor: faturamentoDia,
-    };
-  });
+  // Faturamento do período personalizado
+  const faturamentoPeriodo = dataInicio && dataFim
+    ? pagamentos
+        .filter((p) => {
+          if (!p.data) return false;
+          const pData = new Date(p.data);
+          return pData >= dataInicio && pData <= dataFim;
+        })
+        .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0)
+    : 0;
+
+  // Preparar dados para o gráfico
+  let dadosGrafico;
+  let labelGrafico = "Faturamento dos Últimos 7 Dias";
+
+  if (dataInicio && dataFim) {
+    // Gráfico do período personalizado
+    labelGrafico = `Faturamento de ${format(dataInicio, "dd/MM/yyyy")} a ${format(dataFim, "dd/MM/yyyy")}`;
+    const dias = Math.ceil((dataFim.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const diasPeriodo = Array.from({ length: dias }, (_, i) => {
+      const date = new Date(dataInicio);
+      date.setDate(date.getDate() + i);
+      return format(date, "yyyy-MM-dd");
+    });
+
+    dadosGrafico = diasPeriodo.map((data) => {
+      const faturamentoDia = pagamentos
+        .filter((p) => p.data === data)
+        .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
+      return {
+        dia: format(new Date(data), "dd/MM"),
+        valor: faturamentoDia,
+      };
+    });
+  } else {
+    // Gráfico padrão (últimos 7 dias)
+    const ultimosDias = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - i));
+      return format(date, "yyyy-MM-dd");
+    });
+
+    dadosGrafico = ultimosDias.map((data) => {
+      const faturamentoDia = pagamentos
+        .filter((p) => p.data === data)
+        .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
+      return {
+        dia: format(new Date(data), "dd/MM"),
+        valor: faturamentoDia,
+      };
+    });
+  }
 
   const stats = [
     {
@@ -91,6 +137,12 @@ const Faturamento = () => {
     {
       label: "Faturamento do Mês",
       value: `R$ ${faturamentoMes.toFixed(2).replace(".", ",")}`,
+      icon: TrendingUp,
+      color: "text-primary",
+    },
+    {
+      label: "Faturamento do Ano",
+      value: `R$ ${faturamentoAno.toFixed(2).replace(".", ",")}`,
       icon: TrendingUp,
       color: "text-primary",
     },
@@ -125,7 +177,7 @@ const Faturamento = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (
           <Card key={stat.label} className="p-6 hover-lift">
             <div className="flex items-center gap-4">
@@ -144,7 +196,82 @@ const Faturamento = () => {
       </div>
 
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-6">Faturamento dos Últimos 7 Dias</h2>
+        <h2 className="text-xl font-semibold mb-4">Filtrar por Período</h2>
+        <div className="flex flex-wrap gap-4 items-end">
+          <div className="space-y-2">
+            <Label>Data Início</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[240px] justify-start text-left font-normal",
+                    !dataInicio && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dataInicio ? format(dataInicio, "dd/MM/yyyy") : "Selecione a data"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={dataInicio}
+                  onSelect={setDataInicio}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-2">
+            <Label>Data Fim</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[240px] justify-start text-left font-normal",
+                    !dataFim && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dataFim ? format(dataFim, "dd/MM/yyyy") : "Selecione a data"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={dataFim}
+                  onSelect={setDataFim}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          {(dataInicio || dataFim) && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDataInicio(undefined);
+                setDataFim(undefined);
+              }}
+            >
+              Limpar Filtros
+            </Button>
+          )}
+        </div>
+        {dataInicio && dataFim && (
+          <div className="mt-6 p-4 bg-muted rounded-lg">
+            <p className="text-sm text-muted-foreground mb-1">Faturamento do Período Selecionado</p>
+            <p className="text-3xl font-bold">
+              {showTotal ? `R$ ${faturamentoPeriodo.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+            </p>
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold mb-6">{labelGrafico}</h2>
         {pagamentos.length === 0 ? (
           <div className="h-80 flex items-center justify-center bg-muted rounded-lg">
             <p className="text-muted-foreground">Os dados serão exibidos conforme você registrar pagamentos</p>
