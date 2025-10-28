@@ -211,6 +211,20 @@ Responda como uma atendente real responderia no WhatsApp.`;
       }
     });
 
+    // Se ainda não detectou, procurar no histórico
+    if (!novoContexto.servico_id && historicoMensagens) {
+      for (const s of servicos || []) {
+        const nomeLower = s.nome.toLowerCase();
+        if (historicoMensagens.some(m => (m.conteudo || '').toLowerCase().includes(nomeLower))) {
+          novoContexto.servico_id = s.id;
+          novoContexto.servico_nome = s.nome;
+          if (!novoContexto.etapa) novoContexto.etapa = 'escolher_data';
+          console.log('✅ Serviço detectado no histórico:', s.nome);
+          break;
+        }
+      }
+    }
+
     // Função auxiliar para calcular datas relativas
     const calcularData = (referencia: string): string | null => {
       const now = new Date();
@@ -274,6 +288,30 @@ Responda como uma atendente real responderia no WhatsApp.`;
           console.log('📅 Data detectada (relativa):', novoContexto.data);
         }
       }
+
+      // Se ainda não detectou, procurar no histórico completo
+      if (!novoContexto.data && historicoMensagens) {
+        for (const msg of historicoMensagens) {
+          const txt = (msg.conteudo || '').toLowerCase();
+          const m = txt.match(/(\d{1,2})\/(\d{1,2})(\/(\d{4}))?/);
+          if (m) {
+            const dia = m[1].padStart(2, '0');
+            const mes = m[2].padStart(2, '0');
+            const ano = m[4] || new Date().getFullYear().toString();
+            novoContexto.data = `${ano}-${mes}-${dia}`;
+            novoContexto.etapa = 'escolher_horario';
+            console.log('📅 Data detectada no histórico:', novoContexto.data);
+            break;
+          }
+          const relativa = calcularData(txt);
+          if (relativa) {
+            novoContexto.data = relativa;
+            novoContexto.etapa = 'escolher_horario';
+            console.log('📅 Data detectada no histórico (relativa):', novoContexto.data);
+            break;
+          }
+        }
+      }
     }
 
     // Detectar horário (múltiplos formatos)
@@ -295,6 +333,32 @@ Responda como uma atendente real responderia no WhatsApp.`;
         }
         console.log('⏰ Horário detectado (meio dia):', novoContexto.horario);
       }
+
+      // Se ainda não detectou, procurar no histórico
+      if (!novoContexto.horario && historicoMensagens) {
+        for (const m of historicoMensagens) {
+          const match = (m.conteudo || '').match(/(\d{1,2}):?(\d{2})?/);
+          if (match) {
+            const hora = match[1].padStart(2, '0');
+            const minuto = match[2] ? match[2] : '00';
+            novoContexto.horario = `${hora}:${minuto}`;
+            if (novoContexto.data && novoContexto.servico_id) {
+              novoContexto.etapa = 'confirmar_nome';
+            }
+            console.log('⏰ Horário detectado no histórico:', novoContexto.horario);
+            break;
+          }
+          const txt = (m.conteudo || '').toLowerCase();
+          if (txt.includes('meio dia') || txt.includes('meio-dia')) {
+            novoContexto.horario = '12:00';
+            if (novoContexto.data && novoContexto.servico_id) {
+              novoContexto.etapa = 'confirmar_nome';
+            }
+            console.log('⏰ Horário detectado no histórico (meio dia):', novoContexto.horario);
+            break;
+          }
+        }
+      }
     }
 
     // Detectar nome - só detecta se todas as outras info já estão preenchidas
@@ -309,6 +373,14 @@ Responda como uma atendente real responderia no WhatsApp.`;
       novoContexto.cliente_nome = mensagem.trim();
       novoContexto.etapa = 'criar_agendamento';
       console.log('👤 Nome detectado:', novoContexto.cliente_nome);
+    }
+
+    // Fallback: se já tem serviço, data e horário mas ainda sem nome, usa número como nome
+    if (!novoContexto.cliente_nome && novoContexto.servico_id && novoContexto.data && novoContexto.horario) {
+      const telefoneLimpo = telefone.replace('@s.whatsapp.net', '');
+      novoContexto.cliente_nome = `Cliente ${telefoneLimpo}`;
+      novoContexto.etapa = 'criar_agendamento';
+      console.log('👤 Nome não informado. Usando fallback:', novoContexto.cliente_nome);
     }
 
     // Criar agendamento se todas as informações estiverem completas
