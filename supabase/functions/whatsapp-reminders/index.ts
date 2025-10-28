@@ -18,15 +18,16 @@ serve(async (req) => {
 
     console.log('⏰ Verificando lembretes...');
 
-    // Verificar se lembretes estão ativos
+    // Verificar se lembretes estão ativos (padrão: ATIVOS quando não configurado)
     const { data: configLembretes } = await supabase
       .from('bot_config')
       .select('valor')
       .eq('chave', 'lembretes_ativos')
       .single();
 
-    if (!configLembretes?.valor?.valor) {
-      console.log('📴 Lembretes desativados');
+    const lembretesAtivos = configLembretes?.valor?.valor !== false;
+    if (!lembretesAtivos) {
+      console.log('📴 Lembretes desativados via configuração');
       return new Response(JSON.stringify({ mensagem: 'Lembretes desativados' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
