@@ -189,10 +189,18 @@ Responda como uma atendente real responderia no WhatsApp.`;
     });
 
     if (!aiResponse.ok) {
-      throw new Error('Erro ao processar com IA');
+      const errorText = await aiResponse.text();
+      console.error('❌ Erro na API do Gemini:', aiResponse.status, errorText);
+      throw new Error(`Erro ao processar com IA: ${aiResponse.status} - ${errorText}`);
     }
 
     const aiData = await aiResponse.json();
+    
+    if (!aiData.candidates || !aiData.candidates[0]?.content?.parts?.[0]?.text) {
+      console.error('❌ Resposta inesperada da API:', JSON.stringify(aiData));
+      throw new Error('Resposta inválida da API do Gemini');
+    }
+    
     const resposta = aiData.candidates[0].content.parts[0].text;
 
     // Detectar intenções e atualizar contexto
