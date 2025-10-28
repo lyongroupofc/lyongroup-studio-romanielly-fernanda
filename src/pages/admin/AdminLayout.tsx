@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
@@ -11,17 +11,13 @@ import {
   Menu,
 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const AdminLayout = () => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    toast.success("Até logo!");
-    navigate("/login");
-  };
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
@@ -73,7 +69,7 @@ const AdminLayout = () => {
             <Button
               variant="ghost"
               className="w-full justify-start text-destructive hover:text-destructive"
-              onClick={handleLogout}
+              onClick={signOut}
             >
               <LogOut className="w-5 h-5 mr-3" />
               Sair

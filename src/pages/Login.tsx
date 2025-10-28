@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -13,23 +14,71 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    // Verificar se já está autenticado
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Verificar role e redirecionar
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (roleData?.role === 'super_admin') {
+          navigate('/super-admin');
+        } else if (roleData?.role === 'admin') {
+          navigate('/admin');
+        }
+      }
+    };
+    checkAuth();
+  }, [navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulação de login com credenciais fixas
-    setTimeout(() => {
-      const isValid = email === "jennifersilva@gmail.com" && password === "96862422";
-      if (isValid) {
-        localStorage.setItem("isAuthenticated", "true");
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        // Buscar role do usuário
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', data.session.user.id)
+          .single();
+
+        if (roleError) {
+          toast.error("Erro ao verificar permissões");
+          await supabase.auth.signOut();
+          setIsLoading(false);
+          return;
+        }
+
         toast.success("Login realizado com sucesso!");
-        navigate("/admin");
-      } else {
-        localStorage.removeItem("isAuthenticated");
-        toast.error("E-mail ou senha inválidos");
+
+        // Redirecionar baseado na role
+        if (roleData.role === 'super_admin') {
+          navigate('/super-admin');
+        } else if (roleData.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/profissional');
+        }
       }
+    } catch (error: any) {
+      toast.error(error.message || "E-mail ou senha inválidos");
+    } finally {
       setIsLoading(false);
-    }, 700);
+    }
   };
 
   return (

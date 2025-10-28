@@ -15,13 +15,12 @@ import Profissionais from "./pages/admin/Profissionais";
 import Faturamento from "./pages/admin/Faturamento";
 import BotWhatsApp from "./pages/admin/BotWhatsApp";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
+import SuperAdminLayout from "./pages/super-admin/SuperAdminLayout";
+import SuperAdminDashboard from "./pages/super-admin/Dashboard";
+import CreateSuperAdmin from "./pages/setup/CreateSuperAdmin";
 
 const queryClient = new QueryClient();
-
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
-};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -32,9 +31,14 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/setup" element={<CreateSuperAdmin />} />
           <Route path="/agendar" element={<Agendar />} />
           <Route path="/obrigado" element={<Obrigado />} />
-          <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+          <Route path="/super-admin" element={<ProtectedRoute requiredRole="super_admin"><SuperAdminLayout /></ProtectedRoute>}>
+            <Route index element={<SuperAdminDashboard />} />
+          </Route>
+          
+          <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="agenda" element={<Agenda />} />
             <Route path="servicos" element={<Servicos />} />
