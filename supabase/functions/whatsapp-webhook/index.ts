@@ -153,7 +153,7 @@ EXEMPLOS DE RESPOSTAS BOAS:
 
 Responda como uma atendente real responderia no WhatsApp.`;
 
-    // Construir histórico de conversa para o Gemini
+    // Construir histórico formatado para Gemini
     let conversaCompleta = systemPrompt + "\n\n--- HISTÓRICO DA CONVERSA ---\n";
     
     if (historicoMensagens && historicoMensagens.length > 0) {
@@ -165,63 +165,31 @@ Responda como uma atendente real responderia no WhatsApp.`;
     
     conversaCompleta += `Cliente: ${mensagem}\nJennifer:`;
 
-    // Usar Lovable AI Gateway com histórico completo e fallback
-    let resposta = '';
-    try {
-      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-      if (!LOVABLE_API_KEY) {
-        throw new Error('LOVABLE_API_KEY não configurada');
-      }
+    console.log('🤖 Enviando para Google Gemini');
 
-      // Montar mensagens no formato OpenAI compatível
-      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-        { role: 'system', content: systemPrompt },
-      ];
-
-      if (historicoMensagens && historicoMensagens.length > 0) {
-        historicoMensagens.forEach((msg) => {
-          messages.push({
-            role: msg.tipo === 'recebida' ? 'user' : 'assistant',
-            content: msg.conteudo,
-          });
-        });
-      }
-      messages.push({ role: 'user', content: mensagem });
-
-      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages,
-        }),
-      });
-
-      if (!aiResponse.ok) {
-        const errorText = await aiResponse.text();
-        console.error('❌ Erro no Lovable AI:', aiResponse.status, errorText);
-        if (aiResponse.status === 429) {
-          resposta = 'Ops, estou com muitas mensagens agora. Pode repetir em 1 min? 😉';
-        } else if (aiResponse.status === 402) {
-          resposta = 'No momento não consigo responder. Tente novamente em breve 🙏';
-        } else {
-          resposta = 'Tive um probleminha técnico aqui. Pode mandar sua pergunta de novo?';
+    // Usar Google Gemini API (mais barato e com free tier generoso)
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: conversaCompleta }] }],
+        generationConfig: {
+          temperature: 0.9,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
         }
-      } else {
-        const aiData = await aiResponse.json();
-        resposta = aiData?.choices?.[0]?.message?.content || '';
-        if (!resposta) {
-          console.warn('⚠️ Resposta vazia da IA, usando fallback');
-          resposta = 'Pode me dizer qual serviço e o melhor dia pra você?';
-        }
-      }
-    } catch (e) {
-      console.error('❌ Falha ao chamar IA:', e);
-      resposta = 'Tive um probleminha agora, mas já podemos continuar! Me diga o serviço que você deseja. ✨';
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('❌ Erro no Gemini:', aiResponse.status, errorText);
+      throw new Error(`Erro ao processar: ${aiResponse.status}`);
     }
+
+    const aiData = await aiResponse.json();
+    const resposta = aiData.candidates?.[0]?.content?.parts?.[0]?.text || 'Desculpe, tive um problema. Pode repetir?';
 
 
     // Detectar intenções e atualizar contexto
