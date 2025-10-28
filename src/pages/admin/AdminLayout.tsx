@@ -7,6 +7,7 @@ import {
   Users,
   DollarSign,
   MessageCircle,
+  Bot,
   LogOut,
   Menu,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const AdminLayout = () => {
     { icon: Users, label: "Profissionais", path: "/admin/profissionais" },
     { icon: DollarSign, label: "Faturamento", path: "/admin/faturamento" },
     { icon: MessageCircle, label: "Bot WhatsApp", path: "/admin/bot-whatsapp" },
+    { icon: Bot, label: "Chat L&J", path: "/admin/chat-assistente" },
   ];
 
   return (

@@ -14,6 +14,7 @@ import Servicos from "./pages/admin/Servicos";
 import Profissionais from "./pages/admin/Profissionais";
 import Faturamento from "./pages/admin/Faturamento";
 import BotWhatsApp from "./pages/admin/BotWhatsApp";
+import ChatAssistente from "./pages/admin/ChatAssistente";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SuperAdminLayout from "./pages/super-admin/SuperAdminLayout";
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="profissionais" element={<Profissionais />} />
             <Route path="faturamento" element={<Faturamento />} />
             <Route path="bot-whatsapp" element={<BotWhatsApp />} />
+            <Route path="chat-assistente" element={<ChatAssistente />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

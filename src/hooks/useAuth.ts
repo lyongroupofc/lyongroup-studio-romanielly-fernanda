@@ -60,11 +60,15 @@ export const useAuth = () => {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setRole(null);
-    navigate('/login');
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setRole(null);
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
   };
 
   return {
