@@ -17,6 +17,7 @@ const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated");
     toast.success("Até logo!");
     navigate("/login");
   };

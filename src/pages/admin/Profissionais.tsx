@@ -8,7 +8,10 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { useNavigate } from "react-router-dom";
+
 const Profissionais = () => {
+  const navigate = useNavigate();
   const [openNovoProfissional, setOpenNovoProfissional] = useState(false);
   
   const handleNovoProfissional = (e: React.FormEvent<HTMLFormElement>) => {

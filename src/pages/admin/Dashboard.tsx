@@ -2,7 +2,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Users, DollarSign, Clock, Plus, Sparkles } from "lucide-react";
 
+import { useNavigate } from "react-router-dom";
+
 const Dashboard = () => {
+  const navigate = useNavigate();
   const stats = [
     {
       title: "Agendamentos do Mês",
@@ -91,15 +94,15 @@ const Dashboard = () => {
       <Card className="p-6">
         <h2 className="text-xl font-semibold mb-6">Atalhos Rápidos</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button className="h-auto py-4 flex-col gap-2">
+          <Button className="h-auto py-4 flex-col gap-2" onClick={() => navigate("/admin/agenda")}> 
             <Plus className="w-5 h-5" />
             <span>Novo Agendamento</span>
           </Button>
-          <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+          <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate("/admin/servicos")}>
             <Plus className="w-5 h-5" />
             <span>Novo Serviço</span>
           </Button>
-          <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+          <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate("/admin/profissionais")}>
             <Plus className="w-5 h-5" />
             <span>Novo Profissional</span>
           </Button>

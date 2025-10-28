@@ -17,16 +17,19 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulação de login - será integrado com Lovable Cloud depois
+    // Simulação de login com credenciais fixas
     setTimeout(() => {
-      if (email && password) {
+      const isValid = email === "jennifersilva@gmail.com" && password === "96862422";
+      if (isValid) {
+        localStorage.setItem("isAuthenticated", "true");
         toast.success("Login realizado com sucesso!");
         navigate("/admin");
       } else {
-        toast.error("Por favor, preencha todos os campos");
+        localStorage.removeItem("isAuthenticated");
+        toast.error("E-mail ou senha inválidos");
       }
       setIsLoading(false);
-    }, 1000);
+    }, 700);
   };
 
   return (

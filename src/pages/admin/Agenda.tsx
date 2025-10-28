@@ -16,9 +16,10 @@ const Agenda = () => {
   const [openDayDialog, setOpenDayDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
 
-  const handleDateClick = (day: Date | undefined) => {
+  const handleSelect = (day: Date | undefined) => {
+    setDate(day);
     setSelectedDate(day);
-    setOpenDayDialog(true);
+    if (day) setOpenDayDialog(true);
   };
 
   const handleNovoAgendamento = (e: React.FormEvent<HTMLFormElement>) => {
@@ -57,7 +58,7 @@ const Agenda = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => toast.info("Filtro em desenvolvimento")}>
             <Filter className="w-4 h-4 mr-2" />
             Filtrar
           </Button>
@@ -126,8 +127,7 @@ const Agenda = () => {
           <Calendar
             mode="single"
             selected={date}
-            onSelect={setDate}
-            onDayClick={handleDateClick}
+            onSelect={handleSelect}
             locale={ptBR}
             modifiers={modifiers}
             modifiersStyles={modifiersStyles}
