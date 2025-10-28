@@ -2,9 +2,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon, Plus, Filter, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ptBR } from "date-fns/locale";
-import { isBefore, startOfToday } from "date-fns";
+import { isBefore, startOfToday, isSunday } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,18 +24,24 @@ const Agenda = () => {
 
   type Agendamento = { horario: string; cliente: string; servico: string; status: string };
   type DayData = { reserved: string[]; blocked: string[]; extraOpen: string[]; closed: boolean; agendamentos: Agendamento[] };
-  const [agendaByDate, setAgendaByDate] = useState<Record<string, DayData>>({
-    "2025-10-27": {
-      reserved: ["14:00", "15:30"],
-      blocked: [],
-      extraOpen: [],
-      closed: false,
-      agendamentos: [
-        { horario: "14:00", cliente: "Maria Silva", servico: "Corte + Escova", status: "Realizado" },
-        { horario: "15:30", cliente: "Ana Santos", servico: "Hidratação", status: "Realizado" }
-      ]
-    }
+  const [agendaByDate, setAgendaByDate] = useState<Record<string, DayData>>(() => {
+    const saved = localStorage.getItem("agendaByDate");
+    return saved ? JSON.parse(saved) : {
+      "2025-10-27": {
+        reserved: ["14:00", "15:30"],
+        blocked: [],
+        extraOpen: [],
+        closed: false,
+        agendamentos: [
+          { horario: "14:00", cliente: "Maria Silva", servico: "Corte + Escova", status: "Realizado" },
+          { horario: "15:30", cliente: "Ana Santos", servico: "Hidratação", status: "Realizado" }
+        ]
+      }
+    };
   });
+  useEffect(() => {
+    localStorage.setItem("agendaByDate", JSON.stringify(agendaByDate));
+  }, [agendaByDate]);
   const fmtKey = (d: Date) => d.toISOString().split("T")[0];
   const generateSlots = () => {
     const slots: string[] = [];
@@ -48,7 +54,12 @@ const Agenda = () => {
     }
     return slots;
   };
-  const getDayData = (d: Date): DayData => agendaByDate[fmtKey(d)] ?? { reserved: [], blocked: [], extraOpen: [], closed: false, agendamentos: [] };
+  const getDayData = (d: Date): DayData => {
+    const key = fmtKey(d);
+    const existing = agendaByDate[key];
+    if (existing) return existing;
+    return { reserved: [], blocked: [], extraOpen: [], closed: isSunday(d), agendamentos: [] };
+  };
   const getAvailableSlots = (d: Date | undefined) => {
     if (!d) return [] as string[];
     const data = getDayData(d);
@@ -189,7 +200,7 @@ const Agenda = () => {
             locale={ptBR}
             modifiers={modifiers}
             modifiersStyles={modifiersStyles}
-            disabled={{ before: startOfToday() }}
+            
             className="rounded-xl border shadow-soft pointer-events-auto"
           />
         </div>

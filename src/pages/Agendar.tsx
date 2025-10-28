@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Sparkles, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { isBefore, startOfToday, isSunday } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const Agendar = () => {
   const navigate = useNavigate();
@@ -33,10 +35,41 @@ const Agendar = () => {
 
   const profissionais = ["Jennifer Silva", "Maria Santos", "Ana Costa"];
 
-  const horarios = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"
-  ];
+  type DayData = { reserved: string[]; blocked: string[]; extraOpen: string[]; closed: boolean };
+  const [agendaByDate] = useState<Record<string, DayData>>(() => {
+    const saved = localStorage.getItem("agendaByDate");
+    return saved ? JSON.parse(saved) : {};
+  });
+  const fmtKey = (d: Date) => d.toISOString().split("T")[0];
+  const generateSlots = () => {
+    const slots: string[] = [];
+    for (let h = 9; h <= 18; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        const hh = String(h).padStart(2, "0");
+        const mm = String(m).padStart(2, "0");
+        slots.push(`${hh}:${mm}`);
+      }
+    }
+    return slots;
+  };
+  const getDayData = (d: Date): DayData => {
+    const existing = agendaByDate[fmtKey(d)];
+    if (existing) return existing;
+    return { reserved: [], blocked: [], extraOpen: [], closed: isSunday(d) };
+  };
+  const getAvailableSlots = (d: Date | undefined) => {
+    if (!d) return [] as string[];
+    const data = getDayData(d);
+    if (data.closed) return [];
+    const base = [...generateSlots(), ...data.extraOpen];
+    const taken = new Set([...data.reserved, ...data.blocked]);
+    return base.filter((t) => !taken.has(t)).sort();
+  };
+  const isDayFull = (d: Date) => {
+    const data = getDayData(d);
+    if (data.closed) return false;
+    return getAvailableSlots(d).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,8 +182,21 @@ const Agendar = () => {
                   mode="single"
                   selected={date}
                   onSelect={setDate}
-                  className="rounded-md border shadow-sm"
-                  disabled={(date) => date < new Date() || date.getDay() === 0}
+                  locale={ptBR}
+                  modifiers={{
+                    disponivel: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).closed && !isDayFull(d),
+                    fechado: (d: Date) => !isBefore(d, startOfToday()) && getDayData(d).closed,
+                    cheio: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).closed && isDayFull(d),
+                    past: (d: Date) => isBefore(d, startOfToday()),
+                  }}
+                  modifiersStyles={{
+                    disponivel: { backgroundColor: "hsl(var(--success) / 0.2)", color: "hsl(var(--success))" },
+                    fechado: { backgroundColor: "hsl(var(--destructive) / 0.2)", color: "hsl(var(--destructive))" },
+                    cheio: { backgroundColor: "hsl(280 65% 60% / 0.2)", color: "hsl(280 65% 60%)" },
+                    past: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", opacity: 0.6 },
+                  }}
+                  disabled={(d) => isBefore(d, startOfToday()) || getDayData(d).closed}
+                  className="rounded-md border shadow-sm pointer-events-auto"
                 />
               </div>
             </div>
@@ -160,19 +206,25 @@ const Agendar = () => {
                 <Clock className="w-4 h-4" />
                 Horário Disponível *
               </Label>
-              <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-                {horarios.map((horario) => (
-                  <Button
-                    key={horario}
-                    type="button"
-                    variant={formData.horario === horario ? "default" : "outline"}
-                    onClick={() => setFormData({ ...formData, horario })}
-                    className="w-full"
-                  >
-                    {horario}
-                  </Button>
-                ))}
-              </div>
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                  {date && getAvailableSlots(date).length > 0 ? (
+                    getAvailableSlots(date).map((horario) => (
+                      <Button
+                        key={horario}
+                        type="button"
+                        variant={formData.horario === horario ? "default" : "outline"}
+                        onClick={() => setFormData({ ...formData, horario })}
+                        className="w-full"
+                      >
+                        {horario}
+                      </Button>
+                    ))
+                  ) : (
+                    <div className="col-span-3 md:col-span-4 text-center text-muted-foreground py-2">
+                      Sem horários disponíveis
+                    </div>
+                  )}
+                </div>
             </div>
 
             <Button type="submit" size="lg" className="w-full">
