@@ -21,10 +21,7 @@ export const useBotWhatsApp = () => {
 
   const fetchStatus = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-auth', {
-        body: {},
-        method: 'GET',
-      });
+      const { data, error } = await supabase.functions.invoke('whatsapp-auth');
 
       if (error) throw error;
       setStatus(data?.status || 'desconectado');
@@ -101,10 +98,7 @@ export const useBotWhatsApp = () => {
   const gerarQRCode = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke('whatsapp-auth', {
-        body: {},
-        method: 'GET',
-      });
+      const { data, error } = await supabase.functions.invoke('whatsapp-auth');
 
       if (error) throw error;
       
