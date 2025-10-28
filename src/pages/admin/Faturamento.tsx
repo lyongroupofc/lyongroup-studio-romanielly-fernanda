@@ -1,63 +1,84 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DollarSign, TrendingUp, Calendar, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useAgendamentos } from "@/hooks/useAgendamentos";
+import { usePagamentos } from "@/hooks/usePagamentos";
+import { format } from "date-fns";
 
 const Faturamento = () => {
   const [showTotal, setShowTotal] = useState(true);
-  const [pagamentos, setPagamentos] = useState<Array<{
-    id: number;
-    cliente: string;
-    servico: string;
-    valor: string;
-    metodo: string;
-    status: string;
-    data: string;
-  }>>([]);
+  const { agendamentos, loading: loadingAgendamentos } = useAgendamentos();
+  const { pagamentos, loading: loadingPagamentos, addPagamento } = usePagamentos();
   const [openPagamentoDialog, setOpenPagamentoDialog] = useState(false);
-  const [pagamentoSelecionado, setPagamentoSelecionado] = useState<null | { id: number; cliente: string; servico: string; valor: string; metodo: string; status: string; data: string }>(null);
+  const [agendamentoSelecionado, setAgendamentoSelecionado] = useState<any>(null);
   const [metodoSelecionado, setMetodoSelecionado] = useState<string>("PIX");
+  const [valorEditado, setValorEditado] = useState<string>("");
+  const [observacoes, setObservacoes] = useState<string>("");
 
-  const abrirPagamento = (pag: { id: number; cliente: string; servico: string; valor: string; metodo: string; status: string; data: string }) => {
-    setPagamentoSelecionado(pag);
-    setMetodoSelecionado(pag.metodo || "PIX");
+  const agendamentosPendentes = agendamentos.filter(
+    (ag) => !pagamentos.some((pag) => pag.agendamento_id === ag.id)
+  );
+
+  const abrirDialogPagamento = (agendamento: any) => {
+    setAgendamentoSelecionado(agendamento);
+    setMetodoSelecionado("PIX");
+    setValorEditado("");
+    setObservacoes("");
     setOpenPagamentoDialog(true);
   };
 
-  const aprovarPagamento = () => {
-    if (!pagamentoSelecionado) return;
-    setPagamentos((prev) =>
-      prev.map((p) =>
-        p.id === pagamentoSelecionado.id
-          ? { ...p, status: "Pago", metodo: metodoSelecionado }
-          : p
-      )
-    );
+  const registrarPagamento = async () => {
+    if (!agendamentoSelecionado) return;
+
+    const valorFinal = valorEditado ? parseFloat(valorEditado) : 0;
+
+    await addPagamento({
+      agendamento_id: agendamentoSelecionado.id,
+      cliente_nome: agendamentoSelecionado.cliente_nome,
+      servico: observacoes || agendamentoSelecionado.servico_nome,
+      valor: valorFinal,
+      metodo_pagamento: metodoSelecionado,
+      status: "Pago",
+      data: agendamentoSelecionado.data,
+    });
+
     setOpenPagamentoDialog(false);
-    setPagamentoSelecionado(null);
-    toast.success("Pagamento aprovado!");
+    setAgendamentoSelecionado(null);
   };
+
+  const hoje = format(new Date(), "yyyy-MM-dd");
+  const faturamentoHoje = pagamentos
+    .filter((p) => p.data === hoje && p.status === "Pago")
+    .reduce((acc, p) => acc + Number(p.valor), 0);
+
+  const mesAtual = format(new Date(), "yyyy-MM");
+  const faturamentoMes = pagamentos
+    .filter((p) => p.data.startsWith(mesAtual) && p.status === "Pago")
+    .reduce((acc, p) => acc + Number(p.valor), 0);
 
   const stats = [
     {
       label: "Faturamento Hoje",
-      value: "R$ 0,00",
+      value: `R$ ${faturamentoHoje.toFixed(2).replace(".", ",")}`,
       icon: DollarSign,
       color: "text-success",
     },
     {
       label: "Faturamento do Mês",
-      value: "R$ 0,00",
+      value: `R$ ${faturamentoMes.toFixed(2).replace(".", ",")}`,
       icon: TrendingUp,
       color: "text-primary",
     },
     {
       label: "Pendentes",
-      value: "R$ 0,00",
+      value: `${agendamentosPendentes.length}`,
       icon: Calendar,
       color: "text-warning",
     },
@@ -112,79 +133,139 @@ const Faturamento = () => {
       </Card>
 
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-6">Pagamentos Recentes</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-3">Cliente</th>
-                <th className="text-left p-3">Serviço</th>
-                <th className="text-left p-3">Valor</th>
-                <th className="text-left p-3">Método</th>
-                <th className="text-left p-3">Status</th>
-                <th className="text-left p-3">Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagamentos.map((pag) => (
-                <tr key={pag.id} className="border-b hover:bg-muted/50">
-                  <td className="p-3">
-                    <button type="button" className="underline text-primary" onClick={() => abrirPagamento(pag)}>
-                      {pag.cliente}
-                    </button>
-                  </td>
-                  <td className="p-3">{pag.servico}</td>
-                  <td className="p-3 font-semibold">
-                    {showTotal ? pag.valor : "R$ •••,••"}
-                  </td>
-                  <td className="p-3">{pag.metodo}</td>
-                  <td className="p-3">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        pag.status === "Pago"
-                          ? "bg-success/10 text-success"
-                          : "bg-warning/10 text-warning"
-                      }`}
-                    >
-                      {pag.status}
-                    </span>
-                  </td>
-                  <td className="p-3 text-muted-foreground">{pag.data}</td>
+        <h2 className="text-xl font-semibold mb-6">Agendamentos Pendentes de Pagamento</h2>
+        {loadingAgendamentos ? (
+          <p className="text-muted-foreground text-center py-8">Carregando...</p>
+        ) : agendamentosPendentes.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">Nenhum agendamento pendente</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Cliente</th>
+                  <th className="text-left p-3">Serviço</th>
+                  <th className="text-left p-3">Data</th>
+                  <th className="text-left p-3">Horário</th>
+                  <th className="text-left p-3">Ação</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {agendamentosPendentes.map((ag) => (
+                  <tr key={ag.id} className="border-b hover:bg-muted/50">
+                    <td className="p-3">{ag.cliente_nome}</td>
+                    <td className="p-3">{ag.servico_nome}</td>
+                    <td className="p-3">{format(new Date(ag.data), "dd/MM/yyyy")}</td>
+                    <td className="p-3">{ag.horario}</td>
+                    <td className="p-3">
+                      <Button
+                        size="sm"
+                        onClick={() => abrirDialogPagamento(ag)}
+                      >
+                        Registrar Pagamento
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold mb-6">Pagamentos Recebidos</h2>
+        {loadingPagamentos ? (
+          <p className="text-muted-foreground text-center py-8">Carregando...</p>
+        ) : pagamentos.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">Nenhum pagamento registrado</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Cliente</th>
+                  <th className="text-left p-3">Serviço</th>
+                  <th className="text-left p-3">Valor</th>
+                  <th className="text-left p-3">Método</th>
+                  <th className="text-left p-3">Data</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagamentos.map((pag) => (
+                  <tr key={pag.id} className="border-b hover:bg-muted/50">
+                    <td className="p-3">{pag.cliente_nome}</td>
+                    <td className="p-3">{pag.servico}</td>
+                    <td className="p-3 font-semibold">
+                      {showTotal ? `R$ ${Number(pag.valor).toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+                    </td>
+                    <td className="p-3">{pag.metodo_pagamento}</td>
+                    <td className="p-3 text-muted-foreground">{format(new Date(pag.data), "dd/MM/yyyy")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
       <Dialog open={openPagamentoDialog} onOpenChange={setOpenPagamentoDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Aprovar Pagamento</DialogTitle>
+            <DialogTitle>Registrar Pagamento</DialogTitle>
           </DialogHeader>
-          {pagamentoSelecionado && (
+          {agendamentoSelecionado && (
             <div className="space-y-4">
-              <div className="text-sm text-muted-foreground">
-                <p>Cliente: <span className="font-medium text-foreground">{pagamentoSelecionado.cliente}</span></p>
-                <p>Serviço: <span className="font-medium text-foreground">{pagamentoSelecionado.servico}</span></p>
-                <p>Valor: <span className="font-medium text-foreground">{showTotal ? pagamentoSelecionado.valor : "R$ •••,••"}</span></p>
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Cliente</Label>
+                <p className="font-medium">{agendamentoSelecionado.cliente_nome}</p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm">Método de Pagamento</label>
+                <Label className="text-sm text-muted-foreground">Serviço Original</Label>
+                <p className="text-sm">{agendamentoSelecionado.servico_nome}</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="valor">Valor Recebido</Label>
+                <Input
+                  id="valor"
+                  type="number"
+                  step="0.01"
+                  placeholder="Ex: 50.00"
+                  value={valorEditado}
+                  onChange={(e) => setValorEditado(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="metodo">Método de Pagamento</Label>
                 <Select value={metodoSelecionado} onValueChange={setMetodoSelecionado}>
-                  <SelectTrigger>
+                  <SelectTrigger id="metodo">
                     <SelectValue placeholder="Selecione o método" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PIX">PIX</SelectItem>
                     <SelectItem value="Cartão de Débito">Cartão de Débito</SelectItem>
                     <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setOpenPagamentoDialog(false)}>Cancelar</Button>
-                <Button onClick={aprovarPagamento}>Aprovar</Button>
+              <div className="space-y-2">
+                <Label htmlFor="obs">Observações (produtos, serviços extras, etc.)</Label>
+                <Textarea
+                  id="obs"
+                  placeholder="Ex: Corte + Barba, comprou shampoo..."
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setOpenPagamentoDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={registrarPagamento} disabled={!valorEditado}>
+                  Registrar
+                </Button>
               </div>
             </div>
           )}
