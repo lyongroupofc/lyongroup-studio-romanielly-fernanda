@@ -215,7 +215,9 @@ Responda como uma atendente real responderia no WhatsApp.`;
       if (mensagemLower.includes(s.nome.toLowerCase())) {
         novoContexto.servico_id = s.id;
         novoContexto.servico_nome = s.nome;
-        novoContexto.etapa = 'escolher_data';
+        if (!novoContexto.etapa || novoContexto.etapa === 'escolher_servico') {
+          novoContexto.etapa = 'escolher_data';
+        }
         console.log('✅ Serviço detectado:', s.nome);
       }
     });
@@ -264,7 +266,7 @@ Responda como uma atendente real responderia no WhatsApp.`;
     };
 
     // Detectar data (múltiplos formatos)
-    if (!novoContexto.data || novoContexto.etapa === 'escolher_data') {
+    if (!novoContexto.data) {
       // Formato DD/MM/YYYY ou DD/MM
       const dataMatch = mensagem.match(/(\d{1,2})\/(\d{1,2})(\/(\d{4}))?/);
       if (dataMatch) {
@@ -286,25 +288,35 @@ Responda como uma atendente real responderia no WhatsApp.`;
     }
 
     // Detectar horário (múltiplos formatos)
-    if (novoContexto.etapa === 'escolher_horario' && !novoContexto.horario) {
+    if (!novoContexto.horario) {
       // Formato HH:MM ou HH
       const horarioMatch = mensagem.match(/(\d{1,2}):?(\d{2})?/);
       if (horarioMatch) {
         const hora = horarioMatch[1].padStart(2, '0');
         const minuto = horarioMatch[2] ? horarioMatch[2] : '00';
         novoContexto.horario = `${hora}:${minuto}`;
-        novoContexto.etapa = 'confirmar_nome';
+        if (novoContexto.data && novoContexto.servico_id) {
+          novoContexto.etapa = 'confirmar_nome';
+        }
         console.log('⏰ Horário detectado:', novoContexto.horario);
       } else if (mensagemLower.includes('meio dia') || mensagemLower.includes('meio-dia')) {
         novoContexto.horario = '12:00';
-        novoContexto.etapa = 'confirmar_nome';
+        if (novoContexto.data && novoContexto.servico_id) {
+          novoContexto.etapa = 'confirmar_nome';
+        }
         console.log('⏰ Horário detectado (meio dia):', novoContexto.horario);
       }
     }
 
-    // Detectar nome
-    if (novoContexto.etapa === 'confirmar_nome' && !novoContexto.cliente_nome && 
-        mensagem.length > 2 && !mensagem.match(/^\d/)) {
+    // Detectar nome - só detecta se todas as outras info já estão preenchidas
+    if (!novoContexto.cliente_nome && 
+        novoContexto.servico_id && 
+        novoContexto.data && 
+        novoContexto.horario &&
+        mensagem.length > 2 && 
+        !mensagem.match(/^\d/) &&
+        !mensagemLower.includes('sim') &&
+        !mensagemLower.includes('confirma')) {
       novoContexto.cliente_nome = mensagem.trim();
       novoContexto.etapa = 'criar_agendamento';
       console.log('👤 Nome detectado:', novoContexto.cliente_nome);
