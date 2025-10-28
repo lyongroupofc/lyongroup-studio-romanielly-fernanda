@@ -19,6 +19,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import SuperAdminLayout from "./pages/super-admin/SuperAdminLayout";
 import SuperAdminDashboard from "./pages/super-admin/Dashboard";
 import CreateSuperAdmin from "./pages/setup/CreateSuperAdmin";
+import ResetSuperAdminPassword from "./pages/setup/ResetSuperAdminPassword";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/setup" element={<CreateSuperAdmin />} />
+          <Route path="/reset-password" element={<ResetSuperAdminPassword />} />
           <Route path="/agendar" element={<Agendar />} />
           <Route path="/obrigado" element={<Obrigado />} />
           <Route path="/super-admin" element={<ProtectedRoute requiredRole="super_admin"><SuperAdminLayout /></ProtectedRoute>}>

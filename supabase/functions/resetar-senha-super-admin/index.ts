@@ -23,50 +23,35 @@ serve(async (req) => {
       }
     );
 
-    const { email, password, nome } = await req.json();
+    const { email, novaSenha } = await req.json();
 
-    console.log('Criando super admin:', email);
+    console.log('Resetando senha para:', email);
 
-    // Criar usuário no auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        nome
-      }
-    });
+    // Buscar usuário pelo email
+    const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+    const user = users.users.find(u => u.email === email);
 
-    if (authError) {
-      console.error('Erro ao criar usuário:', authError);
-      throw authError;
+    if (!user) {
+      throw new Error('Usuário não encontrado');
     }
 
-    console.log('Usuário criado:', authData.user.id);
+    // Atualizar senha
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(
+      user.id,
+      { password: novaSenha }
+    );
 
-    // Aguardar trigger criar profile
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Adicionar role de super_admin
-    const { error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .insert({
-        user_id: authData.user.id,
-        role: 'super_admin'
-      });
-
-    if (roleError) {
-      console.error('Erro ao criar role:', roleError);
-      throw roleError;
+    if (error) {
+      console.error('Erro ao resetar senha:', error);
+      throw error;
     }
 
-    console.log('Role super_admin atribuída com sucesso');
+    console.log('Senha resetada com sucesso');
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        user_id: authData.user.id,
-        message: 'Super admin criado com sucesso'
+        message: 'Senha resetada com sucesso'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
