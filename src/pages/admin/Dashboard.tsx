@@ -1,11 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, DollarSign, Clock, Plus, Sparkles } from "lucide-react";
+import { Calendar, Users, DollarSign, Clock, Plus, Sparkles, Eye, EyeOff } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [showTotal, setShowTotal] = useState(true);
   const stats = [
     {
       title: "Agendamentos do Mês",
@@ -79,12 +81,20 @@ const Dashboard = () => {
 
       {/* Resumo Diário */}
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-6">Resumo do Dia</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold">Resumo do Dia</h2>
+          <Button variant="outline" size="sm" onClick={() => setShowTotal(!showTotal)}>
+            {showTotal ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
+            {showTotal ? "Ocultar" : "Mostrar"} valores
+          </Button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {todayStats.map((stat) => (
             <div key={stat.label} className="space-y-2">
               <p className="text-sm text-muted-foreground">{stat.label}</p>
-              <p className="text-2xl font-bold">{stat.value}</p>
+              <p className="text-2xl font-bold">
+                {stat.label === "Faturamento do Dia" ? (showTotal ? stat.value : "R$ •••,••") : stat.value}
+              </p>
             </div>
           ))}
         </div>

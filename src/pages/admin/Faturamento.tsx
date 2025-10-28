@@ -2,9 +2,55 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DollarSign, TrendingUp, Calendar, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 const Faturamento = () => {
   const [showTotal, setShowTotal] = useState(true);
+  const [pagamentos, setPagamentos] = useState([
+    {
+      id: 1,
+      cliente: "Maria Silva",
+      servico: "Corte + Escova",
+      valor: "R$ 140,00",
+      metodo: "PIX",
+      status: "Pago",
+      data: "28/10/2025",
+    },
+    {
+      id: 2,
+      cliente: "Ana Santos",
+      servico: "Hidratação",
+      valor: "R$ 100,00",
+      metodo: "Cartão de Crédito",
+      status: "Pendente",
+      data: "28/10/2025",
+    },
+  ]);
+  const [openPagamentoDialog, setOpenPagamentoDialog] = useState(false);
+  const [pagamentoSelecionado, setPagamentoSelecionado] = useState<null | { id: number; cliente: string; servico: string; valor: string; metodo: string; status: string; data: string }>(null);
+  const [metodoSelecionado, setMetodoSelecionado] = useState<string>("PIX");
+
+  const abrirPagamento = (pag: { id: number; cliente: string; servico: string; valor: string; metodo: string; status: string; data: string }) => {
+    setPagamentoSelecionado(pag);
+    setMetodoSelecionado(pag.metodo || "PIX");
+    setOpenPagamentoDialog(true);
+  };
+
+  const aprovarPagamento = () => {
+    if (!pagamentoSelecionado) return;
+    setPagamentos((prev) =>
+      prev.map((p) =>
+        p.id === pagamentoSelecionado.id
+          ? { ...p, status: "Pago", metodo: metodoSelecionado }
+          : p
+      )
+    );
+    setOpenPagamentoDialog(false);
+    setPagamentoSelecionado(null);
+    toast.success("Pagamento aprovado!");
+  };
 
   const stats = [
     {
@@ -27,26 +73,6 @@ const Faturamento = () => {
     },
   ];
 
-  const pagamentos = [
-    {
-      id: 1,
-      cliente: "Maria Silva",
-      servico: "Corte + Escova",
-      valor: "R$ 140,00",
-      metodo: "PIX",
-      status: "Pago",
-      data: "28/10/2025",
-    },
-    {
-      id: 2,
-      cliente: "Ana Santos",
-      servico: "Hidratação",
-      valor: "R$ 100,00",
-      metodo: "Cartão de Crédito",
-      status: "Pendente",
-      data: "28/10/2025",
-    },
-  ];
 
   return (
     <div className="space-y-8">
@@ -114,7 +140,11 @@ const Faturamento = () => {
             <tbody>
               {pagamentos.map((pag) => (
                 <tr key={pag.id} className="border-b hover:bg-muted/50">
-                  <td className="p-3">{pag.cliente}</td>
+                  <td className="p-3">
+                    <button type="button" className="underline text-primary" onClick={() => abrirPagamento(pag)}>
+                      {pag.cliente}
+                    </button>
+                  </td>
                   <td className="p-3">{pag.servico}</td>
                   <td className="p-3 font-semibold">
                     {showTotal ? pag.valor : "R$ •••,••"}
@@ -138,6 +168,40 @@ const Faturamento = () => {
           </table>
         </div>
       </Card>
+
+      <Dialog open={openPagamentoDialog} onOpenChange={setOpenPagamentoDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Aprovar Pagamento</DialogTitle>
+          </DialogHeader>
+          {pagamentoSelecionado && (
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                <p>Cliente: <span className="font-medium text-foreground">{pagamentoSelecionado.cliente}</span></p>
+                <p>Serviço: <span className="font-medium text-foreground">{pagamentoSelecionado.servico}</span></p>
+                <p>Valor: <span className="font-medium text-foreground">{showTotal ? pagamentoSelecionado.valor : "R$ •••,••"}</span></p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm">Método de Pagamento</label>
+                <Select value={metodoSelecionado} onValueChange={setMetodoSelecionado}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o método" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PIX">PIX</SelectItem>
+                    <SelectItem value="Cartão de Débito">Cartão de Débito</SelectItem>
+                    <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setOpenPagamentoDialog(false)}>Cancelar</Button>
+                <Button onClick={aprovarPagamento}>Aprovar</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
