@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { useServicos } from "@/hooks/useServicos";
 
@@ -12,6 +13,8 @@ const Servicos = () => {
   const [openNovoServico, setOpenNovoServico] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [servicoEditando, setServicoEditando] = useState<any>(null);
+  const [unidadeTempo, setUnidadeTempo] = useState<"minutos" | "horas">("minutos");
+  const [unidadeTempoEdit, setUnidadeTempoEdit] = useState<"minutos" | "horas">("minutos");
   const { servicos, loading, addServico, updateServico, deleteServico } = useServicos();
   
   const handleNovoServico = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -19,19 +22,25 @@ const Servicos = () => {
     const form = e.currentTarget;
     const formData = new FormData(form);
     
+    const duracaoInput = parseInt(formData.get("duracao") as string);
+    const duracaoEmMinutos = unidadeTempo === "horas" ? duracaoInput * 60 : duracaoInput;
+    
     await addServico({
       nome: formData.get("nome") as string,
       descricao: formData.get("descricao") as string,
       preco: parseFloat(formData.get("preco") as string),
-      duracao: parseInt(formData.get("duracao") as string),
+      duracao: duracaoEmMinutos,
     });
     
     setOpenNovoServico(false);
+    setUnidadeTempo("minutos");
     form.reset();
   };
 
   const handleEditarServico = (servico: any) => {
     setServicoEditando(servico);
+    // Detecta automaticamente se deve mostrar em horas ou minutos
+    setUnidadeTempoEdit(servico.duracao >= 60 && servico.duracao % 60 === 0 ? "horas" : "minutos");
     setEditDialogOpen(true);
   };
 
@@ -40,15 +49,19 @@ const Servicos = () => {
     const form = e.currentTarget;
     const formData = new FormData(form);
     
+    const duracaoInput = parseInt(formData.get("duracao") as string);
+    const duracaoEmMinutos = unidadeTempoEdit === "horas" ? duracaoInput * 60 : duracaoInput;
+    
     await updateServico(servicoEditando.id, {
       nome: formData.get("nome") as string,
       descricao: formData.get("descricao") as string,
       preco: parseFloat(formData.get("preco") as string),
-      duracao: parseInt(formData.get("duracao") as string),
+      duracao: duracaoEmMinutos,
     });
     
     setEditDialogOpen(false);
     setServicoEditando(null);
+    setUnidadeTempoEdit("minutos");
   };
 
   const handleExcluirServico = async (id: string) => {
@@ -110,15 +123,26 @@ const Servicos = () => {
                   required 
                 />
               </div>
-              <div>
-                <Label htmlFor="duracao">Duração (minutos)</Label>
-                <Input 
-                  id="duracao" 
-                  name="duracao" 
-                  type="number" 
-                  placeholder="60" 
-                  required 
-                />
+              <div className="space-y-2">
+                <Label htmlFor="duracao">Duração</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input 
+                    id="duracao" 
+                    name="duracao" 
+                    type="number" 
+                    placeholder={unidadeTempo === "horas" ? "2" : "60"}
+                    required 
+                  />
+                  <Select value={unidadeTempo} onValueChange={(value: "minutos" | "horas") => setUnidadeTempo(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="minutos">Minutos</SelectItem>
+                      <SelectItem value="horas">Horas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <Button type="submit" className="w-full">Criar Serviço</Button>
             </form>
@@ -153,7 +177,10 @@ const Servicos = () => {
               </div>
               <div className="flex items-center text-sm text-muted-foreground">
                 <Clock className="w-4 h-4 mr-2" />
-                {servico.duracao} minutos
+                {servico.duracao >= 60 && servico.duracao % 60 === 0 
+                  ? `${servico.duracao / 60} ${servico.duracao / 60 === 1 ? 'hora' : 'horas'}`
+                  : `${servico.duracao} minutos`
+                }
               </div>
             </div>
 
@@ -216,15 +243,26 @@ const Servicos = () => {
                   required 
                 />
               </div>
-              <div>
-                <Label htmlFor="edit-duracao">Duração (minutos)</Label>
-                <Input 
-                  id="edit-duracao" 
-                  name="duracao" 
-                  type="number" 
-                  defaultValue={servicoEditando.duracao} 
-                  required 
-                />
+              <div className="space-y-2">
+                <Label htmlFor="edit-duracao">Duração</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input 
+                    id="edit-duracao" 
+                    name="duracao" 
+                    type="number" 
+                    defaultValue={unidadeTempoEdit === "horas" ? servicoEditando.duracao / 60 : servicoEditando.duracao}
+                    required 
+                  />
+                  <Select value={unidadeTempoEdit} onValueChange={(value: "minutos" | "horas") => setUnidadeTempoEdit(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="minutos">Minutos</SelectItem>
+                      <SelectItem value="horas">Horas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <Button type="submit" className="w-full">Salvar Alterações</Button>
             </form>
