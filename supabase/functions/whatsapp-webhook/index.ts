@@ -92,8 +92,19 @@ serve(async (req) => {
       .select('*')
       .eq('ativo', true);
 
+    // Data atual para contexto
+    const hoje = new Date();
+    const dataAtualFormatada = hoje.toLocaleDateString('pt-BR', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
     // Processar com Google Gemini mantendo histórico
     const systemPrompt = `Você é Jennifer, atendente do salão de beleza. Atenda no WhatsApp de forma NATURAL e HUMANA.
+
+DATA ATUAL: ${dataAtualFormatada}
 
 Serviços disponíveis:
 ${servicos?.map(s => `- ${s.nome}: R$ ${s.preco} (${s.duracao} min)`).join('\n')}
@@ -108,12 +119,28 @@ REGRAS DE OURO (SIGA RIGOROSAMENTE):
 5. SEM LISTAS OU BLOCOS: Evite bullets, números, formatações complexas
 6. SEJA DIRETA: Vá direto ao ponto sem enrolação
 
+ENTENDIMENTO DE DATAS:
+- "segunda" ou "segunda-feira" = próxima segunda-feira
+- "próxima semana" = semana que vem
+- "semana que vem" = próxima semana
+- "amanhã" = dia seguinte
+- "depois de amanhã" = daqui 2 dias
+- "sexta" = próxima sexta-feira
+SEMPRE confirme a data específica com o cliente (ex: "Certo, então dia 15/01, ok?")
+
+ENTENDIMENTO DE HORÁRIOS:
+- "9h", "9:00", "9 horas" = 09:00
+- "meio dia" = 12:00
+- "1 da tarde" = 13:00
+- "2 da tarde" = 14:00
+SEMPRE use formato HH:MM (ex: 09:00, 14:30)
+
 FLUXO DE AGENDAMENTO:
 - Primeiro: Qual serviço quer?
-- Segundo: Que dia prefere?
-- Terceiro: Que horário?
+- Segundo: Que dia prefere? (confirme a data específica)
+- Terceiro: Que horário? (confirme o horário no formato HH:MM)
 - Quarto: Qual seu nome?
-- Confirme e pronto!
+- Confirme TUDO e pronto!
 
 Contexto atual: ${JSON.stringify(contexto, null, 2)}
 
@@ -172,36 +199,107 @@ Responda como uma atendente real responderia no WhatsApp.`;
     const mensagemLower = mensagem.toLowerCase();
     let novoContexto = { ...contexto };
 
+    console.log('🔍 Analisando mensagem:', mensagem);
+    console.log('📍 Etapa atual:', novoContexto.etapa);
+
     // Detectar serviço escolhido
     servicos?.forEach(s => {
       if (mensagemLower.includes(s.nome.toLowerCase())) {
         novoContexto.servico_id = s.id;
         novoContexto.servico_nome = s.nome;
         novoContexto.etapa = 'escolher_data';
+        console.log('✅ Serviço detectado:', s.nome);
       }
     });
 
-    // Detectar data (formato DD/MM/YYYY ou DD/MM)
-    const dataMatch = mensagem.match(/(\d{1,2})\/(\d{1,2})(\/(\d{4}))?/);
-    if (dataMatch && novoContexto.etapa === 'escolher_data') {
-      const dia = dataMatch[1].padStart(2, '0');
-      const mes = dataMatch[2].padStart(2, '0');
-      const ano = dataMatch[4] || new Date().getFullYear().toString();
-      novoContexto.data = `${ano}-${mes}-${dia}`;
-      novoContexto.etapa = 'escolher_horario';
+    // Função auxiliar para calcular datas relativas
+    const calcularData = (referencia: string): string | null => {
+      const now = new Date();
+      const diasSemana = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+      
+      // Detectar "amanhã"
+      if (referencia.includes('amanhã') || referencia.includes('amanha')) {
+        const amanha = new Date(now);
+        amanha.setDate(amanha.getDate() + 1);
+        return amanha.toISOString().split('T')[0];
+      }
+      
+      // Detectar "depois de amanhã"
+      if (referencia.includes('depois de amanhã') || referencia.includes('depois de amanha')) {
+        const depoisAmanha = new Date(now);
+        depoisAmanha.setDate(depoisAmanha.getDate() + 2);
+        return depoisAmanha.toISOString().split('T')[0];
+      }
+      
+      // Detectar dias da semana (próxima segunda, sexta, etc)
+      for (let i = 0; i < diasSemana.length; i++) {
+        if (referencia.includes(diasSemana[i])) {
+          const diaAtual = now.getDay();
+          let diasParaSomar = i - diaAtual;
+          
+          // Se for o mesmo dia ou já passou, vai para próxima semana
+          if (diasParaSomar <= 0) diasParaSomar += 7;
+          
+          // Se menciona "próxima semana" ou "semana que vem", adiciona mais 7 dias
+          if (referencia.includes('próxima semana') || referencia.includes('proxima semana') || 
+              referencia.includes('semana que vem')) {
+            diasParaSomar += 7;
+          }
+          
+          const dataCalculada = new Date(now);
+          dataCalculada.setDate(dataCalculada.getDate() + diasParaSomar);
+          return dataCalculada.toISOString().split('T')[0];
+        }
+      }
+      
+      return null;
+    };
+
+    // Detectar data (múltiplos formatos)
+    if (!novoContexto.data || novoContexto.etapa === 'escolher_data') {
+      // Formato DD/MM/YYYY ou DD/MM
+      const dataMatch = mensagem.match(/(\d{1,2})\/(\d{1,2})(\/(\d{4}))?/);
+      if (dataMatch) {
+        const dia = dataMatch[1].padStart(2, '0');
+        const mes = dataMatch[2].padStart(2, '0');
+        const ano = dataMatch[4] || new Date().getFullYear().toString();
+        novoContexto.data = `${ano}-${mes}-${dia}`;
+        novoContexto.etapa = 'escolher_horario';
+        console.log('📅 Data detectada (formato):', novoContexto.data);
+      } else {
+        // Tentar detectar referências relativas
+        const dataRelativa = calcularData(mensagemLower);
+        if (dataRelativa) {
+          novoContexto.data = dataRelativa;
+          novoContexto.etapa = 'escolher_horario';
+          console.log('📅 Data detectada (relativa):', novoContexto.data);
+        }
+      }
     }
 
-    // Detectar horário
-    const horarioMatch = mensagem.match(/(\d{1,2}):?(\d{2})/);
-    if (horarioMatch && novoContexto.etapa === 'escolher_horario') {
-      novoContexto.horario = `${horarioMatch[1].padStart(2, '0')}:${horarioMatch[2]}`;
-      novoContexto.etapa = 'confirmar_nome';
+    // Detectar horário (múltiplos formatos)
+    if (novoContexto.etapa === 'escolher_horario' && !novoContexto.horario) {
+      // Formato HH:MM ou HH
+      const horarioMatch = mensagem.match(/(\d{1,2}):?(\d{2})?/);
+      if (horarioMatch) {
+        const hora = horarioMatch[1].padStart(2, '0');
+        const minuto = horarioMatch[2] ? horarioMatch[2] : '00';
+        novoContexto.horario = `${hora}:${minuto}`;
+        novoContexto.etapa = 'confirmar_nome';
+        console.log('⏰ Horário detectado:', novoContexto.horario);
+      } else if (mensagemLower.includes('meio dia') || mensagemLower.includes('meio-dia')) {
+        novoContexto.horario = '12:00';
+        novoContexto.etapa = 'confirmar_nome';
+        console.log('⏰ Horário detectado (meio dia):', novoContexto.horario);
+      }
     }
 
     // Detectar nome
-    if (novoContexto.etapa === 'confirmar_nome' && mensagem.length > 2 && !mensagem.match(/^\d/)) {
+    if (novoContexto.etapa === 'confirmar_nome' && !novoContexto.cliente_nome && 
+        mensagem.length > 2 && !mensagem.match(/^\d/)) {
       novoContexto.cliente_nome = mensagem.trim();
       novoContexto.etapa = 'criar_agendamento';
+      console.log('👤 Nome detectado:', novoContexto.cliente_nome);
     }
 
     // Criar agendamento se todas as informações estiverem completas
