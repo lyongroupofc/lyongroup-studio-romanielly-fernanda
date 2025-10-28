@@ -9,26 +9,15 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 const Faturamento = () => {
   const [showTotal, setShowTotal] = useState(true);
-  const [pagamentos, setPagamentos] = useState([
-    {
-      id: 1,
-      cliente: "Maria Silva",
-      servico: "Corte + Escova",
-      valor: "R$ 140,00",
-      metodo: "PIX",
-      status: "Pago",
-      data: "28/10/2025",
-    },
-    {
-      id: 2,
-      cliente: "Ana Santos",
-      servico: "Hidratação",
-      valor: "R$ 100,00",
-      metodo: "Cartão de Crédito",
-      status: "Pendente",
-      data: "28/10/2025",
-    },
-  ]);
+  const [pagamentos, setPagamentos] = useState<Array<{
+    id: number;
+    cliente: string;
+    servico: string;
+    valor: string;
+    metodo: string;
+    status: string;
+    data: string;
+  }>>([]);
   const [openPagamentoDialog, setOpenPagamentoDialog] = useState(false);
   const [pagamentoSelecionado, setPagamentoSelecionado] = useState<null | { id: number; cliente: string; servico: string; valor: string; metodo: string; status: string; data: string }>(null);
   const [metodoSelecionado, setMetodoSelecionado] = useState<string>("PIX");
@@ -56,19 +45,19 @@ const Faturamento = () => {
   const stats = [
     {
       label: "Faturamento Hoje",
-      value: "R$ 1.240,00",
+      value: "R$ 0,00",
       icon: DollarSign,
       color: "text-success",
     },
     {
       label: "Faturamento do Mês",
-      value: "R$ 18.560,00",
+      value: "R$ 0,00",
       icon: TrendingUp,
       color: "text-primary",
     },
     {
       label: "Pendentes",
-      value: "R$ 720,00",
+      value: "R$ 0,00",
       icon: Calendar,
       color: "text-warning",
     },
@@ -117,26 +106,8 @@ const Faturamento = () => {
 
       <Card className="p-6">
         <h2 className="text-xl font-semibold mb-6">Gráfico de Faturamento</h2>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={[
-              { mes: "Set", valor: 15200 },
-              { mes: "Out", valor: 18560 },
-              { mes: "Nov", valor: 12800 },
-              { mes: "Dez", valor: 21400 },
-              { mes: "Jan", valor: 19200 },
-              { mes: "Fev", valor: 17600 },
-            ]}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="mes" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value: number) => showTotal ? `R$ ${value.toFixed(2)}` : "R$ •••,••"}
-                contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
-              />
-              <Bar dataKey="valor" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="h-80 flex items-center justify-center bg-muted rounded-lg">
+          <p className="text-muted-foreground">Os dados serão exibidos conforme você for utilizando o sistema</p>
         </div>
       </Card>
 

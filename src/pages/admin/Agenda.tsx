@@ -1,38 +1,60 @@
-import { Card } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon, Plus, Filter, Loader2 } from "lucide-react";
-import { useState } from "react";
-import { ptBR } from "date-fns/locale";
-import { isBefore, startOfToday, isSunday, format } from "date-fns";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Plus, Loader2, Clock, User, Phone, Scissors } from "lucide-react";
 import { toast } from "sonner";
-import { useAgendamentos } from "@/hooks/useAgendamentos";
+import { isBefore, startOfToday, isSunday, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useAgendamentos, type Agendamento } from "@/hooks/useAgendamentos";
 import { useAgendaConfig } from "@/hooks/useAgendaConfig";
 import { useServicos } from "@/hooks/useServicos";
 import { useProfissionais } from "@/hooks/useProfissionais";
 
 const Agenda = () => {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [openNovoAgendamento, setOpenNovoAgendamento] = useState(false);
-  const [openDayDialog, setOpenDayDialog] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [reservarDialogOpen, setReservarDialogOpen] = useState(false);
-  const [gerenciarDialogOpen, setGerenciarDialogOpen] = useState(false);
-  const [selectedTime, setSelectedTime] = useState<string | undefined>();
-  const [newTime, setNewTime] = useState<string>("");
-  const [detalhesDialogOpen, setDetalhesDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [openNovoDialog, setOpenNovoDialog] = useState(false);
+  const [openReservarDialog, setOpenReservarDialog] = useState(false);
+  const [openGerenciarDialog, setOpenGerenciarDialog] = useState(false);
+  const [openDetalhesDialog, setOpenDetalhesDialog] = useState(false);
+  const [openSideSheet, setOpenSideSheet] = useState(false);
+  const [selectedAgendamento, setSelectedAgendamento] = useState<Agendamento | null>(null);
 
-  const { agendamentos, loading: loadingAgendamentos, addAgendamento } = useAgendamentos();
-  const { configs, loading: loadingConfigs, getConfig, updateConfig } = useAgendaConfig();
-  const { servicos } = useServicos();
-  const { profissionais } = useProfissionais();
+  const { agendamentos, loading: loadingAgendamentos, addAgendamento, updateAgendamento, deleteAgendamento, refetch } = useAgendamentos();
+  const { getConfig, updateConfig } = useAgendaConfig();
+  const { servicos, loading: loadingServicos } = useServicos();
+  const { profissionais, loading: loadingProfissionais } = useProfissionais();
+
+  // Refetch ao montar componente para pegar novos agendamentos
+  useEffect(() => {
+    refetch();
+  }, []);
+
+  const [formData, setFormData] = useState({
+    nome: "",
+    telefone: "",
+    servico: "",
+    profissional: "",
+    horario: "",
+    observacoes: "",
+  });
+
+  const [gerenciarData, setGerenciarData] = useState({
+    fechado: false,
+    horariosBloqueados: [] as string[],
+    horariosExtras: [] as string[],
+    novoHorarioBloqueado: "",
+    novoHorarioExtra: "",
+  });
 
   const fmtKey = (d: Date) => format(d, "yyyy-MM-dd");
-  
+
   const generateSlots = () => {
     const slots: string[] = [];
     for (let h = 9; h <= 18; h++) {
@@ -58,419 +80,568 @@ const Agenda = () => {
     if (!d) return [];
     const dayData = getDayData(d);
     if (dayData.fechado) return [];
-    
+
     const dateStr = fmtKey(d);
-    const agendamentosDay = agendamentos.filter(a => a.data === dateStr);
-    const horariosReservados = new Set(agendamentosDay.map(a => a.horario));
+    const agendamentosDay = agendamentos.filter((a) => a.data === dateStr);
+    const horariosReservados = new Set(agendamentosDay.map((a) => a.horario));
     const horariosBloqueados = new Set(dayData.horariosBloqueados);
-    
+
     const base = [...generateSlots(), ...dayData.horariosExtras];
     return base.filter((t) => !horariosReservados.has(t) && !horariosBloqueados.has(t)).sort();
   };
 
-  const isDayFull = (d: Date): boolean => {
+  const isDayFull = (d: Date) => {
     const dayData = getDayData(d);
     if (dayData.fechado) return false;
     return getAvailableSlots(d).length === 0;
   };
 
-  const handleSelect = (day: Date | undefined) => {
-    setDate(day);
-    setSelectedDate(day);
-    if (day) {
-      const isPast = isBefore(day, startOfToday());
-      if (isPast) {
-        setDetalhesDialogOpen(true);
-      } else {
-        setOpenDayDialog(true);
-      }
-    }
-  };
-
   const modifiers = {
-    disponivel: (date: Date) => !isBefore(date, startOfToday()) && !getDayData(date).fechado && !isDayFull(date),
-    fechado: (date: Date) => getDayData(date).fechado && !isBefore(date, startOfToday()),
-    cheio: (date: Date) => !isBefore(date, startOfToday()) && !getDayData(date).fechado && isDayFull(date),
-    past: (date: Date) => isBefore(date, startOfToday()),
+    disponivel: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && !isDayFull(d),
+    fechado: (d: Date) => !isBefore(d, startOfToday()) && getDayData(d).fechado,
+    cheio: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && isDayFull(d),
+    past: (d: Date) => isBefore(d, startOfToday()),
   };
 
   const modifiersStyles = {
-    disponivel: { backgroundColor: "hsl(var(--success) / 0.2)", color: "hsl(var(--success))" },
-    fechado: { backgroundColor: "hsl(var(--destructive) / 0.2)", color: "hsl(var(--destructive))" },
-    cheio: { backgroundColor: "hsl(280 65% 60% / 0.2)", color: "hsl(280 65% 60%)" },
+    disponivel: { backgroundColor: "hsl(var(--success) / 0.2)", color: "hsl(var(--success))", fontWeight: "600" },
+    fechado: { backgroundColor: "hsl(var(--destructive) / 0.2)", color: "hsl(var(--destructive))", fontWeight: "600" },
+    cheio: { backgroundColor: "hsl(280 65% 60% / 0.2)", color: "hsl(280 65% 60%)", fontWeight: "600" },
     past: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", opacity: 0.6 },
   };
 
-  if (loadingAgendamentos || loadingConfigs) {
+  const handleDayClick = (day: Date | undefined) => {
+    if (!day) return;
+    setSelectedDate(day);
+
+    if (isBefore(day, startOfToday())) {
+      const agendamentosPassados = agendamentos.filter((a) => a.data === fmtKey(day));
+      if (agendamentosPassados.length > 0) {
+        setOpenDetalhesDialog(true);
+      }
+      return;
+    }
+
+    setOpenSideSheet(true);
+  };
+
+  const handleReservar = () => {
+    setOpenSideSheet(false);
+    setOpenReservarDialog(true);
+  };
+
+  const handleGerenciar = () => {
+    if (!selectedDate) return;
+    const dayData = getDayData(selectedDate);
+    setGerenciarData({
+      fechado: dayData.fechado,
+      horariosBloqueados: dayData.horariosBloqueados,
+      horariosExtras: dayData.horariosExtras,
+      novoHorarioBloqueado: "",
+      novoHorarioExtra: "",
+    });
+    setOpenSideSheet(false);
+    setOpenGerenciarDialog(true);
+  };
+
+  const handleSubmitReservar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDate || !formData.nome || !formData.telefone || !formData.servico || !formData.horario) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    try {
+      const servico = servicos.find((s) => s.id === formData.servico);
+      const profissional = formData.profissional ? profissionais.find((p) => p.id === formData.profissional) : null;
+
+      await addAgendamento({
+        data: fmtKey(selectedDate),
+        horario: formData.horario,
+        cliente_nome: formData.nome,
+        cliente_telefone: formData.telefone,
+        servico_id: formData.servico,
+        servico_nome: servico?.nome || "",
+        profissional_id: formData.profissional || null,
+        profissional_nome: profissional?.nome || null,
+        status: "Confirmado",
+        observacoes: formData.observacoes || null,
+      });
+
+      setOpenReservarDialog(false);
+      setFormData({ nome: "", telefone: "", servico: "", profissional: "", horario: "", observacoes: "" });
+    } catch (error) {
+      // Erro já tratado no hook
+    }
+  };
+
+  const handleSalvarGerenciar = async () => {
+    if (!selectedDate) return;
+
+    try {
+      await updateConfig(fmtKey(selectedDate), {
+        fechado: gerenciarData.fechado,
+        horarios_bloqueados: gerenciarData.horariosBloqueados,
+        horarios_extras: gerenciarData.horariosExtras,
+      });
+      toast.success("Configuração atualizada!");
+      setOpenGerenciarDialog(false);
+    } catch (error) {
+      // Erro já tratado no hook
+    }
+  };
+
+  const agendamentosHoje = agendamentos.filter((a) => a.data === format(new Date(), "yyyy-MM-dd"));
+  const agendamentosDia = selectedDate ? agendamentos.filter((a) => a.data === fmtKey(selectedDate)) : [];
+
+  if (loadingAgendamentos || loadingServicos || loadingProfissionais) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-96">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  const agendamentosHoje = agendamentos.filter(a => a.data === fmtKey(new Date()));
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Agenda</h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie todos os agendamentos do salão
-          </p>
+          <p className="text-muted-foreground mt-1">Gerencie os agendamentos do salão</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => toast.info("Filtro em desenvolvimento")}>
-            <Filter className="w-4 h-4 mr-2" />
-            Filtrar
-          </Button>
-          <Dialog open={openNovoAgendamento} onOpenChange={setOpenNovoAgendamento}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Agendamento
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Novo Agendamento</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                await addAgendamento({
-                  data: fmtKey(new Date()),
-                  horario: formData.get("horario") as string,
-                  cliente_nome: formData.get("cliente") as string,
-                  cliente_telefone: formData.get("telefone") as string,
-                  servico_id: formData.get("servico") as string,
-                  servico_nome: servicos.find(s => s.id === formData.get("servico"))?.nome || "",
-                  profissional_id: formData.get("profissional") as string || null,
-                  profissional_nome: profissionais.find(p => p.id === formData.get("profissional"))?.nome || null,
-                  status: "Confirmado",
-                  observacoes: null,
-                });
-                setOpenNovoAgendamento(false);
-              }} className="space-y-4">
-                <div>
-                  <Label htmlFor="cliente">Cliente</Label>
-                  <Input id="cliente" name="cliente" placeholder="Nome do cliente" required />
-                </div>
-                <div>
-                  <Label htmlFor="telefone">Telefone</Label>
-                  <Input id="telefone" name="telefone" type="tel" placeholder="(00) 00000-0000" required />
-                </div>
-                <div>
-                  <Label htmlFor="servico">Serviço</Label>
-                  <Select name="servico" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o serviço" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {servicos.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="profissional">Profissional</Label>
-                  <Select name="profissional">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o profissional" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {profissionais.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="horario">Horário</Label>
-                  <Input id="horario" name="horario" type="time" required />
-                </div>
-                <Button type="submit" className="w-full">Confirmar Agendamento</Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+        <Button onClick={() => setOpenNovoDialog(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Agendamento
+        </Button>
       </div>
 
-      <Card className="p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <CalendarIcon className="w-6 h-6 text-primary" />
-          <h2 className="text-xl font-semibold">Calendário</h2>
-        </div>
-        <div className="flex justify-center py-6">
-          <div className="scale-125">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Calendário */}
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4">Calendário</h2>
+          <div className="flex justify-center">
             <Calendar
               mode="single"
-              selected={date}
-              onSelect={handleSelect}
+              selected={selectedDate}
+              onSelect={handleDayClick}
               locale={ptBR}
               modifiers={modifiers}
               modifiersStyles={modifiersStyles}
-              className="rounded-xl border shadow-soft pointer-events-auto"
+              className="rounded-md border shadow-sm scale-125"
             />
           </div>
-        </div>
-        <div className="flex items-center gap-6 mt-6 justify-center flex-wrap">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-success/20"></div>
-            <span className="text-sm">Dias com vagas</span>
+          <div className="mt-6 space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(var(--success) / 0.2)" }}></div>
+              <span>Disponível</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(280 65% 60% / 0.2)" }}></div>
+              <span>Cheio</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(var(--destructive) / 0.2)" }}></div>
+              <span>Fechado</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-destructive/20"></div>
-            <span className="text-sm">Dias fechados</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(280 65% 60% / 0.2)" }}></div>
-            <span className="text-sm">Dias cheios</span>
-          </div>
-        </div>
-      </Card>
+        </Card>
 
-      {/* Dialog: Selecionar ação do dia */}
-      <Dialog open={openDayDialog} onOpenChange={setOpenDayDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Gerenciar {selectedDate?.toLocaleDateString('pt-BR')}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Button onClick={() => setReservarDialogOpen(true)} className="w-full">
+        {/* Agendamentos de Hoje */}
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4">Agendamentos de Hoje</h2>
+          {agendamentosHoje.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">Nenhum agendamento para hoje</p>
+          ) : (
+            <div className="space-y-3">
+              {agendamentosHoje.map((agendamento) => (
+                <Card key={agendamento.id} className="p-4 hover-lift cursor-pointer" onClick={() => {
+                  setSelectedAgendamento(agendamento);
+                  setOpenDetalhesDialog(true);
+                }}>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-primary" />
+                        <span className="font-semibold">{agendamento.horario}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <User className="w-3 h-3" />
+                        <span>{agendamento.cliente_nome}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Scissors className="w-3 h-3" />
+                        <span>{agendamento.servico_nome}</span>
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs ${
+                      agendamento.status === "Confirmado" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
+                    }`}>
+                      {agendamento.status}
+                    </span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* Sheet lateral para ações do dia */}
+      <Sheet open={openSideSheet} onOpenChange={setOpenSideSheet}>
+        <SheetContent side="left" className="w-[400px] sm:w-[540px]">
+          <SheetHeader>
+            <SheetTitle>
+              {selectedDate && format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-4">
+            <Button className="w-full" onClick={handleReservar}>
+              <Plus className="w-4 h-4 mr-2" />
               Reservar Horário
             </Button>
-            <Button onClick={() => setGerenciarDialogOpen(true)} variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={handleGerenciar}>
               Gerenciar Dia
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* Dialog: Reservar horário (formulário completo) */}
-      <Dialog open={reservarDialogOpen} onOpenChange={setReservarDialogOpen}>
-        <DialogContent className="max-w-lg">
+            {/* Agendamentos do dia selecionado */}
+            <div className="mt-6">
+              <h3 className="font-semibold mb-3">Agendamentos deste dia</h3>
+              {agendamentosDia.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum agendamento</p>
+              ) : (
+                <div className="space-y-2">
+                  {agendamentosDia.map((agendamento) => (
+                    <Card key={agendamento.id} className="p-3 hover-lift cursor-pointer" onClick={() => {
+                      setSelectedAgendamento(agendamento);
+                      setOpenDetalhesDialog(true);
+                      setOpenSideSheet(false);
+                    }}>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-3 h-3 text-primary" />
+                          <span className="font-semibold text-sm">{agendamento.horario}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <User className="w-3 h-3" />
+                          <span>{agendamento.cliente_nome}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Scissors className="w-3 h-3" />
+                          <span>{agendamento.servico_nome}</span>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Dialog Novo Agendamento */}
+      <Dialog open={openNovoDialog} onOpenChange={setOpenNovoDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Novo Agendamento {selectedDate ? `- ${selectedDate.toLocaleDateString('pt-BR')}` : ''}</DialogTitle>
+            <DialogTitle>Novo Agendamento</DialogTitle>
           </DialogHeader>
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            const servicoId = formData.get("servico") as string;
-            const profissionalId = formData.get("profissional") as string;
-            
-            if (!selectedDate) return;
-            
-            await addAgendamento({
-              data: fmtKey(selectedDate),
-              horario: formData.get("horario") as string,
-              cliente_nome: formData.get("cliente") as string,
-              cliente_telefone: formData.get("telefone") as string,
-              servico_id: servicoId,
-              servico_nome: servicos.find(s => s.id === servicoId)?.nome || "",
-              profissional_id: profissionalId || null,
-              profissional_nome: profissionais.find(p => p.id === profissionalId)?.nome || null,
-              status: "Confirmado",
-              observacoes: null,
-            });
-            
-            setReservarDialogOpen(false);
-            setOpenDayDialog(false);
-          }} className="space-y-4">
-            <div>
-              <Label htmlFor="cliente">Cliente *</Label>
-              <Input id="cliente" name="cliente" placeholder="Nome do cliente" required />
+          <form onSubmit={handleSubmitReservar} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nome do Cliente *</Label>
+                <Input value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} required />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefone *</Label>
+                <Input value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} required />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="telefone">Telefone *</Label>
-              <Input id="telefone" name="telefone" type="tel" placeholder="(00) 00000-0000" required />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Serviço *</Label>
+                <Select value={formData.servico} onValueChange={(value) => setFormData({ ...formData, servico: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {servicos.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Profissional</Label>
+                <Select value={formData.profissional} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sem preferência" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profissionais.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="servico">Serviço *</Label>
-              <Select name="servico" required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o serviço" />
-                </SelectTrigger>
-                <SelectContent>
-                  {servicos.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.nome} - R$ {s.preco.toFixed(2)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="profissional">Profissional (Opcional)</Label>
-              <Select name="profissional">
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o profissional" />
-                </SelectTrigger>
-                <SelectContent>
-                  {profissionais.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="horario">Horário *</Label>
-              <Select name="horario" required>
+            <div className="space-y-2">
+              <Label>Horário *</Label>
+              <Select value={formData.horario} onValueChange={(value) => setFormData({ ...formData, horario: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um horário" />
                 </SelectTrigger>
                 <SelectContent>
-                  {getAvailableSlots(selectedDate).map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  {getAvailableSlots(selectedDate).map((h) => (
+                    <SelectItem key={h} value={h}>{h}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => setReservarDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit">Confirmar Agendamento</Button>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea value={formData.observacoes} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setOpenNovoDialog(false)}>Cancelar</Button>
+              <Button type="submit">Confirmar</Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Gerenciar dia */}
-      <Dialog open={gerenciarDialogOpen} onOpenChange={setGerenciarDialogOpen}>
-        <DialogContent>
+      {/* Dialog Reservar Horário */}
+      <Dialog open={openReservarDialog} onOpenChange={setOpenReservarDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Gerenciar Dia {selectedDate ? `- ${selectedDate.toLocaleDateString('pt-BR')}` : ''}</DialogTitle>
+            <DialogTitle>
+              Reservar Horário - {selectedDate && format(selectedDate, "dd/MM/yyyy")}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm">Status do dia</p>
-              <div className="flex gap-2">
-                <Button
-                  variant={selectedDate && getDayData(selectedDate).fechado ? "outline" : "destructive"}
-                  onClick={async () => {
-                    if (!selectedDate) return;
-                    const current = getDayData(selectedDate);
-                    await updateConfig(fmtKey(selectedDate), { fechado: !current.fechado });
-                    toast.success(current.fechado ? "Dia reaberto" : "Dia fechado");
-                    setGerenciarDialogOpen(false);
-                    setOpenDayDialog(false);
-                  }}
-                >
-                  {selectedDate && getDayData(selectedDate).fechado ? "Reabrir Dia" : "Fechar Dia"}
-                </Button>
+          <form onSubmit={handleSubmitReservar} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nome do Cliente *</Label>
+                <Input value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} required />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefone *</Label>
+                <Input value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} required />
               </div>
             </div>
-
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Serviço *</Label>
+                <Select value={formData.servico} onValueChange={(value) => setFormData({ ...formData, servico: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {servicos.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Profissional</Label>
+                <Select value={formData.profissional} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sem preferência" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profissionais.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="space-y-2">
-              <Label>Bloquear horário</Label>
-              <Select value={selectedTime} onValueChange={setSelectedTime}>
+              <Label>Horário *</Label>
+              <Select value={formData.horario} onValueChange={(value) => setFormData({ ...formData, horario: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um horário" />
                 </SelectTrigger>
                 <SelectContent>
-                  {getAvailableSlots(selectedDate).map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  {getAvailableSlots(selectedDate).map((h) => (
+                    <SelectItem key={h} value={h}>{h}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <div className="flex justify-end">
-                <Button variant="secondary" onClick={async () => {
-                  if (!selectedDate || !selectedTime) {
-                    toast.info("Selecione um horário");
-                    return;
-                  }
-                  const current = getDayData(selectedDate);
-                  await updateConfig(fmtKey(selectedDate), {
-                    horarios_bloqueados: [...current.horariosBloqueados, selectedTime]
-                  });
-                  setSelectedTime(undefined);
-                  toast.success("Horário bloqueado!");
-                }}>Bloquear</Button>
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea value={formData.observacoes} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setOpenReservarDialog(false)}>Cancelar</Button>
+              <Button type="submit">Confirmar</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Gerenciar Dia */}
+      <Dialog open={openGerenciarDialog} onOpenChange={setOpenGerenciarDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gerenciar Dia - {selectedDate && format(selectedDate, "dd/MM/yyyy")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Fechar este dia</Label>
+              <Button
+                variant={gerenciarData.fechado ? "destructive" : "outline"}
+                onClick={() => setGerenciarData({ ...gerenciarData, fechado: !gerenciarData.fechado })}
+              >
+                {gerenciarData.fechado ? "Reabrir" : "Fechar"}
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Bloquear Horários</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ex: 14:00"
+                  value={gerenciarData.novoHorarioBloqueado}
+                  onChange={(e) => setGerenciarData({ ...gerenciarData, novoHorarioBloqueado: e.target.value })}
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (gerenciarData.novoHorarioBloqueado) {
+                      setGerenciarData({
+                        ...gerenciarData,
+                        horariosBloqueados: [...gerenciarData.horariosBloqueados, gerenciarData.novoHorarioBloqueado],
+                        novoHorarioBloqueado: "",
+                      });
+                    }
+                  }}
+                >
+                  Adicionar
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {gerenciarData.horariosBloqueados.map((h) => (
+                  <span key={h} className="px-2 py-1 bg-destructive/10 text-destructive rounded text-sm flex items-center gap-1">
+                    {h}
+                    <button
+                      type="button"
+                      onClick={() => setGerenciarData({
+                        ...gerenciarData,
+                        horariosBloqueados: gerenciarData.horariosBloqueados.filter((x) => x !== h),
+                      })}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Abrir novo horário</Label>
-              <Input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} />
-              <div className="flex justify-end">
-                <Button onClick={async () => {
-                  if (!selectedDate || !newTime) {
-                    toast.info("Informe um horário");
-                    return;
-                  }
-                  const current = getDayData(selectedDate);
-                  await updateConfig(fmtKey(selectedDate), {
-                    horarios_extras: Array.from(new Set([...current.horariosExtras, newTime]))
-                  });
-                  setNewTime("");
-                  toast.success("Horário aberto!");
-                }}>Adicionar</Button>
+              <Label>Adicionar Horários Extras</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ex: 19:00"
+                  value={gerenciarData.novoHorarioExtra}
+                  onChange={(e) => setGerenciarData({ ...gerenciarData, novoHorarioExtra: e.target.value })}
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (gerenciarData.novoHorarioExtra) {
+                      setGerenciarData({
+                        ...gerenciarData,
+                        horariosExtras: [...gerenciarData.horariosExtras, gerenciarData.novoHorarioExtra],
+                        novoHorarioExtra: "",
+                      });
+                    }
+                  }}
+                >
+                  Adicionar
+                </Button>
               </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {gerenciarData.horariosExtras.map((h) => (
+                  <span key={h} className="px-2 py-1 bg-success/10 text-success rounded text-sm flex items-center gap-1">
+                    {h}
+                    <button
+                      type="button"
+                      onClick={() => setGerenciarData({
+                        ...gerenciarData,
+                        horariosExtras: gerenciarData.horariosExtras.filter((x) => x !== h),
+                      })}
+                      className="ml-1 hover:text-success"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpenGerenciarDialog(false)}>Cancelar</Button>
+              <Button onClick={handleSalvarGerenciar}>Salvar</Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Detalhes do dia passado */}
-      <Dialog open={detalhesDialogOpen} onOpenChange={setDetalhesDialogOpen}>
-        <DialogContent className="max-w-2xl">
+      {/* Dialog Detalhes do Agendamento */}
+      <Dialog open={openDetalhesDialog} onOpenChange={setOpenDetalhesDialog}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Detalhes do Dia {selectedDate ? `- ${selectedDate.toLocaleDateString('pt-BR')}` : ''}</DialogTitle>
+            <DialogTitle>Detalhes do Agendamento</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            {selectedDate && agendamentos.filter(a => a.data === fmtKey(selectedDate)).length > 0 ? (
-              <div className="space-y-3">
-                <h3 className="font-semibold">Agendamentos Realizados</h3>
-                {agendamentos.filter(a => a.data === fmtKey(selectedDate)).map((agend) => (
-                  <div key={agend.id} className="p-4 bg-success/10 rounded-lg border border-success/20">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold">{agend.cliente_nome}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {agend.servico_nome} • {agend.horario}
-                        </p>
-                      </div>
-                      <span className="px-3 py-1 bg-success text-white text-sm rounded-full">
-                        {agend.status}
-                      </span>
-                    </div>
+          {selectedAgendamento && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span className="font-semibold">{selectedAgendamento.horario} - {selectedAgendamento.data}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  <span>{selectedAgendamento.cliente_nome}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4" />
+                  <span>{selectedAgendamento.cliente_telefone}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Scissors className="w-4 h-4" />
+                  <span>{selectedAgendamento.servico_nome}</span>
+                </div>
+                {selectedAgendamento.profissional_nome && (
+                  <div className="text-sm text-muted-foreground">
+                    Profissional: {selectedAgendamento.profissional_nome}
                   </div>
-                ))}
+                )}
+                {selectedAgendamento.observacoes && (
+                  <div className="text-sm text-muted-foreground">
+                    Obs: {selectedAgendamento.observacoes}
+                  </div>
+                )}
               </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-8">Nenhum agendamento registrado neste dia</p>
-            )}
-          </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setOpenDetalhesDialog(false)}>Fechar</Button>
+                {!isBefore(new Date(selectedAgendamento.data), startOfToday()) && (
+                  <Button variant="destructive" onClick={async () => {
+                    await deleteAgendamento(selectedAgendamento.id);
+                    setOpenDetalhesDialog(false);
+                    setSelectedAgendamento(null);
+                  }}>
+                    Cancelar Agendamento
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
-
-      {/* Agendamentos de hoje */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Agendamentos de Hoje</h2>
-        <div className="space-y-3">
-          {agendamentosHoje.length > 0 ? (
-            agendamentosHoje.map((agend) => (
-              <div key={agend.id} className="p-4 bg-success/10 rounded-lg border border-success/20">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold">{agend.cliente_nome}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {agend.servico_nome} • {agend.horario}
-                      {agend.profissional_nome && ` • ${agend.profissional_nome}`}
-                    </p>
-                  </div>
-                  <span className="px-3 py-1 bg-success text-white text-sm rounded-full">
-                    {agend.status}
-                  </span>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-muted-foreground text-center py-4">Nenhum agendamento para hoje</p>
-          )}
-        </div>
-      </Card>
     </div>
   );
 };

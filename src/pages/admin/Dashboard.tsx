@@ -11,28 +11,28 @@ const Dashboard = () => {
   const stats = [
     {
       title: "Agendamentos do Mês",
-      value: "142",
+      value: "0",
       icon: Calendar,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
     {
       title: "Clientes Atendidos",
-      value: "98",
+      value: "0",
       icon: Users,
       color: "text-success",
       bgColor: "bg-success/10",
     },
     {
       title: "Clientes Pendentes",
-      value: "12",
+      value: "0",
       icon: Clock,
       color: "text-warning",
       bgColor: "bg-warning/10",
     },
     {
       title: "Horários Disponíveis",
-      value: "32",
+      value: "0",
       icon: Calendar,
       color: "text-accent-foreground",
       bgColor: "bg-accent",
@@ -40,9 +40,9 @@ const Dashboard = () => {
   ];
 
   const todayStats = [
-    { label: "Atendimentos Hoje", value: "8" },
-    { label: "Faturamento do Dia", value: "R$ 1.240,00" },
-    { label: "Profissional Mais Requisitado", value: "Jennifer Silva" },
+    { label: "Atendimentos Hoje", value: "0" },
+    { label: "Faturamento do Dia", value: "R$ 0,00" },
+    { label: "Profissional Mais Requisitado", value: "-" },
   ];
 
   return (
