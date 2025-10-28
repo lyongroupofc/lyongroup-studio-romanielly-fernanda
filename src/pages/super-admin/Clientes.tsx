@@ -12,16 +12,25 @@ const Clientes = () => {
             Gerencie as contas dos seus clientes
           </p>
         </div>
-        <Button>
-          <UserPlus className="w-4 h-4 mr-2" />
-          Novo Cliente
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => window.open('/admin', '_blank')}>
+            Ver Painel Cliente
+          </Button>
+          <Button>
+            <UserPlus className="w-4 h-4 mr-2" />
+            Novo Cliente
+          </Button>
+        </div>
       </div>
 
       <Card className="p-6">
-        <p className="text-muted-foreground text-center py-8">
-          Nenhum cliente cadastrado ainda.
-        </p>
+        <div className="space-y-4">
+          <div className="border-b pb-4">
+            <h3 className="font-semibold mb-2">Jennifer Silva (Cliente)</h3>
+            <p className="text-sm text-muted-foreground">jennifersilva@gmail.com</p>
+            <p className="text-xs text-muted-foreground mt-1">Role: Admin</p>
+          </div>
+        </div>
       </Card>
     </div>
   );
