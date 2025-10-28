@@ -70,6 +70,16 @@ serve(async (req) => {
 
     const contexto = conversa!.contexto as Contexto || {};
 
+    // Buscar histórico de mensagens da conversa
+    const { data: historicoMensagens } = await supabase
+      .from('bot_mensagens')
+      .select('*')
+      .eq('conversa_id', conversa!.id)
+      .order('timestamp', { ascending: true })
+      .limit(20); // Últimas 20 mensagens
+
+    console.log('📜 Histórico de mensagens:', historicoMensagens?.length || 0);
+
     // Buscar dados necessários
     const { data: servicos } = await supabase
       .from('servicos')
@@ -82,7 +92,7 @@ serve(async (req) => {
       .select('*')
       .eq('ativo', true);
 
-    // Processar com Lovable AI
+    // Processar com Google Gemini mantendo histórico
     const systemPrompt = `Você é Jennifer, atendente do salão de beleza. Atenda no WhatsApp de forma NATURAL e HUMANA.
 
 Serviços disponíveis:
@@ -116,7 +126,21 @@ EXEMPLOS DE RESPOSTAS BOAS:
 
 Responda como uma atendente real responderia no WhatsApp.`;
 
-    // Usar Google Gemini API diretamente
+    // Construir histórico de conversa para o Gemini
+    let conversaCompleta = systemPrompt + "\n\n--- HISTÓRICO DA CONVERSA ---\n";
+    
+    if (historicoMensagens && historicoMensagens.length > 0) {
+      historicoMensagens.forEach(msg => {
+        const role = msg.tipo === 'recebida' ? 'Cliente' : 'Jennifer';
+        conversaCompleta += `${role}: ${msg.conteudo}\n`;
+      });
+    }
+    
+    conversaCompleta += `Cliente: ${mensagem}\nJennifer:`;
+
+    console.log('🤖 Enviando para Gemini com histórico completo');
+
+    // Usar Google Gemini API com histórico completo
     const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
@@ -125,7 +149,7 @@ Responda como uma atendente real responderia no WhatsApp.`;
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `${systemPrompt}\n\nMensagem do cliente: ${mensagem}`
+            text: conversaCompleta
           }]
         }],
         generationConfig: {
@@ -187,7 +211,15 @@ Responda como uma atendente real responderia no WhatsApp.`;
         novoContexto.horario && 
         novoContexto.cliente_nome) {
       
-      const { error: agendamentoError } = await supabase
+      console.log('💾 Tentando criar agendamento:', {
+        cliente_nome: novoContexto.cliente_nome,
+        telefone,
+        servico_id: novoContexto.servico_id,
+        data: novoContexto.data,
+        horario: novoContexto.horario
+      });
+
+      const { data: agendamentoCriado, error: agendamentoError } = await supabase
         .from('agendamentos')
         .insert({
           cliente_nome: novoContexto.cliente_nome,
@@ -199,12 +231,13 @@ Responda como uma atendente real responderia no WhatsApp.`;
           status: 'Confirmado',
           origem: 'whatsapp',
           bot_conversa_id: conversa!.id,
-        });
+        })
+        .select();
 
       if (agendamentoError) {
-        console.error('Erro ao criar agendamento:', agendamentoError);
+        console.error('❌ Erro ao criar agendamento:', agendamentoError);
       } else {
-        console.log('✅ Agendamento criado com sucesso!');
+        console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
         novoContexto = {}; // Resetar contexto
       }
     }
