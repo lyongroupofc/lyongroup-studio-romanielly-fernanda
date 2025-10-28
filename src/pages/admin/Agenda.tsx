@@ -192,17 +192,18 @@ const Agenda = () => {
           <CalendarIcon className="w-6 h-6 text-primary" />
           <h2 className="text-xl font-semibold">Calendário</h2>
         </div>
-        <div className="flex justify-center">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={handleSelect}
-            locale={ptBR}
-            modifiers={modifiers}
-            modifiersStyles={modifiersStyles}
-            
-            className="rounded-xl border shadow-soft pointer-events-auto"
-          />
+        <div className="flex justify-center py-6">
+          <div className="scale-125">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={handleSelect}
+              locale={ptBR}
+              modifiers={modifiers}
+              modifiersStyles={modifiersStyles}
+              className="rounded-xl border shadow-soft pointer-events-auto"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-6 mt-6 justify-center flex-wrap">
           <div className="flex items-center gap-2">
@@ -239,40 +240,97 @@ const Agenda = () => {
       </Dialog>
 
       <Dialog open={reservarDialogOpen} onOpenChange={setReservarDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Reservar Horário {selectedDate ? `- ${selectedDate.toLocaleDateString('pt-BR')}` : ''}</DialogTitle>
+            <DialogTitle>Novo Agendamento {selectedDate ? `- ${selectedDate.toLocaleDateString('pt-BR')}` : ''}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <Label>Horário disponível</Label>
-            <Select value={selectedTime} onValueChange={setSelectedTime}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um horário" />
-              </SelectTrigger>
-              <SelectContent>
-                {getAvailableSlots(selectedDate).map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setReservarDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={() => {
-                if (!selectedDate || !selectedTime) { toast.info("Selecione um horário"); return; }
-                const key = fmtKey(selectedDate);
-                const data = getDayData(selectedDate);
-                if (data.closed) { toast.error("Dia fechado"); return; }
-                setAgendaByDate({
-                  ...agendaByDate,
-                  [key]: { ...data, reserved: [...data.reserved, selectedTime] }
-                });
-                setReservarDialogOpen(false);
-                setOpenDayDialog(false);
-                setSelectedTime(undefined);
-                toast.success("Horário reservado!");
-              }}>Confirmar</Button>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const cliente = formData.get("cliente") as string;
+            const telefone = formData.get("telefone") as string;
+            const servico = formData.get("servico") as string;
+            const horario = formData.get("horario") as string;
+            
+            if (!selectedDate || !cliente || !telefone || !servico || !horario) {
+              toast.error("Preencha todos os campos obrigatórios");
+              return;
+            }
+            
+            const key = fmtKey(selectedDate);
+            const data = getDayData(selectedDate);
+            if (data.closed) { toast.error("Dia fechado"); return; }
+            
+            setAgendaByDate({
+              ...agendaByDate,
+              [key]: { 
+                ...data, 
+                reserved: [...data.reserved, horario],
+                agendamentos: [
+                  ...data.agendamentos,
+                  { horario, cliente, servico, status: "Confirmado" }
+                ]
+              }
+            });
+            setReservarDialogOpen(false);
+            setOpenDayDialog(false);
+            toast.success("Agendamento criado com sucesso!");
+          }} className="space-y-4">
+            <div>
+              <Label htmlFor="cliente">Cliente *</Label>
+              <Input id="cliente" name="cliente" placeholder="Nome do cliente" required />
             </div>
-          </div>
+            <div>
+              <Label htmlFor="telefone">Telefone *</Label>
+              <Input id="telefone" name="telefone" type="tel" placeholder="(00) 00000-0000" required />
+            </div>
+            <div>
+              <Label htmlFor="servico">Serviço *</Label>
+              <Select name="servico" required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o serviço" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Corte Feminino">Corte Feminino</SelectItem>
+                  <SelectItem value="Corte Masculino">Corte Masculino</SelectItem>
+                  <SelectItem value="Escova">Escova</SelectItem>
+                  <SelectItem value="Hidratação">Hidratação</SelectItem>
+                  <SelectItem value="Coloração">Coloração</SelectItem>
+                  <SelectItem value="Mechas">Mechas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="profissional">Profissional (Opcional)</Label>
+              <Select name="profissional">
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o profissional" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Jennifer Silva">Jennifer Silva</SelectItem>
+                  <SelectItem value="Ana Paula">Ana Paula</SelectItem>
+                  <SelectItem value="Maria Santos">Maria Santos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="horario">Horário *</Label>
+              <Select name="horario" required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um horário" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableSlots(selectedDate).map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setReservarDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit">Confirmar Agendamento</Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
