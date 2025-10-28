@@ -25,6 +25,7 @@ import Logs from "./pages/super-admin/Logs";
 import Configuracoes from "./pages/super-admin/Configuracoes";
 import CreateSuperAdmin from "./pages/setup/CreateSuperAdmin";
 import ResetSuperAdminPassword from "./pages/setup/ResetSuperAdminPassword";
+import CreateCliente from "./pages/setup/CreateCliente";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/setup" element={<CreateSuperAdmin />} />
           <Route path="/reset-password" element={<ResetSuperAdminPassword />} />
+          <Route path="/setup-cliente" element={<CreateCliente />} />
           <Route path="/agendar" element={<Agendar />} />
           <Route path="/obrigado" element={<Obrigado />} />
           <Route path="/super-admin" element={<ProtectedRoute requiredRole="super_admin"><SuperAdminLayout /></ProtectedRoute>}>
