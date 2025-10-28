@@ -6,10 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { Sparkles, Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Sparkles, Calendar as CalendarIcon, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { isBefore, startOfToday, isSunday } from "date-fns";
+import { isBefore, startOfToday, isSunday, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useServicos } from "@/hooks/useServicos";
+import { useProfissionais } from "@/hooks/useProfissionais";
+import { useAgendamentos } from "@/hooks/useAgendamentos";
+import { useAgendaConfig } from "@/hooks/useAgendaConfig";
 
 const Agendar = () => {
   const navigate = useNavigate();
@@ -22,25 +26,13 @@ const Agendar = () => {
     horario: "",
   });
 
-  const servicos = [
-    "Corte Feminino",
-    "Corte Masculino",
-    "Escova",
-    "Hidratação",
-    "Coloração",
-    "Mechas",
-    "Manicure",
-    "Pedicure",
-  ];
+  const { servicos, loading: loadingServicos } = useServicos();
+  const { profissionais, loading: loadingProfissionais } = useProfissionais();
+  const { agendamentos, addAgendamento } = useAgendamentos();
+  const { configs, getConfig } = useAgendaConfig();
 
-  const profissionais = ["Jennifer Silva", "Maria Santos", "Ana Costa"];
+  const fmtKey = (d: Date) => format(d, "yyyy-MM-dd");
 
-  type DayData = { reserved: string[]; blocked: string[]; extraOpen: string[]; closed: boolean };
-  const [agendaByDate] = useState<Record<string, DayData>>(() => {
-    const saved = localStorage.getItem("agendaByDate");
-    return saved ? JSON.parse(saved) : {};
-  });
-  const fmtKey = (d: Date) => d.toISOString().split("T")[0];
   const generateSlots = () => {
     const slots: string[] = [];
     for (let h = 9; h <= 18; h++) {
@@ -52,26 +44,37 @@ const Agendar = () => {
     }
     return slots;
   };
-  const getDayData = (d: Date): DayData => {
-    const existing = agendaByDate[fmtKey(d)];
-    if (existing) return existing;
-    return { reserved: [], blocked: [], extraOpen: [], closed: isSunday(d) };
+
+  const getDayData = (d: Date) => {
+    const config = getConfig(fmtKey(d));
+    return {
+      fechado: config?.fechado || isSunday(d),
+      horariosBloqueados: config?.horarios_bloqueados || [],
+      horariosExtras: config?.horarios_extras || [],
+    };
   };
+
   const getAvailableSlots = (d: Date | undefined) => {
-    if (!d) return [] as string[];
-    const data = getDayData(d);
-    if (data.closed) return [];
-    const base = [...generateSlots(), ...data.extraOpen];
-    const taken = new Set([...data.reserved, ...data.blocked]);
-    return base.filter((t) => !taken.has(t)).sort();
+    if (!d) return [];
+    const dayData = getDayData(d);
+    if (dayData.fechado) return [];
+    
+    const dateStr = fmtKey(d);
+    const agendamentosDay = agendamentos.filter(a => a.data === dateStr);
+    const horariosReservados = new Set(agendamentosDay.map(a => a.horario));
+    const horariosBloqueados = new Set(dayData.horariosBloqueados);
+    
+    const base = [...generateSlots(), ...dayData.horariosExtras];
+    return base.filter((t) => !horariosReservados.has(t) && !horariosBloqueados.has(t)).sort();
   };
+
   const isDayFull = (d: Date) => {
-    const data = getDayData(d);
-    if (data.closed) return false;
+    const dayData = getDayData(d);
+    if (dayData.fechado) return false;
     return getAvailableSlots(d).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!date || !formData.nome || !formData.telefone || !formData.servico || !formData.horario) {
@@ -79,18 +82,47 @@ const Agendar = () => {
       return;
     }
 
-    // Aqui será integrado com o backend e WhatsApp
-    toast.success("Agendamento confirmado! Você receberá uma mensagem no WhatsApp.");
-    
-    setTimeout(() => {
-      navigate("/obrigado", {
-        state: {
-          data: date.toLocaleDateString("pt-BR"),
-          horario: formData.horario,
-        },
+    try {
+      const servico = servicos.find(s => s.id === formData.servico);
+      const profissional = formData.profissional ? profissionais.find(p => p.id === formData.profissional) : null;
+
+      await addAgendamento({
+        data: fmtKey(date),
+        horario: formData.horario,
+        cliente_nome: formData.nome,
+        cliente_telefone: formData.telefone,
+        servico_id: formData.servico,
+        servico_nome: servico?.nome || "",
+        profissional_id: formData.profissional || null,
+        profissional_nome: profissional?.nome || null,
+        status: "Confirmado",
+        observacoes: null,
       });
-    }, 1500);
+
+      toast.success("Agendamento confirmado! Você receberá uma confirmação no WhatsApp.");
+      
+      setTimeout(() => {
+        navigate("/obrigado", {
+          state: {
+            data: date.toLocaleDateString("pt-BR"),
+            horario: formData.horario,
+          },
+        });
+      }, 1500);
+    } catch (error) {
+      // Error já tratado no hook
+    }
   };
+
+  if (loadingServicos || loadingProfissionais) {
+    return (
+      <div className="min-h-screen gradient-soft flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const horariosDisponiveis = getAvailableSlots(date);
 
   return (
     <div className="min-h-screen gradient-soft py-12 px-4">
@@ -144,8 +176,8 @@ const Agendar = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {servicos.map((servico) => (
-                      <SelectItem key={servico} value={servico}>
-                        {servico}
+                      <SelectItem key={servico.id} value={servico.id}>
+                        {servico.nome} - R$ {servico.preco.toFixed(2)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -163,8 +195,8 @@ const Agendar = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {profissionais.map((prof) => (
-                      <SelectItem key={prof} value={prof}>
-                        {prof}
+                      <SelectItem key={prof.id} value={prof.id}>
+                        {prof.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -184,9 +216,9 @@ const Agendar = () => {
                   onSelect={setDate}
                   locale={ptBR}
                   modifiers={{
-                    disponivel: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).closed && !isDayFull(d),
-                    fechado: (d: Date) => !isBefore(d, startOfToday()) && getDayData(d).closed,
-                    cheio: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).closed && isDayFull(d),
+                    disponivel: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && !isDayFull(d),
+                    fechado: (d: Date) => !isBefore(d, startOfToday()) && getDayData(d).fechado,
+                    cheio: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && isDayFull(d),
                     past: (d: Date) => isBefore(d, startOfToday()),
                   }}
                   modifiersStyles={{
@@ -195,7 +227,7 @@ const Agendar = () => {
                     cheio: { backgroundColor: "hsl(280 65% 60% / 0.2)", color: "hsl(280 65% 60%)" },
                     past: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", opacity: 0.6 },
                   }}
-                  disabled={(d) => isBefore(d, startOfToday()) || getDayData(d).closed}
+                  disabled={(d) => isBefore(d, startOfToday()) || getDayData(d).fechado}
                   className="rounded-md border shadow-sm pointer-events-auto"
                 />
               </div>
@@ -206,25 +238,25 @@ const Agendar = () => {
                 <Clock className="w-4 h-4" />
                 Horário Disponível *
               </Label>
-                <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-                  {date && getAvailableSlots(date).length > 0 ? (
-                    getAvailableSlots(date).map((horario) => (
-                      <Button
-                        key={horario}
-                        type="button"
-                        variant={formData.horario === horario ? "default" : "outline"}
-                        onClick={() => setFormData({ ...formData, horario })}
-                        className="w-full"
-                      >
-                        {horario}
-                      </Button>
-                    ))
-                  ) : (
-                    <div className="col-span-3 md:col-span-4 text-center text-muted-foreground py-2">
-                      Sem horários disponíveis
-                    </div>
-                  )}
-                </div>
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                {horariosDisponiveis.length > 0 ? (
+                  horariosDisponiveis.map((horario) => (
+                    <Button
+                      key={horario}
+                      type="button"
+                      variant={formData.horario === horario ? "default" : "outline"}
+                      onClick={() => setFormData({ ...formData, horario })}
+                      className="w-full"
+                    >
+                      {horario}
+                    </Button>
+                  ))
+                ) : (
+                  <div className="col-span-3 md:col-span-4 text-center text-muted-foreground py-2">
+                    Sem horários disponíveis para esta data
+                  </div>
+                )}
+              </div>
             </div>
 
             <Button type="submit" size="lg" className="w-full">

@@ -14,7 +14,200 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agenda_config: {
+        Row: {
+          created_at: string | null
+          data: string
+          fechado: boolean | null
+          horarios_bloqueados: string[] | null
+          horarios_extras: string[] | null
+          id: string
+          observacoes: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data: string
+          fechado?: boolean | null
+          horarios_bloqueados?: string[] | null
+          horarios_extras?: string[] | null
+          id?: string
+          observacoes?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data?: string
+          fechado?: boolean | null
+          horarios_bloqueados?: string[] | null
+          horarios_extras?: string[] | null
+          id?: string
+          observacoes?: string | null
+        }
+        Relationships: []
+      }
+      agendamentos: {
+        Row: {
+          cliente_nome: string
+          cliente_telefone: string
+          created_at: string | null
+          data: string
+          horario: string
+          id: string
+          observacoes: string | null
+          profissional_id: string | null
+          profissional_nome: string | null
+          servico_id: string | null
+          servico_nome: string
+          status: string | null
+        }
+        Insert: {
+          cliente_nome: string
+          cliente_telefone: string
+          created_at?: string | null
+          data: string
+          horario: string
+          id?: string
+          observacoes?: string | null
+          profissional_id?: string | null
+          profissional_nome?: string | null
+          servico_id?: string | null
+          servico_nome: string
+          status?: string | null
+        }
+        Update: {
+          cliente_nome?: string
+          cliente_telefone?: string
+          created_at?: string | null
+          data?: string
+          horario?: string
+          id?: string
+          observacoes?: string | null
+          profissional_id?: string | null
+          profissional_nome?: string | null
+          servico_id?: string | null
+          servico_nome?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_profissional_id_fkey"
+            columns: ["profissional_id"]
+            isOneToOne: false
+            referencedRelation: "profissionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagamentos: {
+        Row: {
+          agendamento_id: string | null
+          cliente_nome: string
+          created_at: string | null
+          data: string
+          id: string
+          metodo_pagamento: string | null
+          servico: string
+          status: string | null
+          valor: number
+        }
+        Insert: {
+          agendamento_id?: string | null
+          cliente_nome: string
+          created_at?: string | null
+          data: string
+          id?: string
+          metodo_pagamento?: string | null
+          servico: string
+          status?: string | null
+          valor: number
+        }
+        Update: {
+          agendamento_id?: string | null
+          cliente_nome?: string
+          created_at?: string | null
+          data?: string
+          id?: string
+          metodo_pagamento?: string | null
+          servico?: string
+          status?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profissionais: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          email: string | null
+          especialidades: string[] | null
+          id: string
+          nome: string
+          telefone: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          email?: string | null
+          especialidades?: string[] | null
+          id?: string
+          nome: string
+          telefone?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          email?: string | null
+          especialidades?: string[] | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+        }
+        Relationships: []
+      }
+      servicos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          duracao: number
+          id: string
+          nome: string
+          preco: number
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          duracao: number
+          id?: string
+          nome: string
+          preco: number
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          duracao?: number
+          id?: string
+          nome?: string
+          preco?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

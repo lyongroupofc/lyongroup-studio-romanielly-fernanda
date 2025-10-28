@@ -1,56 +1,36 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, User, Phone, Calendar, Edit, Trash2 } from "lucide-react";
+import { Plus, User, Phone, Edit, Trash2, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { toast } from "sonner";
-
-import { useNavigate } from "react-router-dom";
+import { useProfissionais } from "@/hooks/useProfissionais";
 
 const Profissionais = () => {
-  const navigate = useNavigate();
   const [openNovoProfissional, setOpenNovoProfissional] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [profissionalEditando, setProfissionalEditando] = useState<any>(null);
-  const [profissionais, setProfissionais] = useState([
-    {
-      id: 1,
-      nome: "Jennifer Silva",
-      telefone: "(11) 99999-9999",
-      especialidade: "Cabeleireira e Proprietária",
-      iniciais: "JS",
-    },
-    {
-      id: 2,
-      nome: "Ana Paula",
-      telefone: "(11) 98888-8888",
-      especialidade: "Manicure e Pedicure",
-      iniciais: "AP",
-    },
-  ]);
+  const { profissionais, loading, addProfissional, updateProfissional, deleteProfissional } = useProfissionais();
   
   const getIniciais = (nome: string) => {
     const partes = nome.split(" ");
     return partes.length > 1 ? `${partes[0][0]}${partes[partes.length - 1][0]}` : partes[0][0] + partes[0][1];
   };
 
-  const handleNovoProfissional = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleNovoProfissional = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
-    const nome = formData.get("nome") as string;
-    const novoProfissional = {
-      id: profissionais.length + 1,
-      nome,
+    
+    await addProfissional({
+      nome: formData.get("nome") as string,
       telefone: formData.get("telefone") as string,
-      especialidade: formData.get("especialidade") as string,
-      iniciais: getIniciais(nome),
-    };
-    setProfissionais([...profissionais, novoProfissional]);
-    toast.success("Profissional cadastrado com sucesso!");
+      email: formData.get("email") as string,
+      especialidades: [(formData.get("especialidade") as string)],
+    });
+    
     setOpenNovoProfissional(false);
     form.reset();
   };
@@ -60,33 +40,35 @@ const Profissionais = () => {
     setEditDialogOpen(true);
   };
 
-  const handleSalvarEdicao = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSalvarEdicao = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
-    const nome = formData.get("nome") as string;
-    setProfissionais(profissionais.map(p => 
-      p.id === profissionalEditando.id ? {
-        ...p,
-        nome,
-        telefone: formData.get("telefone") as string,
-        especialidade: formData.get("especialidade") as string,
-        iniciais: getIniciais(nome),
-      } : p
-    ));
-    toast.success("Profissional atualizado!");
+    
+    await updateProfissional(profissionalEditando.id, {
+      nome: formData.get("nome") as string,
+      telefone: formData.get("telefone") as string,
+      email: formData.get("email") as string,
+      especialidades: [(formData.get("especialidade") as string)],
+    });
+    
     setEditDialogOpen(false);
     setProfissionalEditando(null);
   };
 
-  const handleExcluirProfissional = (id: number) => {
-    setProfissionais(profissionais.filter(p => p.id !== id));
-    toast.success("Profissional removido com sucesso!");
+  const handleExcluirProfissional = async (id: string) => {
+    if (confirm("Deseja realmente remover este profissional?")) {
+      await deleteProfissional(id);
+    }
   };
 
-  const handleVerAgenda = (nome: string) => {
-    toast.info(`Visualizando agenda de ${nome}`);
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -118,6 +100,10 @@ const Profissionais = () => {
                 <Input id="telefone" name="telefone" type="tel" placeholder="(00) 00000-0000" required />
               </div>
               <div>
+                <Label htmlFor="email">E-mail</Label>
+                <Input id="email" name="email" type="email" placeholder="email@exemplo.com" />
+              </div>
+              <div>
                 <Label htmlFor="especialidade">Especialidade</Label>
                 <Input id="especialidade" name="especialidade" placeholder="Ex: Cabeleireira" required />
               </div>
@@ -127,55 +113,56 @@ const Profissionais = () => {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {profissionais.map((profissional) => (
-          <Card key={profissional.id} className="p-6 hover-lift">
+          <Card key={profissional.id} className="p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-start gap-4">
-              <Avatar className="w-16 h-16">
-                <AvatarFallback className="bg-primary text-white text-lg">
-                  {profissional.iniciais}
+              <Avatar className="h-14 w-14">
+                <AvatarFallback className="text-lg font-semibold bg-primary text-primary-foreground">
+                  {getIniciais(profissional.nome)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xl font-semibold">{profissional.nome}</h3>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleEditarProfissional(profissional)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={() => handleExcluirProfissional(profissional.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <User className="w-4 h-4" />
-                    {profissional.especialidade}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="w-4 h-4" />
-                    {profissional.telefone}
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full mt-4"
-                  onClick={() => handleVerAgenda(profissional.nome)}
-                >
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Ver Agenda
-                </Button>
+                <h3 className="font-semibold text-lg">{profissional.nome}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {profissional.especialidades?.[0] || "Profissional"}
+                </p>
               </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {profissional.telefone && (
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <Phone className="w-4 h-4 mr-2" />
+                  {profissional.telefone}
+                </div>
+              )}
+              {profissional.email && (
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <User className="w-4 h-4 mr-2" />
+                  {profissional.email}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleEditarProfissional(profissional)}
+                className="flex-1"
+              >
+                <Edit className="w-4 h-4 mr-1" />
+                Editar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleExcluirProfissional(profissional.id)}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </div>
           </Card>
         ))}
@@ -190,20 +177,42 @@ const Profissionais = () => {
             <form onSubmit={handleSalvarEdicao} className="space-y-4">
               <div>
                 <Label htmlFor="edit-nome">Nome Completo</Label>
-                <Input id="edit-nome" name="nome" defaultValue={profissionalEditando.nome} required />
+                <Input 
+                  id="edit-nome" 
+                  name="nome" 
+                  defaultValue={profissionalEditando.nome} 
+                  required 
+                />
               </div>
               <div>
                 <Label htmlFor="edit-telefone">Telefone</Label>
-                <Input id="edit-telefone" name="telefone" type="tel" defaultValue={profissionalEditando.telefone} required />
+                <Input 
+                  id="edit-telefone" 
+                  name="telefone" 
+                  type="tel" 
+                  defaultValue={profissionalEditando.telefone || ""} 
+                  required 
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-email">E-mail</Label>
+                <Input 
+                  id="edit-email" 
+                  name="email" 
+                  type="email" 
+                  defaultValue={profissionalEditando.email || ""} 
+                />
               </div>
               <div>
                 <Label htmlFor="edit-especialidade">Especialidade</Label>
-                <Input id="edit-especialidade" name="especialidade" defaultValue={profissionalEditando.especialidade} required />
+                <Input 
+                  id="edit-especialidade" 
+                  name="especialidade" 
+                  defaultValue={profissionalEditando.especialidades?.[0] || ""} 
+                  required 
+                />
               </div>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
-                <Button type="submit" className="flex-1">Salvar</Button>
-              </div>
+              <Button type="submit" className="w-full">Salvar Alterações</Button>
             </form>
           )}
         </DialogContent>

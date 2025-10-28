@@ -1,0 +1,80 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+export type AgendaConfig = {
+  id: string;
+  data: string;
+  fechado: boolean;
+  horarios_bloqueados: string[];
+  horarios_extras: string[];
+  observacoes: string | null;
+};
+
+export const useAgendaConfig = () => {
+  const [configs, setConfigs] = useState<Record<string, AgendaConfig>>({});
+  const [loading, setLoading] = useState(true);
+
+  const fetchConfigs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("agenda_config")
+        .select("*");
+
+      if (error) throw error;
+      const configMap: Record<string, AgendaConfig> = {};
+      data?.forEach(config => {
+        configMap[config.data] = config;
+      });
+      setConfigs(configMap);
+    } catch (error) {
+      console.error("Erro ao carregar configurações:", error);
+      toast.error("Erro ao carregar configurações da agenda");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConfigs();
+  }, []);
+
+  const getConfig = (data: string): AgendaConfig | null => {
+    return configs[data] || null;
+  };
+
+  const updateConfig = async (data: string, updates: Partial<Omit<AgendaConfig, "id" | "data">>) => {
+    try {
+      const existing = configs[data];
+      
+      if (existing) {
+        const { data: updated, error } = await supabase
+          .from("agenda_config")
+          .update(updates)
+          .eq("data", data)
+          .select()
+          .single();
+
+        if (error) throw error;
+        setConfigs({ ...configs, [data]: updated });
+        return updated;
+      } else {
+        const { data: created, error } = await supabase
+          .from("agenda_config")
+          .insert([{ data, ...updates }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        setConfigs({ ...configs, [data]: created });
+        return created;
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar configuração:", error);
+      toast.error("Erro ao atualizar configuração");
+      throw error;
+    }
+  };
+
+  return { configs, loading, getConfig, updateConfig, refetch: fetchConfigs };
+};
