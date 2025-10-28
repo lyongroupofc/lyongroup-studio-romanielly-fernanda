@@ -9,6 +9,10 @@ import Agendar from "./pages/Agendar";
 import Obrigado from "./pages/Obrigado";
 import AdminLayout from "./pages/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
+import Agenda from "./pages/admin/Agenda";
+import Servicos from "./pages/admin/Servicos";
+import Profissionais from "./pages/admin/Profissionais";
+import Faturamento from "./pages/admin/Faturamento";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,10 +30,10 @@ const App = () => (
           <Route path="/obrigado" element={<Obrigado />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Dashboard />} />
-            <Route path="agenda" element={<Dashboard />} />
-            <Route path="servicos" element={<Dashboard />} />
-            <Route path="profissionais" element={<Dashboard />} />
-            <Route path="faturamento" element={<Dashboard />} />
+            <Route path="agenda" element={<Agenda />} />
+            <Route path="servicos" element={<Servicos />} />
+            <Route path="profissionais" element={<Profissionais />} />
+            <Route path="faturamento" element={<Faturamento />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
