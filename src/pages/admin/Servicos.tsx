@@ -10,22 +10,9 @@ import { toast } from "sonner";
 
 const Servicos = () => {
   const [openNovoServico, setOpenNovoServico] = useState(false);
-  
-  const handleNovoServico = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    toast.success("Serviço criado com sucesso!");
-    setOpenNovoServico(false);
-  };
-
-  const handleEditarServico = (nome: string) => {
-    toast.info(`Editando ${nome}`);
-  };
-
-  const handleExcluirServico = (nome: string) => {
-    toast.success(`${nome} excluído com sucesso!`);
-  };
-
-  const servicos = [
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [servicoEditando, setServicoEditando] = useState<any>(null);
+  const [servicos, setServicos] = useState([
     {
       id: 1,
       nome: "Corte Feminino",
@@ -47,7 +34,52 @@ const Servicos = () => {
       preco: "R$ 100,00",
       duracao: "90 min",
     },
-  ];
+  ]);
+  
+  const handleNovoServico = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const novoServico = {
+      id: servicos.length + 1,
+      nome: formData.get("nome") as string,
+      descricao: formData.get("descricao") as string,
+      preco: `R$ ${parseFloat(formData.get("preco") as string).toFixed(2)}`,
+      duracao: `${formData.get("duracao")} min`,
+    };
+    setServicos([...servicos, novoServico]);
+    toast.success("Serviço criado com sucesso!");
+    setOpenNovoServico(false);
+    form.reset();
+  };
+
+  const handleEditarServico = (servico: any) => {
+    setServicoEditando(servico);
+    setEditDialogOpen(true);
+  };
+
+  const handleSalvarEdicao = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    setServicos(servicos.map(s => 
+      s.id === servicoEditando.id ? {
+        ...s,
+        nome: formData.get("nome") as string,
+        descricao: formData.get("descricao") as string,
+        preco: `R$ ${parseFloat(formData.get("preco") as string).toFixed(2)}`,
+        duracao: `${formData.get("duracao")} min`,
+      } : s
+    ));
+    toast.success("Serviço atualizado!");
+    setEditDialogOpen(false);
+    setServicoEditando(null);
+  };
+
+  const handleExcluirServico = (id: number) => {
+    setServicos(servicos.filter(s => s.id !== id));
+    toast.success("Serviço excluído com sucesso!");
+  };
 
   return (
     <div className="space-y-8">
@@ -72,19 +104,19 @@ const Servicos = () => {
             <form onSubmit={handleNovoServico} className="space-y-4">
               <div>
                 <Label htmlFor="nome">Nome do Serviço</Label>
-                <Input id="nome" placeholder="Ex: Corte Feminino" required />
+                <Input id="nome" name="nome" placeholder="Ex: Corte Feminino" required />
               </div>
               <div>
                 <Label htmlFor="descricao">Descrição</Label>
-                <Textarea id="descricao" placeholder="Descreva o serviço" required />
+                <Textarea id="descricao" name="descricao" placeholder="Descreva o serviço" required />
               </div>
               <div>
                 <Label htmlFor="preco">Preço (R$)</Label>
-                <Input id="preco" type="number" step="0.01" placeholder="0,00" required />
+                <Input id="preco" name="preco" type="number" step="0.01" placeholder="0,00" required />
               </div>
               <div>
                 <Label htmlFor="duracao">Duração (minutos)</Label>
-                <Input id="duracao" type="number" placeholder="60" required />
+                <Input id="duracao" name="duracao" type="number" placeholder="60" required />
               </div>
               <Button type="submit" className="w-full">Criar Serviço</Button>
             </form>
@@ -103,7 +135,7 @@ const Servicos = () => {
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  onClick={() => handleEditarServico(servico.nome)}
+                  onClick={() => handleEditarServico(servico)}
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
@@ -111,7 +143,7 @@ const Servicos = () => {
                   variant="ghost" 
                   size="icon" 
                   className="text-destructive"
-                  onClick={() => handleExcluirServico(servico.nome)}
+                  onClick={() => handleExcluirServico(servico.id)}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -132,6 +164,38 @@ const Servicos = () => {
           </Card>
         ))}
       </div>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Serviço</DialogTitle>
+          </DialogHeader>
+          {servicoEditando && (
+            <form onSubmit={handleSalvarEdicao} className="space-y-4">
+              <div>
+                <Label htmlFor="edit-nome">Nome do Serviço</Label>
+                <Input id="edit-nome" name="nome" defaultValue={servicoEditando.nome} required />
+              </div>
+              <div>
+                <Label htmlFor="edit-descricao">Descrição</Label>
+                <Textarea id="edit-descricao" name="descricao" defaultValue={servicoEditando.descricao} required />
+              </div>
+              <div>
+                <Label htmlFor="edit-preco">Preço (R$)</Label>
+                <Input id="edit-preco" name="preco" type="number" step="0.01" defaultValue={servicoEditando.preco.replace("R$ ", "")} required />
+              </div>
+              <div>
+                <Label htmlFor="edit-duracao">Duração (minutos)</Label>
+                <Input id="edit-duracao" name="duracao" type="number" defaultValue={servicoEditando.duracao.replace(" min", "")} required />
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+                <Button type="submit" className="flex-1">Salvar</Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

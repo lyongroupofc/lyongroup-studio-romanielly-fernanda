@@ -13,26 +13,9 @@ import { useNavigate } from "react-router-dom";
 const Profissionais = () => {
   const navigate = useNavigate();
   const [openNovoProfissional, setOpenNovoProfissional] = useState(false);
-  
-  const handleNovoProfissional = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    toast.success("Profissional cadastrado com sucesso!");
-    setOpenNovoProfissional(false);
-  };
-
-  const handleEditarProfissional = (nome: string) => {
-    toast.info(`Editando ${nome}`);
-  };
-
-  const handleExcluirProfissional = (nome: string) => {
-    toast.success(`${nome} removido com sucesso!`);
-  };
-
-  const handleVerAgenda = (nome: string) => {
-    toast.info(`Visualizando agenda de ${nome}`);
-  };
-
-  const profissionais = [
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [profissionalEditando, setProfissionalEditando] = useState<any>(null);
+  const [profissionais, setProfissionais] = useState([
     {
       id: 1,
       nome: "Jennifer Silva",
@@ -47,7 +30,63 @@ const Profissionais = () => {
       especialidade: "Manicure e Pedicure",
       iniciais: "AP",
     },
-  ];
+  ]);
+  
+  const getIniciais = (nome: string) => {
+    const partes = nome.split(" ");
+    return partes.length > 1 ? `${partes[0][0]}${partes[partes.length - 1][0]}` : partes[0][0] + partes[0][1];
+  };
+
+  const handleNovoProfissional = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const nome = formData.get("nome") as string;
+    const novoProfissional = {
+      id: profissionais.length + 1,
+      nome,
+      telefone: formData.get("telefone") as string,
+      especialidade: formData.get("especialidade") as string,
+      iniciais: getIniciais(nome),
+    };
+    setProfissionais([...profissionais, novoProfissional]);
+    toast.success("Profissional cadastrado com sucesso!");
+    setOpenNovoProfissional(false);
+    form.reset();
+  };
+
+  const handleEditarProfissional = (profissional: any) => {
+    setProfissionalEditando(profissional);
+    setEditDialogOpen(true);
+  };
+
+  const handleSalvarEdicao = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const nome = formData.get("nome") as string;
+    setProfissionais(profissionais.map(p => 
+      p.id === profissionalEditando.id ? {
+        ...p,
+        nome,
+        telefone: formData.get("telefone") as string,
+        especialidade: formData.get("especialidade") as string,
+        iniciais: getIniciais(nome),
+      } : p
+    ));
+    toast.success("Profissional atualizado!");
+    setEditDialogOpen(false);
+    setProfissionalEditando(null);
+  };
+
+  const handleExcluirProfissional = (id: number) => {
+    setProfissionais(profissionais.filter(p => p.id !== id));
+    toast.success("Profissional removido com sucesso!");
+  };
+
+  const handleVerAgenda = (nome: string) => {
+    toast.info(`Visualizando agenda de ${nome}`);
+  };
 
   return (
     <div className="space-y-8">
@@ -72,15 +111,15 @@ const Profissionais = () => {
             <form onSubmit={handleNovoProfissional} className="space-y-4">
               <div>
                 <Label htmlFor="nome">Nome Completo</Label>
-                <Input id="nome" placeholder="Nome do profissional" required />
+                <Input id="nome" name="nome" placeholder="Nome do profissional" required />
               </div>
               <div>
                 <Label htmlFor="telefone">Telefone</Label>
-                <Input id="telefone" type="tel" placeholder="(00) 00000-0000" required />
+                <Input id="telefone" name="telefone" type="tel" placeholder="(00) 00000-0000" required />
               </div>
               <div>
                 <Label htmlFor="especialidade">Especialidade</Label>
-                <Input id="especialidade" placeholder="Ex: Cabeleireira" required />
+                <Input id="especialidade" name="especialidade" placeholder="Ex: Cabeleireira" required />
               </div>
               <Button type="submit" className="w-full">Cadastrar Profissional</Button>
             </form>
@@ -104,7 +143,7 @@ const Profissionais = () => {
                     <Button 
                       variant="ghost" 
                       size="icon"
-                      onClick={() => handleEditarProfissional(profissional.nome)}
+                      onClick={() => handleEditarProfissional(profissional)}
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -112,7 +151,7 @@ const Profissionais = () => {
                       variant="ghost"
                       size="icon"
                       className="text-destructive"
-                      onClick={() => handleExcluirProfissional(profissional.nome)}
+                      onClick={() => handleExcluirProfissional(profissional.id)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -141,6 +180,34 @@ const Profissionais = () => {
           </Card>
         ))}
       </div>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Profissional</DialogTitle>
+          </DialogHeader>
+          {profissionalEditando && (
+            <form onSubmit={handleSalvarEdicao} className="space-y-4">
+              <div>
+                <Label htmlFor="edit-nome">Nome Completo</Label>
+                <Input id="edit-nome" name="nome" defaultValue={profissionalEditando.nome} required />
+              </div>
+              <div>
+                <Label htmlFor="edit-telefone">Telefone</Label>
+                <Input id="edit-telefone" name="telefone" type="tel" defaultValue={profissionalEditando.telefone} required />
+              </div>
+              <div>
+                <Label htmlFor="edit-especialidade">Especialidade</Label>
+                <Input id="edit-especialidade" name="especialidade" defaultValue={profissionalEditando.especialidade} required />
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+                <Button type="submit" className="flex-1">Salvar</Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

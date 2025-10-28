@@ -20,9 +20,22 @@ const Agenda = () => {
   const [gerenciarDialogOpen, setGerenciarDialogOpen] = useState(false);
   const [selectedTime, setSelectedTime] = useState<string | undefined>();
   const [newTime, setNewTime] = useState<string>("");
+  const [detalhesDialogOpen, setDetalhesDialogOpen] = useState(false);
 
-  type DayData = { reserved: string[]; blocked: string[]; extraOpen: string[]; closed: boolean };
-  const [agendaByDate, setAgendaByDate] = useState<Record<string, DayData>>({});
+  type Agendamento = { horario: string; cliente: string; servico: string; status: string };
+  type DayData = { reserved: string[]; blocked: string[]; extraOpen: string[]; closed: boolean; agendamentos: Agendamento[] };
+  const [agendaByDate, setAgendaByDate] = useState<Record<string, DayData>>({
+    "2025-10-27": {
+      reserved: ["14:00", "15:30"],
+      blocked: [],
+      extraOpen: [],
+      closed: false,
+      agendamentos: [
+        { horario: "14:00", cliente: "Maria Silva", servico: "Corte + Escova", status: "Realizado" },
+        { horario: "15:30", cliente: "Ana Santos", servico: "Hidratação", status: "Realizado" }
+      ]
+    }
+  });
   const fmtKey = (d: Date) => d.toISOString().split("T")[0];
   const generateSlots = () => {
     const slots: string[] = [];
@@ -35,7 +48,7 @@ const Agenda = () => {
     }
     return slots;
   };
-  const getDayData = (d: Date): DayData => agendaByDate[fmtKey(d)] ?? { reserved: [], blocked: [], extraOpen: [], closed: false };
+  const getDayData = (d: Date): DayData => agendaByDate[fmtKey(d)] ?? { reserved: [], blocked: [], extraOpen: [], closed: false, agendamentos: [] };
   const getAvailableSlots = (d: Date | undefined) => {
     if (!d) return [] as string[];
     const data = getDayData(d);
@@ -44,11 +57,23 @@ const Agenda = () => {
     const taken = new Set([...data.reserved, ...data.blocked]);
     return base.filter((t) => !taken.has(t)).sort();
   };
+  const isDayFull = (d: Date): boolean => {
+    const data = getDayData(d);
+    if (data.closed) return false;
+    return getAvailableSlots(d).length === 0;
+  };
 
   const handleSelect = (day: Date | undefined) => {
     setDate(day);
     setSelectedDate(day);
-    if (day) setOpenDayDialog(true);
+    if (day) {
+      const isPast = isBefore(day, startOfToday());
+      if (isPast) {
+        setDetalhesDialogOpen(true);
+      } else {
+        setOpenDayDialog(true);
+      }
+    }
   };
 
   const handleNovoAgendamento = (e: React.FormEvent<HTMLFormElement>) => {
@@ -68,15 +93,17 @@ const Agenda = () => {
   };
 
   const modifiers = {
-    disponivel: (date: Date) => date.getDay() !== 0 && !isBefore(date, startOfToday()),
-    fechado: (date: Date) => date.getDay() === 0,
+    disponivel: (date: Date) => !isBefore(date, startOfToday()) && !getDayData(date).closed && !isDayFull(date),
+    fechado: (date: Date) => getDayData(date).closed && !isBefore(date, startOfToday()),
+    cheio: (date: Date) => !isBefore(date, startOfToday()) && !getDayData(date).closed && isDayFull(date),
     past: (date: Date) => isBefore(date, startOfToday()),
   };
 
   const modifiersStyles = {
     disponivel: { backgroundColor: "hsl(var(--success) / 0.2)", color: "hsl(var(--success))" },
     fechado: { backgroundColor: "hsl(var(--destructive) / 0.2)", color: "hsl(var(--destructive))" },
-    past: { backgroundColor: "transparent", color: "hsl(var(--foreground))", opacity: 0.9 },
+    cheio: { backgroundColor: "hsl(280 65% 60% / 0.2)", color: "hsl(280 65% 60%)" },
+    past: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", opacity: 0.6 },
   };
 
   return (
@@ -175,6 +202,10 @@ const Agenda = () => {
             <div className="w-4 h-4 rounded bg-destructive/20"></div>
             <span className="text-sm">Dias fechados</span>
           </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: "hsl(280 65% 60% / 0.2)" }}></div>
+            <span className="text-sm">Dias cheios</span>
+          </div>
         </div>
       </Card>
 
@@ -251,6 +282,8 @@ const Agenda = () => {
                     const data = getDayData(selectedDate);
                     setAgendaByDate({ ...agendaByDate, [key]: { ...data, closed: !data.closed } });
                     toast.success(data.closed ? "Dia reaberto" : "Dia fechado");
+                    setGerenciarDialogOpen(false);
+                    setOpenDayDialog(false);
                   }}
                 >
                   {selectedDate && getDayData(selectedDate).closed ? "Reabrir Dia" : "Fechar Dia"}
@@ -296,6 +329,38 @@ const Agenda = () => {
                 }}>Adicionar</Button>
               </div>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={detalhesDialogOpen} onOpenChange={setDetalhesDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Dia {selectedDate ? `- ${selectedDate.toLocaleDateString('pt-BR')}` : ''}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedDate && getDayData(selectedDate).agendamentos.length > 0 ? (
+              <div className="space-y-3">
+                <h3 className="font-semibold">Agendamentos Realizados</h3>
+                {getDayData(selectedDate).agendamentos.map((agend, idx) => (
+                  <div key={idx} className="p-4 bg-success/10 rounded-lg border border-success/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold">{agend.cliente}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {agend.servico} • {agend.horario}
+                        </p>
+                      </div>
+                      <span className="px-3 py-1 bg-success text-white text-sm rounded-full">
+                        {agend.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">Nenhum agendamento registrado neste dia</p>
+            )}
           </div>
         </DialogContent>
       </Dialog>
