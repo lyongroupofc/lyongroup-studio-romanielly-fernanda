@@ -18,6 +18,11 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SuperAdminLayout from "./pages/super-admin/SuperAdminLayout";
 import SuperAdminDashboard from "./pages/super-admin/Dashboard";
+import Clientes from "./pages/super-admin/Clientes";
+import MonitoramentoIA from "./pages/super-admin/MonitoramentoIA";
+import Custos from "./pages/super-admin/Custos";
+import Logs from "./pages/super-admin/Logs";
+import Configuracoes from "./pages/super-admin/Configuracoes";
 import CreateSuperAdmin from "./pages/setup/CreateSuperAdmin";
 import ResetSuperAdminPassword from "./pages/setup/ResetSuperAdminPassword";
 
@@ -38,6 +43,11 @@ const App = () => (
           <Route path="/obrigado" element={<Obrigado />} />
           <Route path="/super-admin" element={<ProtectedRoute requiredRole="super_admin"><SuperAdminLayout /></ProtectedRoute>}>
             <Route index element={<SuperAdminDashboard />} />
+            <Route path="clientes" element={<Clientes />} />
+            <Route path="ia" element={<MonitoramentoIA />} />
+            <Route path="custos" element={<Custos />} />
+            <Route path="logs" element={<Logs />} />
+            <Route path="config" element={<Configuracoes />} />
           </Route>
           
           <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
