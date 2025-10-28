@@ -167,29 +167,53 @@ Responda como uma atendente real responderia no WhatsApp.`;
 
     console.log('🤖 Enviando para Google Gemini');
 
-    // Usar Google Gemini API (mais barato e com free tier generoso)
-    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: conversaCompleta }] }],
-        generationConfig: {
-          temperature: 0.9,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        }
-      }),
-    });
+    let resposta: string | null = null;
+    try {
+      // Usar Google Gemini API (com histórico)
+      const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: conversaCompleta }] }],
+          generationConfig: {
+            temperature: 0.9,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+          }
+        }),
+      });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('❌ Erro no Gemini:', aiResponse.status, errorText);
-      throw new Error(`Erro ao processar: ${aiResponse.status}`);
+      if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        console.error('❌ Erro no Gemini:', aiResponse.status, errorText);
+        throw new Error(`gemini_${aiResponse.status}`);
+      }
+
+      const aiData = await aiResponse.json();
+      resposta = aiData.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    } catch (e) {
+      console.error('⚠️ Gemini indisponível. Ativando fallback resiliente...', e);
+      // Fallback determinístico para NUNCA ficar sem resposta
+      const nomesServicos = (servicos || []).map(s => s.nome);
+      const sugestaoServicos = nomesServicos.slice(0, 3).join(', ');
+
+      if (!contexto?.servico_id) {
+        resposta = `Estou online 24h 😉 Qual serviço você quer? Ex: ${sugestaoServicos}`;
+      } else if (!contexto?.data) {
+        resposta = 'Perfeito! Para qual dia? Pode me dizer a data (ex: 12/11) ou "amanhã"/"sexta"?';
+      } else if (!contexto?.horario) {
+        resposta = 'Certo! Qual horário prefere? Diga no formato HH:MM (ex: 14:30)';
+      } else if (!contexto?.cliente_nome) {
+        resposta = 'Qual seu nome para confirmar o agendamento?';
+      } else {
+        resposta = 'Tudo certo por aqui! Posso confirmar o agendamento?';
+      }
     }
 
-    const aiData = await aiResponse.json();
-    const resposta = aiData.candidates?.[0]?.content?.parts?.[0]?.text || 'Desculpe, tive um problema. Pode repetir?';
+    if (!resposta) {
+      resposta = 'Tive um pico de uso agora, mas já estou aqui! Pode repetir por favor?';
+    }
 
 
     // Detectar intenções e atualizar contexto
