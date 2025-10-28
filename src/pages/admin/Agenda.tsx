@@ -76,6 +76,24 @@ const Agenda = () => {
     };
   };
 
+  const calcularHorariosBloqueados = (horarioInicio: string, duracaoMinutos: number): string[] => {
+    const [horas, minutos] = horarioInicio.split(':').map(Number);
+    const inicioEmMinutos = horas * 60 + minutos;
+    const fimEmMinutos = inicioEmMinutos + duracaoMinutos;
+    
+    const horariosBloqueados: string[] = [];
+    
+    // Gera todos os slots de 30 em 30 minutos desde o início até o fim
+    for (let min = inicioEmMinutos; min < fimEmMinutos; min += 30) {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      const horario = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      horariosBloqueados.push(horario);
+    }
+    
+    return horariosBloqueados;
+  };
+
   const getAvailableSlots = (d: Date | undefined) => {
     if (!d) return [];
     const dayData = getDayData(d);
@@ -83,11 +101,26 @@ const Agenda = () => {
 
     const dateStr = fmtKey(d);
     const agendamentosDay = agendamentos.filter((a) => a.data === dateStr);
-    const horariosReservados = new Set(agendamentosDay.map((a) => a.horario));
-    const horariosBloqueados = new Set(dayData.horariosBloqueados);
+    
+    // Calcula todos os horários bloqueados considerando a duração de cada serviço
+    const todosBloqueados = new Set<string>();
+    
+    agendamentosDay.forEach(ag => {
+      const servico = servicos.find(s => s.id === ag.servico_id);
+      if (servico) {
+        const horariosBloqueados = calcularHorariosBloqueados(ag.horario, servico.duracao);
+        horariosBloqueados.forEach(h => todosBloqueados.add(h));
+      } else {
+        // Se não encontrar o serviço, bloqueia apenas o horário inicial
+        todosBloqueados.add(ag.horario);
+      }
+    });
+    
+    // Adiciona horários bloqueados manualmente
+    dayData.horariosBloqueados.forEach(h => todosBloqueados.add(h));
 
     const base = [...generateSlots(), ...dayData.horariosExtras];
-    return base.filter((t) => !horariosReservados.has(t) && !horariosBloqueados.has(t)).sort();
+    return base.filter((t) => !todosBloqueados.has(t)).sort();
   };
 
   const isDayFull = (d: Date) => {
