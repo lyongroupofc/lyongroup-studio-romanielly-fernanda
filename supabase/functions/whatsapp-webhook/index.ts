@@ -23,7 +23,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+    const geminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY')!;
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { telefone, mensagem } = await req.json();
@@ -116,18 +116,24 @@ EXEMPLOS DE RESPOSTAS BOAS:
 
 Responda como uma atendente real responderia no WhatsApp.`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Usar Google Gemini API diretamente
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: mensagem }
-        ],
+        contents: [{
+          parts: [{
+            text: `${systemPrompt}\n\nMensagem do cliente: ${mensagem}`
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.9,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        }
       }),
     });
 
@@ -136,7 +142,7 @@ Responda como uma atendente real responderia no WhatsApp.`;
     }
 
     const aiData = await aiResponse.json();
-    const resposta = aiData.choices[0].message.content;
+    const resposta = aiData.candidates[0].content.parts[0].text;
 
     // Detectar intenções e atualizar contexto
     const mensagemLower = mensagem.toLowerCase();
