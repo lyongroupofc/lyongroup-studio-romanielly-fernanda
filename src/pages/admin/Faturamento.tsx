@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DollarSign, TrendingUp, Calendar, Eye, EyeOff } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { usePagamentos } from "@/hooks/usePagamentos";
 import { format } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const Faturamento = () => {
   const [showTotal, setShowTotal] = useState(true);
@@ -55,13 +56,30 @@ const Faturamento = () => {
 
   const hoje = format(new Date(), "yyyy-MM-dd");
   const faturamentoHoje = pagamentos
-    .filter((p) => p.data === hoje && p.status === "Pago")
-    .reduce((acc, p) => acc + Number(p.valor), 0);
+    .filter((p) => p.data === hoje)
+    .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
 
   const mesAtual = format(new Date(), "yyyy-MM");
   const faturamentoMes = pagamentos
-    .filter((p) => p.data.startsWith(mesAtual) && p.status === "Pago")
-    .reduce((acc, p) => acc + Number(p.valor), 0);
+    .filter((p) => p.data && p.data.startsWith(mesAtual))
+    .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
+
+  // Preparar dados para o gráfico (últimos 7 dias)
+  const ultimosDias = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - i));
+    return format(date, "yyyy-MM-dd");
+  });
+
+  const dadosGrafico = ultimosDias.map((data) => {
+    const faturamentoDia = pagamentos
+      .filter((p) => p.data === data)
+      .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
+    return {
+      dia: format(new Date(data), "dd/MM"),
+      valor: faturamentoDia,
+    };
+  });
 
   const stats = [
     {
@@ -126,10 +144,25 @@ const Faturamento = () => {
       </div>
 
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-6">Gráfico de Faturamento</h2>
-        <div className="h-80 flex items-center justify-center bg-muted rounded-lg">
-          <p className="text-muted-foreground">Os dados serão exibidos conforme você for utilizando o sistema</p>
-        </div>
+        <h2 className="text-xl font-semibold mb-6">Faturamento dos Últimos 7 Dias</h2>
+        {pagamentos.length === 0 ? (
+          <div className="h-80 flex items-center justify-center bg-muted rounded-lg">
+            <p className="text-muted-foreground">Os dados serão exibidos conforme você registrar pagamentos</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={dadosGrafico}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis dataKey="dia" className="text-xs" />
+              <YAxis className="text-xs" />
+              <Tooltip
+                formatter={(value: number) => [`R$ ${value.toFixed(2).replace(".", ",")}`, "Faturamento"]}
+                contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+              />
+              <Bar dataKey="valor" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </Card>
 
       <Card className="p-6">
