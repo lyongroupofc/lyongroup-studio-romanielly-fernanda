@@ -67,6 +67,7 @@ const SuperAdminDashboard = () => {
       <Card className="p-6">
         <h2 className="text-xl font-bold mb-4">Ações Rápidas</h2>
         <div className="flex gap-4">
+          <Button onClick={() => window.location.href = '/admin'}>Acessar Painel Cliente</Button>
           <Button>Criar Cliente</Button>
           <Button variant="outline">Ver Logs</Button>
           <Button variant="outline">Configurações IA</Button>
