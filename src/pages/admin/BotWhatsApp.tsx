@@ -6,8 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBotWhatsApp } from "@/hooks/useBotWhatsApp";
-import { MessageCircle, QrCode, TrendingUp, Calendar, Clock, RefreshCw } from "lucide-react";
+import { useBotConversas } from "@/hooks/useBotConversas";
+import { MessageCircle, QrCode, TrendingUp, Calendar, Clock, RefreshCw, Phone, MessageSquare } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const BotWhatsApp = () => {
   const {
@@ -21,6 +25,14 @@ const BotWhatsApp = () => {
     atualizarConfig,
     refetch,
   } = useBotWhatsApp();
+
+  const {
+    conversas,
+    mensagens,
+    loading: loadingConversas,
+    conversaSelecionada,
+    selecionarConversa,
+  } = useBotConversas();
 
   if (loading) {
     return (
@@ -245,36 +257,104 @@ const BotWhatsApp = () => {
         </CardContent>
       </Card>
 
-      {/* Instruções */}
+      {/* Conversas */}
       <Card>
         <CardHeader>
-          <CardTitle>Como Funciona</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Conversas Recentes
+          </CardTitle>
+          <CardDescription>
+            Acompanhe as conversas do bot em tempo real
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <h3 className="font-semibold">1. Conectar WhatsApp</h3>
-            <p className="text-sm text-muted-foreground">
-              Gere e escaneie o QR Code para conectar sua conta do WhatsApp Business
-            </p>
-          </div>
-          <div className="space-y-2">
-            <h3 className="font-semibold">2. Ativar o Bot</h3>
-            <p className="text-sm text-muted-foreground">
-              Ative o bot nas configurações para que ele comece a responder mensagens
-            </p>
-          </div>
-          <div className="space-y-2">
-            <h3 className="font-semibold">3. Personalizar Mensagens</h3>
-            <p className="text-sm text-muted-foreground">
-              Configure as mensagens automáticas e horários de funcionamento
-            </p>
-          </div>
-          <div className="space-y-2">
-            <h3 className="font-semibold">4. Agendamentos Automáticos</h3>
-            <p className="text-sm text-muted-foreground">
-              O bot irá processar agendamentos, reagendamentos e cancelamentos automaticamente
-            </p>
-          </div>
+        <CardContent>
+          {loadingConversas ? (
+            <div className="space-y-2">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ) : conversas.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>Nenhuma conversa ainda</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Lista de Conversas */}
+              <ScrollArea className="h-[500px] pr-4">
+                <div className="space-y-2">
+                  {conversas.map((conversa) => (
+                    <button
+                      key={conversa.id}
+                      onClick={() => selecionarConversa(conversa.id)}
+                      className={`w-full text-left p-4 rounded-lg border transition-colors ${
+                        conversaSelecionada === conversa.id
+                          ? 'bg-primary/10 border-primary'
+                          : 'hover:bg-muted'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="bg-primary/10 p-2 rounded-full">
+                          <Phone className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{conversa.telefone}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(conversa.ultimo_contato), {
+                              addSuffix: true,
+                              locale: ptBR,
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              {/* Mensagens */}
+              <div className="border rounded-lg">
+                {conversaSelecionada ? (
+                  <ScrollArea className="h-[500px] p-4">
+                    <div className="space-y-3">
+                      {mensagens[conversaSelecionada]?.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`flex ${
+                            msg.tipo === 'enviada' ? 'justify-end' : 'justify-start'
+                          }`}
+                        >
+                          <div
+                            className={`max-w-[80%] rounded-lg p-3 ${
+                              msg.tipo === 'enviada'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted'
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap">{msg.conteudo}</p>
+                            <p className="text-xs opacity-70 mt-1">
+                              {new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="h-[500px] flex items-center justify-center text-muted-foreground">
+                    <div className="text-center">
+                      <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>Selecione uma conversa</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
