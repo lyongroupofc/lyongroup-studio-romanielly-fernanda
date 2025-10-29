@@ -57,8 +57,11 @@ const Agenda = () => {
 
   const generateSlots = () => {
     const slots: string[] = [];
-    for (let h = 9; h <= 18; h++) {
+    // Funcionamento: 08:00 às 21:00 em intervalos de 30min
+    for (let h = 8; h <= 21; h++) {
       for (let m = 0; m < 60; m += 30) {
+        // Não gerar 21:30 (fechamos às 21:00)
+        if (h === 21 && m === 30) continue;
         const hh = String(h).padStart(2, "0");
         const mm = String(m).padStart(2, "0");
         slots.push(`${hh}:${mm}`);
@@ -121,6 +124,34 @@ const Agenda = () => {
 
     const base = [...generateSlots(), ...dayData.horariosExtras];
     return base.filter((t) => !todosBloqueados.has(t)).sort();
+  };
+
+  const getServiceStartSlots = (d: Date | undefined, servicoId?: string) => {
+    if (!d || !servicoId) return [];
+    const base = getAvailableSlots(d);
+    const baseSet = new Set(base);
+    const serv = servicos.find((s) => s.id === servicoId);
+    if (!serv) return base;
+
+    const steps = Math.ceil(serv.duracao / 30); // número de slots de 30min necessários
+    const limiteMinutos = 21 * 60; // 21:00
+
+    const toMin = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    };
+    const toHHMM = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+    return base.filter((start) => {
+      const inicio = toMin(start);
+      const fim = inicio + serv.duracao;
+      if (fim > limiteMinutos) return false; // precisa terminar até 21:00
+      for (let k = 0; k < steps; k++) {
+        const slot = toHHMM(inicio + k * 30);
+        if (!baseSet.has(slot)) return false;
+      }
+      return true;
+    });
   };
 
   const isDayFull = (d: Date) => {
@@ -376,7 +407,9 @@ const Agenda = () => {
       <Dialog open={openNovoDialog} onOpenChange={setOpenNovoDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Novo Agendamento</DialogTitle>
+            <DialogTitle>
+              Novo Agendamento {selectedDate ? `- ${format(selectedDate, "dd/MM/yyyy")}` : ""}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmitReservar} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -389,10 +422,21 @@ const Agenda = () => {
                 <Input value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} required />
               </div>
             </div>
+            {/* Data do agendamento */}
+            <div className="space-y-2">
+              <Label>Data *</Label>
+              <Input
+                type="date"
+                value={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
+                onChange={(e) => setSelectedDate(e.target.value ? new Date(e.target.value) : undefined)}
+                required
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Serviço *</Label>
-                <Select value={formData.servico} onValueChange={(value) => setFormData({ ...formData, servico: value })}>
+                <Select value={formData.servico} onValueChange={(value) => setFormData({ ...formData, servico: value, horario: '' })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
@@ -419,12 +463,16 @@ const Agenda = () => {
             </div>
             <div className="space-y-2">
               <Label>Horário *</Label>
-              <Select value={formData.horario} onValueChange={(value) => setFormData({ ...formData, horario: value })}>
+              <Select
+                value={formData.horario}
+                onValueChange={(value) => setFormData({ ...formData, horario: value })}
+                disabled={!formData.servico}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione um horário" />
+                  <SelectValue placeholder={formData.servico ? "Selecione um horário" : "Selecione um serviço primeiro"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {getAvailableSlots(selectedDate).map((h) => (
+                  {getServiceStartSlots(selectedDate, formData.servico).map((h) => (
                     <SelectItem key={h} value={h}>{h}</SelectItem>
                   ))}
                 </SelectContent>
@@ -491,12 +539,16 @@ const Agenda = () => {
             </div>
             <div className="space-y-2">
               <Label>Horário *</Label>
-              <Select value={formData.horario} onValueChange={(value) => setFormData({ ...formData, horario: value })}>
+              <Select
+                value={formData.horario}
+                onValueChange={(value) => setFormData({ ...formData, horario: value })}
+                disabled={!formData.servico}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione um horário" />
+                  <SelectValue placeholder={formData.servico ? "Selecione um horário" : "Selecione um serviço primeiro"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {getAvailableSlots(selectedDate).map((h) => (
+                  {getServiceStartSlots(selectedDate, formData.servico).map((h) => (
                     <SelectItem key={h} value={h}>{h}</SelectItem>
                   ))}
                 </SelectContent>
