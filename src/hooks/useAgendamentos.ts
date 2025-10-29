@@ -40,6 +40,28 @@ export const useAgendamentos = () => {
 
   useEffect(() => {
     fetchAgendamentos();
+
+    const channel = supabase
+      .channel('agendamentos_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'agendamentos' },
+        (payload) => {
+          const rec: any = (payload as any).new ?? (payload as any).old;
+          if ((payload as any).eventType === 'INSERT' && (payload as any).new) {
+            setAgendamentos((prev) => [...prev, (payload as any).new as Agendamento]);
+          } else if ((payload as any).eventType === 'UPDATE' && (payload as any).new) {
+            setAgendamentos((prev) => prev.map((a) => a.id === rec.id ? (payload as any).new as Agendamento : a));
+          } else if ((payload as any).eventType === 'DELETE' && (payload as any).old) {
+            setAgendamentos((prev) => prev.filter((a) => a.id !== rec.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const addAgendamento = async (agendamento: Omit<Agendamento, "id">) => {

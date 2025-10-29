@@ -190,15 +190,18 @@ serve(async (req) => {
       }
     });
 
-    // Se ainda não detectou, procurar no histórico
+    // Se ainda não detectou, procurar no histórico (apenas mensagens do cliente e mais recentes)
     if (!novoContexto.servico_id && historicoMensagens) {
+      const recentesCliente = (historicoMensagens as any[])
+        .filter((m) => m.tipo === 'recebida')
+        .slice(-6);
       for (const s of servicos || []) {
         const nomeLower = s.nome.toLowerCase();
-        if (historicoMensagens.some(m => (m.conteudo || '').toLowerCase().includes(nomeLower))) {
+        if (recentesCliente.some((m) => (m.conteudo || '').toLowerCase().includes(nomeLower))) {
           novoContexto.servico_id = s.id;
           novoContexto.servico_nome = s.nome;
           if (!novoContexto.etapa) novoContexto.etapa = 'escolher_data';
-          console.log('✅ Serviço detectado no histórico:', s.nome);
+          console.log('✅ Serviço detectado no histórico (cliente):', s.nome);
           break;
         }
       }
@@ -418,11 +421,10 @@ serve(async (req) => {
     if (!novoContexto.cliente_nome && novoContexto.servico_id && novoContexto.data && novoContexto.horario) {
       novoContexto.etapa = 'confirmar_nome';
       try {
-        const dias = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
-        const d = new Date(`${novoContexto.data}T12:00:00`);
-        const wd = dias[d.getDay()];
-        const [yyyy, mm, dd] = (novoContexto.data as string).split('-');
-        const ddmm = `${dd}/${mm}`;
+        const [yyyyNum, mmNum, ddNum] = (novoContexto.data as string).split('-').map(Number);
+        const d = new Date(Date.UTC(yyyyNum, mmNum - 1, ddNum, 12, 0, 0));
+        const wd = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'][d.getUTCDay()];
+        const ddmm = `${String(ddNum).padStart(2,'0')}/${String(mmNum).padStart(2,'0')}`;
         const nomeServ = novoContexto.servico_nome || 'serviço';
         resposta = `Perfeito! ${nomeServ} em ${ddmm} (${wd}) às ${novoContexto.horario}. Qual seu nome completo para confirmar? 💜`;
       } catch {}
@@ -517,12 +519,15 @@ serve(async (req) => {
                 } else {
                   console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
                   // Confirmação padrão caso a IA não tenha confirmado
-                  if (!resposta || resposta.trim() === '') {
-                    try {
-                      const [yyyy, mm, dd] = (novoContexto.data as string).split('-');
-                      resposta = `Pronto! Agendei para ${dd}/${mm} às ${novoContexto.horario} 💜`;
-                    } catch {}
-                  }
+                  try {
+                    const [yyyyNum, mmNum, ddNum] = (novoContexto.data as string).split('-').map(Number);
+                    const d = new Date(Date.UTC(yyyyNum, mmNum - 1, ddNum, 12, 0, 0));
+                    const wd = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'][d.getUTCDay()];
+                    const ddmm = `${String(ddNum).padStart(2,'0')}/${String(mmNum).padStart(2,'0')}`;
+                    const nomeServ = novoContexto.servico_nome || 'serviço';
+                    const nomeCliente = novoContexto.cliente_nome!;
+                    resposta = `Prontinho, ${nomeCliente}! ${nomeServ} agendado para ${ddmm} (${wd}) às ${novoContexto.horario}. 💜`;
+                  } catch {}
                   novoContexto = {}; // Resetar contexto
                 }
               }
@@ -555,13 +560,16 @@ serve(async (req) => {
                 console.error('❌ Erro ao criar agendamento:', agendamentoError);
               } else {
                 console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
-                if (!resposta || resposta.trim() === '') {
-                  try {
-                    const [yyyy, mm, dd] = (novoContexto.data as string).split('-');
-                    resposta = `Pronto! Agendei para ${dd}/${mm} às ${novoContexto.horario} 💜`;
-                  } catch {}
-                }
-                novoContexto = {}; 
+                try {
+                  const [yyyyNum, mmNum, ddNum] = (novoContexto.data as string).split('-').map(Number);
+                  const d = new Date(Date.UTC(yyyyNum, mmNum - 1, ddNum, 12, 0, 0));
+                  const wd = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'][d.getUTCDay()];
+                  const ddmm = `${String(ddNum).padStart(2,'0')}/${String(mmNum).padStart(2,'0')}`;
+                  const nomeServ = novoContexto.servico_nome || 'serviço';
+                  const nomeCliente = novoContexto.cliente_nome!;
+                  resposta = `Prontinho, ${nomeCliente}! ${nomeServ} agendado para ${ddmm} (${wd}) às ${novoContexto.horario}. 💜`;
+                } catch {}
+                novoContexto = {};
               }
             }
           }
