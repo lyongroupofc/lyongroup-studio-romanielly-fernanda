@@ -36,9 +36,11 @@ serve(async (req) => {
       .from('bot_config')
       .select('valor')
       .eq('chave', 'ativo')
-      .single();
+      .maybeSingle();
 
-    if (!configAtivo?.valor?.valor) {
+    const ativoGlobal = configAtivo?.valor?.valor !== false; // default: ativo
+
+    if (!ativoGlobal) {
       console.log('🤖 Bot está desativado globalmente');
       return new Response(JSON.stringify({ resposta: 'Bot desativado' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -64,7 +66,7 @@ serve(async (req) => {
       .from('bot_conversas')
       .select('*')
       .eq('telefone', telefone)
-      .single();
+      .maybeSingle();
 
     if (!conversa) {
       const { data: novaConversa } = await supabase
