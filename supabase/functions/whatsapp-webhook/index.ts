@@ -791,7 +791,7 @@ serve(async (req) => {
               } else {
                 // Se for reagendamento, ATUALIZAR
                 if (novoContexto.acao === 'reagendar' && novoContexto.agendamento_id) {
-                  console.log('💾 Atualizando agendamento:', novoContexto.agendamento_id);
+                  console.log('💾 Tentando reagendar agendamento:', novoContexto.agendamento_id);
 
                   const { data: agendamentoAtualizado, error: agendamentoError } = await supabase
                     .from('agendamentos')
@@ -804,9 +804,16 @@ serve(async (req) => {
                     .select();
 
                   if (agendamentoError) {
-                    console.error('❌ Erro ao atualizar:', agendamentoError);
+                    console.error('❌ Erro ao reagendar:', {
+                      error: agendamentoError,
+                      message: agendamentoError.message,
+                      details: agendamentoError.details,
+                      hint: agendamentoError.hint
+                    });
+                    resposta = 'Ops, tive um problema ao reagendar. Pode tentar novamente? 💜';
+                    novoContexto.etapa = 'escolher_horario';
                   } else {
-                    console.log('✅ Agendamento atualizado!', agendamentoAtualizado);
+                    console.log('✅ Agendamento reagendado com sucesso!', agendamentoAtualizado);
                     
                     try {
                       const [yyyy, mm, dd] = (novoContexto.data as string).split('-').map(Number);
@@ -821,7 +828,13 @@ serve(async (req) => {
                   }
                 } else {
                   // Criar novo
-                  console.log('💾 Criando novo agendamento');
+                  console.log('💾 Tentando criar agendamento com dados:', {
+                    cliente_nome: novoContexto.cliente_nome,
+                    telefone,
+                    servico_id: novoContexto.servico_id,
+                    data: novoContexto.data,
+                    horario: novoContexto.horario
+                  });
 
                   const { data: agendamentoCriado, error: agendamentoError } = await supabase
                     .from('agendamentos')
@@ -839,9 +852,16 @@ serve(async (req) => {
                     .select();
 
                   if (agendamentoError) {
-                    console.error('❌ Erro ao criar:', agendamentoError);
+                    console.error('❌ Erro ao criar agendamento:', {
+                      error: agendamentoError,
+                      message: agendamentoError.message,
+                      details: agendamentoError.details,
+                      hint: agendamentoError.hint
+                    });
+                    resposta = 'Ops, tive um problema ao agendar. Pode tentar novamente? Se continuar dando erro, me chama que agendamos manualmente, tá bom? 💜';
+                    novoContexto.etapa = 'criar_agendamento';
                   } else {
-                    console.log('✅ Agendamento criado!', agendamentoCriado);
+                    console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
                     
                     try {
                       const [yyyy, mm, dd] = (novoContexto.data as string).split('-').map(Number);
@@ -858,9 +878,9 @@ serve(async (req) => {
               }
             } else {
               // Fallback sem duração
-              console.log('💾 Criando sem validação de duração');
-
               if (novoContexto.acao === 'reagendar' && novoContexto.agendamento_id) {
+                console.log('💾 Tentando reagendar (fallback):', novoContexto.agendamento_id);
+
                 const { error: agendamentoError } = await supabase
                   .from('agendamentos')
                   .update({
@@ -870,7 +890,16 @@ serve(async (req) => {
                   })
                   .eq('id', novoContexto.agendamento_id);
 
-                if (!agendamentoError) {
+                if (agendamentoError) {
+                  console.error('❌ Erro ao reagendar (fallback):', {
+                    error: agendamentoError,
+                    message: agendamentoError.message,
+                    details: agendamentoError.details
+                  });
+                  resposta = 'Ops, tive um problema ao reagendar. Pode tentar novamente? 💜';
+                  novoContexto.etapa = 'escolher_horario';
+                } else {
+                  console.log('✅ Agendamento reagendado (fallback)!');
                   try {
                     const [yyyy, mm, dd] = (novoContexto.data as string).split('-').map(Number);
                     const d = new Date(Date.UTC(yyyy, mm - 1, dd, 12, 0, 0));
@@ -881,6 +910,14 @@ serve(async (req) => {
                   novoContexto = {};
                 }
               } else {
+                console.log('💾 Tentando criar agendamento (sem validação de duração) com dados:', {
+                  cliente_nome: novoContexto.cliente_nome,
+                  telefone,
+                  servico_id: novoContexto.servico_id,
+                  data: novoContexto.data,
+                  horario: novoContexto.horario
+                });
+
                 const { error: agendamentoError } = await supabase
                   .from('agendamentos')
                   .insert({
@@ -895,7 +932,17 @@ serve(async (req) => {
                     bot_conversa_id: conversa!.id,
                   });
 
-                if (!agendamentoError) {
+                if (agendamentoError) {
+                  console.error('❌ Erro ao criar agendamento (fallback):', {
+                    error: agendamentoError,
+                    message: agendamentoError.message,
+                    details: agendamentoError.details,
+                    hint: agendamentoError.hint
+                  });
+                  resposta = 'Ops, tive um problema ao agendar. Pode tentar novamente? Se continuar dando erro, me chama que agendamos manualmente, tá bom? 💜';
+                  novoContexto.etapa = 'criar_agendamento';
+                } else {
+                  console.log('✅ Agendamento criado com sucesso (fallback)!');
                   try {
                     const [yyyy, mm, dd] = (novoContexto.data as string).split('-').map(Number);
                     const d = new Date(Date.UTC(yyyy, mm - 1, dd, 12, 0, 0));
@@ -928,8 +975,10 @@ Diretrizes:
 - Não use muitos emojis ou palavras demais.`;
 
         if (!LOVABLE_API_KEY) {
+          console.log('⚠️ LOVABLE_API_KEY não configurada');
           resposta = 'Oi! Como posso te ajudar? 💜';
         } else {
+          console.log('🤖 Chamando Lovable AI...');
           const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -948,13 +997,21 @@ Diretrizes:
           if (aiResp.ok) {
             const data = await aiResp.json();
             resposta = data.choices?.[0]?.message?.content?.trim() || 'Certo! Como posso te ajudar? 💜';
+            console.log('✅ IA respondeu:', resposta);
+          } else if (aiResp.status === 429) {
+            console.error('❌ Rate limit excedido (429)');
+            resposta = 'Desculpa, amor! Estou com muitas mensagens agora. Pode tentar de novo em alguns minutos? 💜';
+          } else if (aiResp.status === 402) {
+            console.error('❌ Créditos da IA esgotados (402)');
+            resposta = 'Oi! Como posso te ajudar? 💜';
           } else {
-            console.error('AI gateway error:', aiResp.status, await aiResp.text());
+            const errorText = await aiResp.text();
+            console.error(`❌ Erro na IA (${aiResp.status}):`, errorText);
             resposta = 'Certo! Como posso te ajudar? 💜';
           }
         }
       } catch (e) {
-        console.error('AI fallback error:', e);
+        console.error('❌ Erro na chamada IA:', e);
         resposta = 'Certo! Como posso te ajudar? 💜';
       }
     }
