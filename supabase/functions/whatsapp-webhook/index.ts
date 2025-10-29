@@ -318,9 +318,12 @@ serve(async (req) => {
         }
       }
 
-      // Se ainda não detectou, procurar no histórico completo
+      // Se ainda não detectou, procurar no histórico (recente e apenas mensagens do cliente)
       if (!novoContexto.data && historicoMensagens) {
-        for (const msg of historicoMensagens) {
+        const recentes = (historicoMensagens as any[])
+          .filter((m) => m.tipo === 'recebida')
+          .slice(-6);
+        for (const msg of recentes) {
           const txt = (msg.conteudo || '').toLowerCase();
           const m = txt.match(/(\d{1,2})\/(\d{1,2})(\/(\d{4}))?/);
           if (m) {
@@ -329,14 +332,14 @@ serve(async (req) => {
             const ano = m[4] || new Date().getFullYear().toString();
             novoContexto.data = `${ano}-${mes}-${dia}`;
             novoContexto.etapa = 'escolher_horario';
-            console.log('📅 Data detectada no histórico:', novoContexto.data);
+            console.log('📅 Data detectada no histórico (recente):', novoContexto.data);
             break;
           }
           const relativa = calcularData(txt);
           if (relativa) {
             novoContexto.data = relativa;
             novoContexto.etapa = 'escolher_horario';
-            console.log('📅 Data detectada no histórico (relativa):', novoContexto.data);
+            console.log('📅 Data detectada no histórico (relativa/recente):', novoContexto.data);
             break;
           }
         }
@@ -361,16 +364,19 @@ serve(async (req) => {
         console.log('⏰ Horário detectado (meio dia):', novoContexto.horario);
       }
 
-      // Se ainda não detectou, procurar no histórico (com validação)
+      // Se ainda não detectou, procurar no histórico (recente, do cliente e com validação)
       if (!novoContexto.horario && historicoMensagens) {
-        for (const m of historicoMensagens) {
+        const recentes = (historicoMensagens as any[])
+          .filter((m) => m.tipo === 'recebida')
+          .slice(-6);
+        for (const m of recentes) {
           const h2 = parseHorario(m.conteudo || '');
           if (h2 && isValidHorario(h2)) {
             novoContexto.horario = h2;
             if (novoContexto.data && novoContexto.servico_id) {
               novoContexto.etapa = 'confirmar_nome';
             }
-            console.log('⏰ Horário detectado no histórico:', novoContexto.horario);
+            console.log('⏰ Horário detectado no histórico (recente):', novoContexto.horario);
             break;
           }
           const txt = (m.conteudo || '').toLowerCase();
@@ -379,7 +385,7 @@ serve(async (req) => {
             if (novoContexto.data && novoContexto.servico_id) {
               novoContexto.etapa = 'confirmar_nome';
             }
-            console.log('⏰ Horário detectado no histórico (meio dia):', novoContexto.horario);
+            console.log('⏰ Horário detectado no histórico (meio dia/recente):', novoContexto.horario);
             break;
           }
         }
@@ -392,8 +398,15 @@ serve(async (req) => {
         novoContexto.data && 
         novoContexto.horario) {
       const candidato = mensagem.trim();
-      const contemTermosNaoNome = /[0-9\/?]/.test(candidato) || /(dia|vaga|hora|tem|pode|amanh|segunda|terça|terca|quarta|quinta|sexta|sábado|sabado|domingo)/i.test(candidato);
-      const ehNomeProvavel = /^[A-Za-zÀ-ÿ' ]{2,60}$/.test(candidato) && !contemTermosNaoNome;
+      const lower = candidato.toLowerCase();
+      const stop = [
+        'ok','obrigado','obrigada','valeu','isso','sim','nao','não','ta','tá','tudo bem','perfeito','certo','confirmo','claro','por favor','bom dia','boa tarde','boa noite','ate','até','agradeco','agradeço','beleza'
+      ];
+      const contemTermosNaoNome = /[0-9\/?.,!]/.test(candidato) || stop.some(w => lower.startsWith(w) || lower === w || lower.includes(` ${w} `));
+      const palavras = candidato.split(/\s+/).filter(Boolean);
+      const duasPalavrasMin = palavras.length >= 2 && palavras.every(p => p.length >= 2 && !stop.includes(p.toLowerCase()));
+      const somenteLetras = /^[A-Za-zÀ-ÿ' ]{2,60}$/.test(candidato);
+      const ehNomeProvavel = somenteLetras && duasPalavrasMin && !contemTermosNaoNome;
       if (ehNomeProvavel) {
         novoContexto.cliente_nome = candidato;
         novoContexto.etapa = 'criar_agendamento';
@@ -404,6 +417,15 @@ serve(async (req) => {
     // Não agendar sem nome válido
     if (!novoContexto.cliente_nome && novoContexto.servico_id && novoContexto.data && novoContexto.horario) {
       novoContexto.etapa = 'confirmar_nome';
+      try {
+        const dias = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+        const d = new Date(`${novoContexto.data}T12:00:00`);
+        const wd = dias[d.getDay()];
+        const [yyyy, mm, dd] = (novoContexto.data as string).split('-');
+        const ddmm = `${dd}/${mm}`;
+        const nomeServ = novoContexto.servico_nome || 'serviço';
+        resposta = `Perfeito! ${nomeServ} em ${ddmm} (${wd}) às ${novoContexto.horario}. Qual seu nome completo para confirmar? 💜`;
+      } catch {}
       console.log('👤 Aguardando nome válido do cliente para prosseguir.');
     }
 
