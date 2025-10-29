@@ -75,56 +75,65 @@ const ChatAssistente = () => {
         throw new Error("Falha ao conectar com a assistente");
       }
 
-      if (!resp.body) throw new Error("Resposta sem corpo");
+      const contentType = resp.headers.get("content-type") || "";
 
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let textBuffer = "";
-      let streamDone = false;
-      let assistantContent = "";
+      if (contentType.includes("text/event-stream")) {
+        if (!resp.body) throw new Error("Resposta sem corpo");
 
-      // Add empty assistant message
-      setMessages(prev => [...prev, { role: "assistant", content: "" }]);
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let textBuffer = "";
+        let streamDone = false;
+        let assistantContent = "";
 
-      while (!streamDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        textBuffer += decoder.decode(value, { stream: true });
+        // Add empty assistant message for streaming updates
+        setMessages(prev => [...prev, { role: "assistant", content: "" }]);
 
-        let newlineIndex: number;
-        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-          let line = textBuffer.slice(0, newlineIndex);
-          textBuffer = textBuffer.slice(newlineIndex + 1);
+        while (!streamDone) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          textBuffer += decoder.decode(value, { stream: true });
 
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
+          let newlineIndex: number;
+          while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+            let line = textBuffer.slice(0, newlineIndex);
+            textBuffer = textBuffer.slice(newlineIndex + 1);
 
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") {
-            streamDone = true;
-            break;
-          }
+            if (line.endsWith("\r")) line = line.slice(0, -1);
+            if (line.startsWith(":") || line.trim() === "") continue;
+            if (!line.startsWith("data: ")) continue;
 
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) {
-              assistantContent += content;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = {
-                  role: "assistant",
-                  content: assistantContent,
-                };
-                return newMessages;
-              });
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") {
+              streamDone = true;
+              break;
             }
-          } catch {
-            textBuffer = line + "\n" + textBuffer;
-            break;
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+              if (content) {
+                assistantContent += content;
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  newMessages[newMessages.length - 1] = {
+                    role: "assistant",
+                    content: assistantContent,
+                  };
+                  return newMessages;
+                });
+              }
+            } catch {
+              textBuffer = line + "\n" + textBuffer;
+              break;
+            }
           }
         }
+      } else {
+        // Non-streaming JSON response
+        const data = await resp.json();
+        const generatedText = data.generatedText || data.choices?.[0]?.message?.content || "Desculpe, não consegui gerar uma resposta.";
+        setMessages(prev => [...prev, { role: "assistant", content: generatedText }]);
       }
     } catch (error) {
       console.error("Erro no chat:", error);
