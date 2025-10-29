@@ -76,7 +76,7 @@ Seja sempre útil, amigável e ajude os clientes da melhor forma possível!`;
           { role: "system", content: systemPrompt },
           ...messages,
         ],
-        stream: true,
+        stream: false, // Desabilitar streaming para chamadas do WhatsApp
       }),
     });
 
@@ -101,8 +101,11 @@ Seja sempre útil, amigável e ajude os clientes da melhor forma possível!`;
       });
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    const data = await response.json();
+    const generatedText = data.choices?.[0]?.message?.content || "Desculpe, não consegui gerar uma resposta.";
+
+    return new Response(JSON.stringify({ generatedText }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("chat error:", e);

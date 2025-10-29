@@ -23,7 +23,6 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const geminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY')!;
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { telefone, mensagem } = await req.json();
@@ -101,113 +100,55 @@ serve(async (req) => {
       day: 'numeric' 
     });
 
-    // Processar com Google Gemini mantendo histórico
-    const systemPrompt = `Você é Jennifer, atendente do salão de beleza. Atenda no WhatsApp de forma NATURAL e HUMANA.
-
-DATA ATUAL: ${dataAtualFormatada}
-
-Serviços disponíveis:
-${servicos?.map(s => `- ${s.nome}: R$ ${s.preco} (${s.duracao} min)`).join('\n')}
-
-Profissionais: ${profissionais?.map(p => p.nome).join(', ')}
-
-REGRAS DE OURO (SIGA RIGOROSAMENTE):
-1. RESPOSTAS CURTAS: Máximo 2-3 linhas por mensagem
-2. UMA PERGUNTA POR VEZ: Nunca pergunte várias coisas de uma vez
-3. LINGUAGEM DO WHATSAPP: Informal, natural, como uma pessoa real
-4. USE EMOJIS COM MODERAÇÃO: 1-2 por mensagem apenas
-5. SEM LISTAS OU BLOCOS: Evite bullets, números, formatações complexas
-6. SEJA DIRETA: Vá direto ao ponto sem enrolação
-
-ENTENDIMENTO DE DATAS:
-- "segunda" ou "segunda-feira" = próxima segunda-feira
-- "próxima semana" = semana que vem
-- "semana que vem" = próxima semana
-- "amanhã" = dia seguinte
-- "depois de amanhã" = daqui 2 dias
-- "sexta" = próxima sexta-feira
-SEMPRE confirme a data específica com o cliente (ex: "Certo, então dia 15/01, ok?")
-
-ENTENDIMENTO DE HORÁRIOS:
-- "9h", "9:00", "9 horas" = 09:00
-- "meio dia" = 12:00
-- "1 da tarde" = 13:00
-- "2 da tarde" = 14:00
-SEMPRE use formato HH:MM (ex: 09:00, 14:30)
-
-FLUXO DE AGENDAMENTO:
-- Primeiro: Qual serviço quer?
-- Segundo: Que dia prefere? (confirme a data específica)
-- Terceiro: Que horário? (confirme o horário no formato HH:MM)
-- Quarto: Qual seu nome?
-- Confirme TUDO e pronto!
-
-Contexto atual: ${JSON.stringify(contexto, null, 2)}
-
-EXEMPLOS DE RESPOSTAS BOAS:
-❌ "Olá! Temos os seguintes serviços disponíveis:\n- Corte\n- Manicure\nQual você gostaria?"
-✅ "Oi! Quer agendar corte, manicure ou outro serviço? 💇"
-
-❌ "Para agendar preciso saber: 1) serviço 2) data 3) horário"
-✅ "Qual serviço você quer agendar?"
-
-Responda como uma atendente real responderia no WhatsApp.`;
-
-    // Construir histórico formatado para Gemini
-    let conversaCompleta = systemPrompt + "\n\n--- HISTÓRICO DA CONVERSA ---\n";
+    // Construir histórico de mensagens para o Lovable AI
+    const mensagensFormatadas = [];
     
     if (historicoMensagens && historicoMensagens.length > 0) {
       historicoMensagens.forEach(msg => {
-        const role = msg.tipo === 'recebida' ? 'Cliente' : 'Jennifer';
-        conversaCompleta += `${role}: ${msg.conteudo}\n`;
+        mensagensFormatadas.push({
+          role: msg.tipo === 'recebida' ? 'user' : 'assistant',
+          content: msg.conteudo
+        });
       });
     }
     
-    conversaCompleta += `Cliente: ${mensagem}\nJennifer:`;
+    // Adicionar mensagem atual do usuário
+    mensagensFormatadas.push({
+      role: 'user',
+      content: mensagem
+    });
 
-    console.log('🤖 Enviando para Google Gemini');
+    console.log('🤖 Enviando para Lovable AI (L&J)');
 
     let resposta: string | null = null;
     try {
-      // Usar Google Gemini API (com histórico)
-      const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: conversaCompleta }] }],
-          generationConfig: {
-            temperature: 0.9,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
-          }
-        }),
+      // Chamar edge function chat-assistente
+      const { data: chatData, error: chatError } = await supabase.functions.invoke('chat-assistente', {
+        body: { messages: mensagensFormatadas }
       });
 
-      if (!aiResponse.ok) {
-        const errorText = await aiResponse.text();
-        console.error('❌ Erro no Gemini:', aiResponse.status, errorText);
-        throw new Error(`gemini_${aiResponse.status}`);
+      if (chatError) {
+        console.error('❌ Erro no Lovable AI:', chatError);
+        throw chatError;
       }
 
-      const aiData = await aiResponse.json();
-      resposta = aiData.candidates?.[0]?.content?.parts?.[0]?.text || null;
+      resposta = chatData?.generatedText || null;
     } catch (e) {
-      console.error('⚠️ Gemini indisponível. Ativando fallback resiliente...', e);
+      console.error('⚠️ Lovable AI indisponível. Ativando fallback resiliente...', e);
       // Fallback determinístico para NUNCA ficar sem resposta
       const nomesServicos = (servicos || []).map(s => s.nome);
       const sugestaoServicos = nomesServicos.slice(0, 3).join(', ');
 
       if (!contexto?.servico_id) {
-        resposta = `Estou online 24h 😉 Qual serviço você quer? Ex: ${sugestaoServicos}`;
+        resposta = `Olá! 💜 Qual serviço você quer agendar? Ex: ${sugestaoServicos} 🫶🏾`;
       } else if (!contexto?.data) {
-        resposta = 'Perfeito! Para qual dia? Pode me dizer a data (ex: 12/11) ou "amanhã"/"sexta"?';
+        resposta = 'Perfeito! Para qual dia você prefere? ✨';
       } else if (!contexto?.horario) {
-        resposta = 'Certo! Qual horário prefere? Diga no formato HH:MM (ex: 14:30)';
+        resposta = 'E qual horário? 💆🏽‍♀️';
       } else if (!contexto?.cliente_nome) {
-        resposta = 'Qual seu nome para confirmar o agendamento?';
+        resposta = 'Qual seu nome para confirmar o agendamento? 🫶🏾';
       } else {
-        resposta = 'Tudo certo por aqui! Posso confirmar o agendamento?';
+        resposta = 'Tudo certo! Posso confirmar seu agendamento? ✨';
       }
     }
 
