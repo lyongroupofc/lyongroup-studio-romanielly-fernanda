@@ -1,38 +1,76 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Users, DollarSign, Clock, Plus, Sparkles, Eye, EyeOff } from "lucide-react";
-
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useAgendamentos } from "@/hooks/useAgendamentos";
+import { usePagamentos } from "@/hooks/usePagamentos";
+import { format } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [showTotal, setShowTotal] = useState(true);
+  const { agendamentos, loading: loadingAgendamentos } = useAgendamentos();
+  const { pagamentos, loading: loadingPagamentos } = usePagamentos();
+
+  // Cálculos de estatísticas
+  const hoje = format(new Date(), "yyyy-MM-dd");
+  const mesAtual = format(new Date(), "yyyy-MM");
+  
+  const agendamentosMes = agendamentos.filter(ag => ag.data?.startsWith(mesAtual)).length;
+  const agendamentosHoje = agendamentos.filter(ag => ag.data === hoje).length;
+  const clientesAtendidos = agendamentos.filter(ag => ag.status === "Concluído").length;
+  const clientesPendentes = agendamentos.filter(ag => ag.status === "Confirmado" && ag.data >= hoje).length;
+  
+  const faturamentoHoje = pagamentos
+    .filter(p => p.data === hoje)
+    .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
+  
+  // Dados para o gráfico dos últimos 7 dias
+  const ultimosDias = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - i));
+    return format(date, "yyyy-MM-dd");
+  });
+
+  const dadosGrafico = ultimosDias.map((data) => {
+    const faturamentoDia = pagamentos
+      .filter((p) => p.data === data)
+      .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
+    const agendamentosDia = agendamentos.filter(ag => ag.data === data).length;
+    return {
+      dia: format(new Date(data), "dd/MM"),
+      faturamento: faturamentoDia,
+      agendamentos: agendamentosDia,
+    };
+  });
+
   const stats = [
     {
       title: "Agendamentos do Mês",
-      value: "0",
+      value: agendamentosMes.toString(),
       icon: Calendar,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
     {
       title: "Clientes Atendidos",
-      value: "0",
+      value: clientesAtendidos.toString(),
       icon: Users,
       color: "text-success",
       bgColor: "bg-success/10",
     },
     {
       title: "Clientes Pendentes",
-      value: "0",
+      value: clientesPendentes.toString(),
       icon: Clock,
       color: "text-warning",
       bgColor: "bg-warning/10",
     },
     {
-      title: "Horários Disponíveis",
-      value: "0",
+      title: "Agendamentos Hoje",
+      value: agendamentosHoje.toString(),
       icon: Calendar,
       color: "text-accent-foreground",
       bgColor: "bg-accent",
@@ -40,9 +78,9 @@ const Dashboard = () => {
   ];
 
   const todayStats = [
-    { label: "Atendimentos Hoje", value: "0" },
-    { label: "Faturamento do Dia", value: "R$ 0,00" },
-    { label: "Profissional Mais Requisitado", value: "-" },
+    { label: "Atendimentos Hoje", value: agendamentosHoje.toString() },
+    { label: "Faturamento do Dia", value: `R$ ${faturamentoHoje.toFixed(2).replace(".", ",")}` },
+    { label: "Total de Agendamentos", value: agendamentos.length.toString() },
   ];
 
   return (
@@ -52,7 +90,7 @@ const Dashboard = () => {
         <Sparkles className="w-8 h-8 text-white" />
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-white">
-            Bem-vinda, Jennifer Silva ✨
+            Bem-vinda, Lara & Jennifer Silva ✨
           </h1>
           <p className="text-white/90 text-lg">
             Que o seu dia seja incrível!
@@ -119,16 +157,40 @@ const Dashboard = () => {
         </div>
       </Card>
 
-      {/* Gráfico Placeholder */}
+      {/* Gráfico de Agendamentos e Faturamento */}
       <Card className="p-6">
         <h2 className="text-xl font-semibold mb-6">
-          Evolução de Agendamentos e Faturamento
+          Evolução de Agendamentos e Faturamento (Últimos 7 Dias)
         </h2>
-        <div className="h-64 flex items-center justify-center bg-muted rounded-lg">
-          <p className="text-muted-foreground">
-            Gráfico será implementado com dados reais
-          </p>
-        </div>
+        {loadingAgendamentos || loadingPagamentos ? (
+          <div className="h-80 flex items-center justify-center bg-muted rounded-lg">
+            <p className="text-muted-foreground">Carregando dados...</p>
+          </div>
+        ) : pagamentos.length === 0 && agendamentos.length === 0 ? (
+          <div className="h-80 flex items-center justify-center bg-muted rounded-lg">
+            <p className="text-muted-foreground">Os dados serão exibidos conforme você registrar agendamentos e pagamentos</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={dadosGrafico}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis dataKey="dia" className="text-xs" />
+              <YAxis yAxisId="left" className="text-xs" />
+              <YAxis yAxisId="right" orientation="right" className="text-xs" />
+              <Tooltip
+                formatter={(value: number, name: string) => {
+                  if (name === "faturamento") {
+                    return [`R$ ${value.toFixed(2).replace(".", ",")}`, "Faturamento"];
+                  }
+                  return [value, "Agendamentos"];
+                }}
+                contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+              />
+              <Bar yAxisId="left" dataKey="faturamento" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} name="faturamento" />
+              <Bar yAxisId="right" dataKey="agendamentos" fill="hsl(var(--success))" radius={[8, 8, 0, 0]} name="agendamentos" />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </Card>
     </div>
   );
