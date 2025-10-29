@@ -190,6 +190,12 @@ serve(async (req) => {
       }
     });
 
+    // Canonicaliza resposta quando apenas o serviço foi definido
+    if (novoContexto.servico_id && !novoContexto.data) {
+      const nomeServ = novoContexto.servico_nome || 'serviço';
+      resposta = `Perfeito! ${nomeServ} anotado. Para qual dia você prefere? ✨`;
+    }
+
     // Se ainda não detectou, procurar no histórico (apenas mensagens do cliente e mais recentes)
     if (!novoContexto.servico_id && historicoMensagens) {
       const recentesCliente = (historicoMensagens as any[])
@@ -347,9 +353,21 @@ serve(async (req) => {
           }
         }
       }
-    }
+     }
 
-    // Detectar horário (múltiplos formatos)
+     // Se já temos data e serviço mas falta horário, padroniza a resposta com data correta
+     if (novoContexto.data && novoContexto.servico_id && !novoContexto.horario) {
+       try {
+         const [yyyyNum, mmNum, ddNum] = (novoContexto.data as string).split('-').map(Number);
+         const d = new Date(Date.UTC(yyyyNum, mmNum - 1, ddNum, 12, 0, 0));
+         const wd = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'][d.getUTCDay()];
+         const ddmm = `${String(ddNum).padStart(2,'0')}/${String(mmNum).padStart(2,'0')}`;
+         const nomeServ = novoContexto.servico_nome || 'serviço';
+         resposta = `Perfeito! ${nomeServ} em ${ddmm} (${wd}). Qual horário você prefere? 💜`;
+       } catch {}
+     }
+ 
+     // Detectar horário (múltiplos formatos)
     if (!novoContexto.horario) {
       // Primeiro tenta padrões robustos e válidos
       const hor = parseHorario(mensagem);
