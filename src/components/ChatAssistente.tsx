@@ -13,6 +13,7 @@ type Message = {
 };
 
 const ChatAssistente = () => {
+  const { servicos } = useServicos();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -33,6 +34,14 @@ const ChatAssistente = () => {
   const streamChat = async (userMessage: string) => {
     const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-assistente`;
 
+    // Preparar lista de serviços formatada
+    const servicosFormatados = servicos.map(s => {
+      const duracaoTexto = s.duracao >= 60 
+        ? `${Math.floor(s.duracao / 60)}h${s.duracao % 60 > 0 ? ` ${s.duracao % 60}min` : ''}`
+        : `${s.duracao} min`;
+      return `• ${s.nome} - R$ ${Number(s.preco).toFixed(2).replace('.', ',')} (${duracaoTexto})`;
+    }).join('\n');
+
     try {
       const resp = await fetch(CHAT_URL, {
         method: "POST",
@@ -41,7 +50,8 @@ const ChatAssistente = () => {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({ 
-          messages: [...messages, { role: "user", content: userMessage }] 
+          messages: [...messages, { role: "user", content: userMessage }],
+          servicos: servicosFormatados
         }),
       });
 
