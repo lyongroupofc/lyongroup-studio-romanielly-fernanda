@@ -401,11 +401,8 @@ Responda APENAS com uma dessas palavras:
           // Se for o mesmo dia ou já passou, vai para próxima semana
           if (diasParaSomar <= 0) diasParaSomar += 7;
           
-          // Se menciona "próxima semana" ou "semana que vem", adiciona mais 7 dias
-          if (referencia.includes('próxima semana') || referencia.includes('proxima semana') || 
-              referencia.includes('semana que vem')) {
-            diasParaSomar += 7;
-          }
+          // Nota: "próxima semana" ou "semana que vem" já é atendido pelo cálculo acima.
+          // Não somar +7 novamente para evitar pular uma semana a mais.
           
           const dataCalculada = new Date(now);
           dataCalculada.setDate(dataCalculada.getDate() + diasParaSomar);
