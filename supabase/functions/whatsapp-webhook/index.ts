@@ -174,40 +174,61 @@ serve(async (req) => {
       content: mensagem
     });
 
-    console.log('🤖 Enviando para Lovable AI (L&J)');
-
+    // Resposta determinística para perguntas sobre serviços/valores
     let resposta: string | null = null;
-    try {
-      // Chamar edge function chat-assistente com contexto de serviços
-      const { data: chatData, error: chatError } = await supabase.functions.invoke('chat-assistente', {
-        body: { 
-          messages: mensagensFormatadas,
-          servicos: servicosFormatados
+    const ml = (mensagem || '').toLowerCase();
+    const pedeLista = /(lista de serviços|lista de servicos|quais.*serviç|quais.*servic|tem.*serviç|tem.*servic|que serviço|que servico)/i.test(ml);
+    let servicoDetectado: any = null;
+    for (const s of (servicos || [])) {
+      if (ml.includes((s.nome || '').toLowerCase())) { servicoDetectado = s; break; }
+    }
+    const perguntaPreco = /(quanto custa|preço|preco|valor)/i.test(ml);
+
+    if (pedeLista && (servicos || []).length > 0) {
+      resposta = `Tenho sim, amor! 💜\n\n${servicosFormatados}`;
+    } else if (perguntaPreco && servicoDetectado) {
+      const s = servicoDetectado as any;
+      const duracaoTexto = s.duracao >= 60 
+        ? `${Math.floor(s.duracao / 60)}h${s.duracao % 60 > 0 ? ` ${s.duracao % 60}min` : ''}`
+        : `${s.duracao} min`;
+      resposta = `${s.nome} custa R$ ${Number(s.preco).toFixed(2).replace('.', ',')} e dura ${duracaoTexto}.`;
+    }
+
+    // Só chama IA se ainda não geramos resposta específica
+    if (!resposta) {
+      console.log('🤖 Enviando para Lovable AI (L&J)');
+      try {
+        // Chamar edge function chat-assistente com contexto de serviços
+        const { data: chatData, error: chatError } = await supabase.functions.invoke('chat-assistente', {
+          body: { 
+            messages: mensagensFormatadas,
+            servicos: servicosFormatados
+          }
+        });
+
+        if (chatError) {
+          console.error('❌ Erro no Lovable AI:', chatError);
+          throw chatError;
         }
-      });
 
-      if (chatError) {
-        console.error('❌ Erro no Lovable AI:', chatError);
-        throw chatError;
-      }
+        resposta = chatData?.generatedText || null;
+      } catch (e) {
+        console.error('⚠️ Lovable AI indisponível. Ativando fallback resiliente...', e);
+        // Fallback determinístico para NUNCA ficar sem resposta
+        const nomesServicos = (servicos || []).map(s => s.nome);
+        const sugestaoServicos = nomesServicos.slice(0, 3).join(', ');
 
-      resposta = chatData?.generatedText || null;
-    } catch (e) {
-      console.error('⚠️ Lovable AI indisponível. Ativando fallback resiliente...', e);
-      // Fallback determinístico para NUNCA ficar sem resposta
-      const nomesServicos = (servicos || []).map(s => s.nome);
-      const sugestaoServicos = nomesServicos.slice(0, 3).join(', ');
-
-      if (!contexto?.servico_id) {
-        resposta = `Olá! 💜 Qual serviço você quer agendar? Ex: ${sugestaoServicos} 🫶🏾`;
-      } else if (!contexto?.data) {
-        resposta = 'Perfeito! Para qual dia você prefere? ✨';
-      } else if (!contexto?.horario) {
-        resposta = 'E qual horário? 💆🏽‍♀️';
-      } else if (!contexto?.cliente_nome) {
-        resposta = 'Qual seu nome para confirmar o agendamento? 🫶🏾';
-      } else {
-        resposta = 'Tudo certo! Posso confirmar seu agendamento? ✨';
+        if (!contexto?.servico_id) {
+          resposta = `Olá! 💜 Qual serviço você quer agendar? Ex: ${sugestaoServicos} 🫶🏾`;
+        } else if (!contexto?.data) {
+          resposta = 'Perfeito! Para qual dia você prefere? ✨';
+        } else if (!contexto?.horario) {
+          resposta = 'E qual horário? 💆🏽‍♀️';
+        } else if (!contexto?.cliente_nome) {
+          resposta = 'Qual seu nome para confirmar o agendamento? 🫶🏾';
+        } else {
+          resposta = 'Tudo certo! Posso confirmar seu agendamento? ✨';
+        }
       }
     }
 
