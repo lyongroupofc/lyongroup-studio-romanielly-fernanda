@@ -13,6 +13,8 @@ interface Contexto {
   data?: string;
   horario?: string;
   cliente_nome?: string;
+  acao?: 'agendar' | 'cancelar' | 'reagendar';
+  agendamento_id?: string; // Para cancelamento/reagendamento
 }
 
 serve(async (req) => {
@@ -81,7 +83,31 @@ serve(async (req) => {
       conteudo: mensagem,
     });
 
-    const contexto = conversa!.contexto as Contexto || {};
+    let contexto = conversa!.contexto as Contexto || {};
+
+    // Buscar agendamentos futuros do cliente
+    const hoje = new Date().toISOString().split('T')[0];
+    const { data: agendamentosFuturos } = await supabase
+      .from('agendamentos')
+      .select('*')
+      .eq('cliente_telefone', telefone)
+      .gte('data', hoje)
+      .order('data', { ascending: true });
+
+    // Verificar se já existe um agendamento confirmado (evitar duplicatas/re-processamento)
+    const temAgendamentoRecente = agendamentosFuturos?.some(ag => {
+      const diff = Date.now() - new Date(ag.created_at).getTime();
+      return diff < 60000; // Criado nos últimos 60 segundos
+    });
+
+    if (temAgendamentoRecente) {
+      console.log('✅ Agendamento recente detectado, resetando contexto');
+      contexto = {}; // Resetar contexto para evitar loop
+      await supabase
+        .from('bot_conversas')
+        .update({ contexto: {}, ultimo_contato: new Date().toISOString() })
+        .eq('id', conversa!.id);
+    }
 
     // Buscar histórico de mensagens da conversa
     const { data: historicoMensagens } = await supabase
@@ -106,8 +132,8 @@ serve(async (req) => {
       .eq('ativo', true);
 
     // Data atual para contexto
-    const hoje = new Date();
-    const dataAtualFormatada = hoje.toLocaleDateString('pt-BR', { 
+    const dataAtual = new Date();
+    const dataAtualFormatada = dataAtual.toLocaleDateString('pt-BR', { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
@@ -175,20 +201,79 @@ serve(async (req) => {
     const mensagemLower = mensagem.toLowerCase();
     let novoContexto = { ...contexto };
 
+    // Detectar intenção de cancelamento ou reagendamento
     console.log('🔍 Analisando mensagem:', mensagem);
     console.log('📍 Etapa atual:', novoContexto.etapa);
+    
+    const querCancelar = /\b(cancelar|desmarcar|não quero mais|não vou conseguir)\b/i.test(mensagemLower);
+    const querReagendar = /\b(reagendar|remarcar|mudar (o|a|de) (horário|horario|data)|trocar (o|a|de) (horário|horario|data))\b/i.test(mensagemLower);
 
-    // Detectar serviço escolhido
-    servicos?.forEach(s => {
-      if (mensagemLower.includes(s.nome.toLowerCase())) {
-        novoContexto.servico_id = s.id;
-        novoContexto.servico_nome = s.nome;
-        if (!novoContexto.etapa || novoContexto.etapa === 'escolher_servico') {
-          novoContexto.etapa = 'escolher_data';
+    // Verificar políticas de cancelamento/reagendamento
+    const calcularDiasAteAgendamento = (dataAgendamento: string): number => {
+      const dataHoje = new Date();
+      dataHoje.setHours(0, 0, 0, 0);
+      const dataAg = new Date(dataAgendamento + 'T00:00:00');
+      const diffMs = dataAg.getTime() - dataHoje.getTime();
+      return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    };
+
+    // Processar cancelamento
+    if (querCancelar && agendamentosFuturos && agendamentosFuturos.length > 0) {
+      const agendamento = agendamentosFuturos[0];
+      const diasAte = calcularDiasAteAgendamento(agendamento.data);
+      
+      if (diasAte < 5) {
+        resposta = `Querida, nossa política de cancelamento permite até 5 dias antes do horário. Seu agendamento é em ${diasAte} dia(s). Precisa muito cancelar? 😔`;
+      } else {
+        const { error } = await supabase
+          .from('agendamentos')
+          .update({ status: 'Cancelado' })
+          .eq('id', agendamento.id);
+        
+        if (!error) {
+          const [yyyy, mm, dd] = agendamento.data.split('-');
+          resposta = `Tudo bem, amor! Seu agendamento de ${agendamento.servico_nome} do dia ${dd}/${mm} às ${agendamento.horario} foi cancelado. 💜 Se precisar agendar de novo, é só chamar!`;
+          novoContexto = {}; // Resetar contexto
+          console.log('✅ Cancelamento realizado');
+        } else {
+          console.error('❌ Erro ao cancelar:', error);
+          resposta = 'Ops, tive um problema ao cancelar. Pode tentar novamente? 😊';
         }
-        console.log('✅ Serviço detectado:', s.nome);
       }
-    });
+    }
+    // Processar reagendamento
+    else if (querReagendar && agendamentosFuturos && agendamentosFuturos.length > 0) {
+      const agendamento = agendamentosFuturos[0];
+      const diasAte = calcularDiasAteAgendamento(agendamento.data);
+      
+      if (diasAte < 2) {
+        resposta = `Querida, nossa política de reagendamento permite até 2 dias antes do horário. Seu agendamento é em ${diasAte} dia(s). Não consigo remarcar tão perto. 😔`;
+      } else {
+        novoContexto.acao = 'reagendar';
+        novoContexto.agendamento_id = agendamento.id;
+        novoContexto.servico_id = agendamento.servico_id;
+        novoContexto.servico_nome = agendamento.servico_nome;
+        novoContexto.cliente_nome = agendamento.cliente_nome;
+        novoContexto.etapa = 'escolher_data';
+        const [yyyy, mm, dd] = agendamento.data.split('-');
+        resposta = `Claro, amor! Vou remarcar seu ${agendamento.servico_nome} que estava agendado para ${dd}/${mm} às ${agendamento.horario}. Qual nova data você prefere? 💜`;
+        console.log('🔄 Iniciando reagendamento');
+      }
+    }
+    // Detectar serviço escolhido (novo agendamento)
+    else {
+      servicos?.forEach(s => {
+        if (mensagemLower.includes(s.nome.toLowerCase())) {
+          novoContexto.servico_id = s.id;
+          novoContexto.servico_nome = s.nome;
+          novoContexto.acao = 'agendar';
+          if (!novoContexto.etapa || novoContexto.etapa === 'escolher_servico') {
+            novoContexto.etapa = 'escolher_data';
+          }
+          console.log('✅ Serviço detectado:', s.nome);
+        }
+      });
+    }
 
     // Canonicaliza resposta quando apenas o serviço foi definido
     if (novoContexto.servico_id && !novoContexto.data) {
@@ -536,6 +621,16 @@ serve(async (req) => {
                   console.error('❌ Erro ao criar agendamento:', agendamentoError);
                 } else {
                   console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
+                  
+                  // Se for reagendamento, cancelar o antigo
+                  if (novoContexto.acao === 'reagendar' && novoContexto.agendamento_id) {
+                    await supabase
+                      .from('agendamentos')
+                      .update({ status: 'Reagendado' })
+                      .eq('id', novoContexto.agendamento_id);
+                    console.log('✅ Agendamento anterior marcado como reagendado');
+                  }
+                  
                   // Confirmação padrão caso a IA não tenha confirmado
                   try {
                     const [yyyyNum, mmNum, ddNum] = (novoContexto.data as string).split('-').map(Number);
@@ -544,7 +639,8 @@ serve(async (req) => {
                     const ddmm = `${String(ddNum).padStart(2,'0')}/${String(mmNum).padStart(2,'0')}`;
                     const nomeServ = novoContexto.servico_nome || 'serviço';
                     const nomeCliente = novoContexto.cliente_nome!;
-                    resposta = `Prontinho, ${nomeCliente}! ${nomeServ} agendado para ${ddmm} (${wd}) às ${novoContexto.horario}. 💜`;
+                    const acao = novoContexto.acao === 'reagendar' ? 'reagendado' : 'agendado';
+                    resposta = `Prontinho, ${nomeCliente}! ${nomeServ} ${acao} para ${ddmm} (${wd}) às ${novoContexto.horario}. 💜`;
                   } catch {}
                   novoContexto = {}; // Resetar contexto
                 }
@@ -578,6 +674,16 @@ serve(async (req) => {
                 console.error('❌ Erro ao criar agendamento:', agendamentoError);
               } else {
                 console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
+                
+                // Se for reagendamento, cancelar o antigo
+                if (novoContexto.acao === 'reagendar' && novoContexto.agendamento_id) {
+                  await supabase
+                    .from('agendamentos')
+                    .update({ status: 'Reagendado' })
+                    .eq('id', novoContexto.agendamento_id);
+                  console.log('✅ Agendamento anterior marcado como reagendado');
+                }
+                
                 try {
                   const [yyyyNum, mmNum, ddNum] = (novoContexto.data as string).split('-').map(Number);
                   const d = new Date(Date.UTC(yyyyNum, mmNum - 1, ddNum, 12, 0, 0));
@@ -585,7 +691,8 @@ serve(async (req) => {
                   const ddmm = `${String(ddNum).padStart(2,'0')}/${String(mmNum).padStart(2,'0')}`;
                   const nomeServ = novoContexto.servico_nome || 'serviço';
                   const nomeCliente = novoContexto.cliente_nome!;
-                  resposta = `Prontinho, ${nomeCliente}! ${nomeServ} agendado para ${ddmm} (${wd}) às ${novoContexto.horario}. 💜`;
+                  const acao = novoContexto.acao === 'reagendar' ? 'reagendado' : 'agendado';
+                  resposta = `Prontinho, ${nomeCliente}! ${nomeServ} ${acao} para ${ddmm} (${wd}) às ${novoContexto.horario}. 💜`;
                 } catch {}
                 novoContexto = {};
               }
