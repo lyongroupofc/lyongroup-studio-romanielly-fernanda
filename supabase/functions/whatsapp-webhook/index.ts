@@ -466,25 +466,23 @@ Responda APENAS com uma dessas palavras:
       return slots;
     };
 
-    // Detectar data (múltiplos formatos)
-    if (!novoContexto.data) {
-      // Formato DD/MM/YYYY ou DD/MM
-      const dataMatch = mensagem.match(/(\d{1,2})\/(\d{1,2})(\/(\d{4}))?/);
-      if (dataMatch) {
-        const dia = dataMatch[1].padStart(2, '0');
-        const mes = dataMatch[2].padStart(2, '0');
-        const ano = dataMatch[4] || new Date().getFullYear().toString();
-        novoContexto.data = `${ano}-${mes}-${dia}`;
+    // Detectar data (múltiplos formatos) - SEMPRE processa para permitir correções
+    // Formato DD/MM/YYYY ou DD/MM tem prioridade sobre data existente
+    const dataMatch = mensagem.match(/(\d{1,2})\/(\d{1,2})(\/(\d{4}))?/);
+    if (dataMatch) {
+      const dia = dataMatch[1].padStart(2, '0');
+      const mes = dataMatch[2].padStart(2, '0');
+      const ano = dataMatch[4] || new Date().getFullYear().toString();
+      novoContexto.data = `${ano}-${mes}-${dia}`;
+      novoContexto.etapa = 'escolher_horario';
+      console.log('📅 Data detectada (formato):', novoContexto.data);
+    } else if (!novoContexto.data) {
+      // Só tenta detectar referências relativas se não tem data explícita
+      const dataRelativa = calcularData(mensagemLower);
+      if (dataRelativa) {
+        novoContexto.data = dataRelativa;
         novoContexto.etapa = 'escolher_horario';
-        console.log('📅 Data detectada (formato):', novoContexto.data);
-      } else {
-        // Tentar detectar referências relativas
-        const dataRelativa = calcularData(mensagemLower);
-        if (dataRelativa) {
-          novoContexto.data = dataRelativa;
-          novoContexto.etapa = 'escolher_horario';
-          console.log('📅 Data detectada (relativa):', novoContexto.data);
-        }
+        console.log('📅 Data detectada (relativa):', novoContexto.data);
       }
 
       // Se ainda não detectou, procurar no histórico (recente e apenas mensagens do cliente)
@@ -513,7 +511,7 @@ Responda APENAS com uma dessas palavras:
           }
         }
       }
-     }
+    }
 
      // Se já temos data e serviço mas falta horário, padroniza a resposta com data correta
      if (novoContexto.data && novoContexto.servico_id && !novoContexto.horario) {
