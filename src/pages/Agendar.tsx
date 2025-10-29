@@ -60,12 +60,11 @@ const Agendar = () => {
   const calcularHorariosBloqueados = (horarioInicio: string, duracaoMinutos: number): string[] => {
     const [horas, minutos] = horarioInicio.split(':').map(Number);
     const inicioEmMinutos = horas * 60 + minutos;
-    // Adicionar buffer de 60 minutos
-    const fimEmMinutos = inicioEmMinutos + duracaoMinutos + 60;
+    const fimEmMinutos = inicioEmMinutos + duracaoMinutos;
     
     const horariosBloqueados: string[] = [];
     
-    // Gera todos os slots de 30 em 30 minutos desde o início até o fim (com buffer)
+    // Gera todos os slots de 30 em 30 minutos desde o início até o fim (duração do serviço)
     for (let min = inicioEmMinutos; min < fimEmMinutos; min += 30) {
       const h = Math.floor(min / 60);
       const m = min % 60;
