@@ -201,12 +201,47 @@ serve(async (req) => {
     const mensagemLower = mensagem.toLowerCase();
     let novoContexto = { ...contexto };
 
-    // Detectar intenção de cancelamento ou reagendamento
+    // Detectar intenção usando IA (mais inteligente que palavras-chave)
     console.log('🔍 Analisando mensagem:', mensagem);
     console.log('📍 Etapa atual:', novoContexto.etapa);
     
-    const querCancelar = /\b(cancelar|desmarcar|não quero mais|não vou conseguir)\b/i.test(mensagemLower);
-    const querReagendar = /\b(reagendar|remarcar|mudar (o|a|de) (horário|horario|data)|trocar (o|a|de) (horário|horario|data))\b/i.test(mensagemLower);
+    let intencao: 'agendar' | 'cancelar' | 'reagendar' | 'conversa' = 'conversa';
+    
+    // Usar IA para detectar intenção se houver agendamentos futuros
+    if (agendamentosFuturos && agendamentosFuturos.length > 0) {
+      try {
+        const promptIntencao = `Analise a seguinte mensagem do cliente e identifique a intenção:
+"${mensagem}"
+
+Contexto: O cliente já tem um agendamento marcado.
+
+Responda APENAS com uma dessas palavras:
+- "cancelar" se o cliente quer cancelar/desmarcar o agendamento
+- "reagendar" se o cliente quer remarcar/mudar horário/data
+- "agendar" se o cliente quer fazer um novo agendamento
+- "conversa" se é apenas uma conversa normal (agradecimento, confirmação, etc)`;
+
+        const { data: intencaoData } = await supabase.functions.invoke('chat-assistente', {
+          body: { 
+            messages: [{ role: 'user', content: promptIntencao }]
+          }
+        });
+
+        const detectedIntencao = (intencaoData?.generatedText || 'conversa').toLowerCase().trim();
+        if (['cancelar', 'reagendar', 'agendar', 'conversa'].includes(detectedIntencao)) {
+          intencao = detectedIntencao as typeof intencao;
+          console.log('🎯 Intenção detectada pela IA:', intencao);
+        }
+      } catch (e) {
+        console.error('⚠️ Erro ao detectar intenção, usando fallback');
+        // Fallback para palavras-chave
+        if (/\b(cancelar|desmarcar|não quero mais|não vou conseguir)\b/i.test(mensagemLower)) {
+          intencao = 'cancelar';
+        } else if (/\b(reagendar|remarcar|mudar|trocar|preciso mudar|quero mudar|tenho que mudar)\b/i.test(mensagemLower)) {
+          intencao = 'reagendar';
+        }
+      }
+    }
 
     // Verificar políticas de cancelamento/reagendamento
     const calcularDiasAteAgendamento = (dataAgendamento: string): number => {
@@ -218,7 +253,7 @@ serve(async (req) => {
     };
 
     // Processar cancelamento
-    if (querCancelar && agendamentosFuturos && agendamentosFuturos.length > 0) {
+    if (intencao === 'cancelar' && agendamentosFuturos && agendamentosFuturos.length > 0) {
       const agendamento = agendamentosFuturos[0];
       const diasAte = calcularDiasAteAgendamento(agendamento.data);
       
@@ -242,7 +277,7 @@ serve(async (req) => {
       }
     }
     // Processar reagendamento
-    else if (querReagendar && agendamentosFuturos && agendamentosFuturos.length > 0) {
+    else if (intencao === 'reagendar' && agendamentosFuturos && agendamentosFuturos.length > 0) {
       const agendamento = agendamentosFuturos[0];
       const diasAte = calcularDiasAteAgendamento(agendamento.data);
       
@@ -593,15 +628,129 @@ serve(async (req) => {
                 resposta = `Esse horário não funciona, querida. O ${servEsc.nome} leva ${servEsc.duracao} min e terminaria após 21h. Pode escolher um horário antes? 💜`;
                 novoContexto.etapa = 'escolher_horario';
               } else {
-                // Tudo ok, criar o agendamento
-                console.log('💾 Tentando criar agendamento:', {
-                  cliente_nome: novoContexto.cliente_nome,
-                  telefone,
-                  servico_id: novoContexto.servico_id,
-                  data: novoContexto.data,
-                  horario: novoContexto.horario
+                // Se for reagendamento, ATUALIZAR o agendamento existente
+                if (novoContexto.acao === 'reagendar' && novoContexto.agendamento_id) {
+                  console.log('💾 Atualizando agendamento existente:', {
+                    id: novoContexto.agendamento_id,
+                    nova_data: novoContexto.data,
+                    novo_horario: novoContexto.horario
+                  });
+
+                  const { data: agendamentoAtualizado, error: agendamentoError } = await supabase
+                    .from('agendamentos')
+                    .update({
+                      data: novoContexto.data,
+                      horario: novoContexto.horario,
+                      status: 'Confirmado'
+                    })
+                    .eq('id', novoContexto.agendamento_id)
+                    .select();
+
+                  if (agendamentoError) {
+                    console.error('❌ Erro ao atualizar agendamento:', agendamentoError);
+                  } else {
+                    console.log('✅ Agendamento atualizado com sucesso!', agendamentoAtualizado);
+                    
+                    try {
+                      const [yyyyNum, mmNum, ddNum] = (novoContexto.data as string).split('-').map(Number);
+                      const d = new Date(Date.UTC(yyyyNum, mmNum - 1, ddNum, 12, 0, 0));
+                      const wd = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'][d.getUTCDay()];
+                      const ddmm = `${String(ddNum).padStart(2,'0')}/${String(mmNum).padStart(2,'0')}`;
+                      const nomeServ = novoContexto.servico_nome || 'serviço';
+                      const nomeCliente = novoContexto.cliente_nome!;
+                      resposta = `Prontinho, ${nomeCliente}! Seu ${nomeServ} foi reagendado para ${ddmm} (${wd}) às ${novoContexto.horario}. 💜`;
+                    } catch {}
+                    novoContexto = {}; // Resetar contexto
+                  }
+                } else {
+                  // Criar novo agendamento
+                  console.log('💾 Criando novo agendamento:', {
+                    cliente_nome: novoContexto.cliente_nome,
+                    telefone,
+                    servico_id: novoContexto.servico_id,
+                    data: novoContexto.data,
+                    horario: novoContexto.horario
+                  });
+
+                  const { data: agendamentoCriado, error: agendamentoError } = await supabase
+                    .from('agendamentos')
+                    .insert({
+                      cliente_nome: novoContexto.cliente_nome,
+                      cliente_telefone: telefone,
+                      servico_id: novoContexto.servico_id,
+                      servico_nome: novoContexto.servico_nome,
+                      data: novoContexto.data,
+                      horario: novoContexto.horario,
+                      status: 'Confirmado',
+                      origem: 'whatsapp',
+                      bot_conversa_id: conversa!.id,
+                    })
+                    .select();
+
+                  if (agendamentoError) {
+                    console.error('❌ Erro ao criar agendamento:', agendamentoError);
+                  } else {
+                    console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
+                    
+                    try {
+                      const [yyyyNum, mmNum, ddNum] = (novoContexto.data as string).split('-').map(Number);
+                      const d = new Date(Date.UTC(yyyyNum, mmNum - 1, ddNum, 12, 0, 0));
+                      const wd = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'][d.getUTCDay()];
+                      const ddmm = `${String(ddNum).padStart(2,'0')}/${String(mmNum).padStart(2,'0')}`;
+                      const nomeServ = novoContexto.servico_nome || 'serviço';
+                      const nomeCliente = novoContexto.cliente_nome!;
+                      resposta = `Prontinho, ${nomeCliente}! ${nomeServ} agendado para ${ddmm} (${wd}) às ${novoContexto.horario}. 💜`;
+                    } catch {}
+                    novoContexto = {}; // Resetar contexto
+                  }
+                }
+              }
+            } else {
+              // Sem info de duração, prosseguir (fallback)
+              console.log('💾 Tentando criar agendamento (sem duração definida):', {
+                cliente_nome: novoContexto.cliente_nome,
+                telefone,
+                servico_id: novoContexto.servico_id,
+                data: novoContexto.data,
+                horario: novoContexto.horario
+              });
+
+              // Se for reagendamento, ATUALIZAR o agendamento existente
+              if (novoContexto.acao === 'reagendar' && novoContexto.agendamento_id) {
+                console.log('💾 Atualizando agendamento existente (sem duração):', {
+                  id: novoContexto.agendamento_id,
+                  nova_data: novoContexto.data,
+                  novo_horario: novoContexto.horario
                 });
 
+                const { data: agendamentoAtualizado, error: agendamentoError } = await supabase
+                  .from('agendamentos')
+                  .update({
+                    data: novoContexto.data,
+                    horario: novoContexto.horario,
+                    status: 'Confirmado'
+                  })
+                  .eq('id', novoContexto.agendamento_id)
+                  .select();
+
+                if (agendamentoError) {
+                  console.error('❌ Erro ao atualizar agendamento:', agendamentoError);
+                } else {
+                  console.log('✅ Agendamento atualizado com sucesso!', agendamentoAtualizado);
+                  
+                  try {
+                    const [yyyyNum, mmNum, ddNum] = (novoContexto.data as string).split('-').map(Number);
+                    const d = new Date(Date.UTC(yyyyNum, mmNum - 1, ddNum, 12, 0, 0));
+                    const wd = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'][d.getUTCDay()];
+                    const ddmm = `${String(ddNum).padStart(2,'0')}/${String(mmNum).padStart(2,'0')}`;
+                    const nomeServ = novoContexto.servico_nome || 'serviço';
+                    const nomeCliente = novoContexto.cliente_nome!;
+                    resposta = `Prontinho, ${nomeCliente}! Seu ${nomeServ} foi reagendado para ${ddmm} (${wd}) às ${novoContexto.horario}. 💜`;
+                  } catch {}
+                  novoContexto = {};
+                }
+              } else {
+                // Criar novo agendamento
                 const { data: agendamentoCriado, error: agendamentoError } = await supabase
                   .from('agendamentos')
                   .insert({
@@ -622,16 +771,6 @@ serve(async (req) => {
                 } else {
                   console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
                   
-                  // Se for reagendamento, cancelar o antigo
-                  if (novoContexto.acao === 'reagendar' && novoContexto.agendamento_id) {
-                    await supabase
-                      .from('agendamentos')
-                      .update({ status: 'Reagendado' })
-                      .eq('id', novoContexto.agendamento_id);
-                    console.log('✅ Agendamento anterior marcado como reagendado');
-                  }
-                  
-                  // Confirmação padrão caso a IA não tenha confirmado
                   try {
                     const [yyyyNum, mmNum, ddNum] = (novoContexto.data as string).split('-').map(Number);
                     const d = new Date(Date.UTC(yyyyNum, mmNum - 1, ddNum, 12, 0, 0));
@@ -639,62 +778,10 @@ serve(async (req) => {
                     const ddmm = `${String(ddNum).padStart(2,'0')}/${String(mmNum).padStart(2,'0')}`;
                     const nomeServ = novoContexto.servico_nome || 'serviço';
                     const nomeCliente = novoContexto.cliente_nome!;
-                    const acao = novoContexto.acao === 'reagendar' ? 'reagendado' : 'agendado';
-                    resposta = `Prontinho, ${nomeCliente}! ${nomeServ} ${acao} para ${ddmm} (${wd}) às ${novoContexto.horario}. 💜`;
+                    resposta = `Prontinho, ${nomeCliente}! ${nomeServ} agendado para ${ddmm} (${wd}) às ${novoContexto.horario}. 💜`;
                   } catch {}
-                  novoContexto = {}; // Resetar contexto
+                  novoContexto = {};
                 }
-              }
-            } else {
-              // Sem info de duração, prosseguir (fallback)
-              console.log('💾 Tentando criar agendamento (sem duração definida):', {
-                cliente_nome: novoContexto.cliente_nome,
-                telefone,
-                servico_id: novoContexto.servico_id,
-                data: novoContexto.data,
-                horario: novoContexto.horario
-              });
-
-              const { data: agendamentoCriado, error: agendamentoError } = await supabase
-                .from('agendamentos')
-                .insert({
-                  cliente_nome: novoContexto.cliente_nome,
-                  cliente_telefone: telefone,
-                  servico_id: novoContexto.servico_id,
-                  servico_nome: novoContexto.servico_nome,
-                  data: novoContexto.data,
-                  horario: novoContexto.horario,
-                  status: 'Confirmado',
-                  origem: 'whatsapp',
-                  bot_conversa_id: conversa!.id,
-                })
-                .select();
-
-              if (agendamentoError) {
-                console.error('❌ Erro ao criar agendamento:', agendamentoError);
-              } else {
-                console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
-                
-                // Se for reagendamento, cancelar o antigo
-                if (novoContexto.acao === 'reagendar' && novoContexto.agendamento_id) {
-                  await supabase
-                    .from('agendamentos')
-                    .update({ status: 'Reagendado' })
-                    .eq('id', novoContexto.agendamento_id);
-                  console.log('✅ Agendamento anterior marcado como reagendado');
-                }
-                
-                try {
-                  const [yyyyNum, mmNum, ddNum] = (novoContexto.data as string).split('-').map(Number);
-                  const d = new Date(Date.UTC(yyyyNum, mmNum - 1, ddNum, 12, 0, 0));
-                  const wd = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'][d.getUTCDay()];
-                  const ddmm = `${String(ddNum).padStart(2,'0')}/${String(mmNum).padStart(2,'0')}`;
-                  const nomeServ = novoContexto.servico_nome || 'serviço';
-                  const nomeCliente = novoContexto.cliente_nome!;
-                  const acao = novoContexto.acao === 'reagendar' ? 'reagendado' : 'agendado';
-                  resposta = `Prontinho, ${nomeCliente}! ${nomeServ} ${acao} para ${ddmm} (${wd}) às ${novoContexto.horario}. 💜`;
-                } catch {}
-                novoContexto = {};
               }
             }
           }
