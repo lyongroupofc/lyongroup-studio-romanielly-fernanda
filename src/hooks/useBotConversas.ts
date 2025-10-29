@@ -132,6 +132,25 @@ export const useBotConversas = () => {
     }
   };
 
+  const clearContext = async (conversaId: string) => {
+    try {
+      const { error } = await supabase
+        .from('bot_conversas')
+        .update({ contexto: {} })
+        .eq('id', conversaId);
+
+      if (error) throw error;
+      
+      // Atualizar localmente
+      setConversas(prev => 
+        prev.map(c => c.id === conversaId ? { ...c, contexto: {} } : c)
+      );
+    } catch (error) {
+      console.error('Erro ao limpar contexto:', error);
+      throw error;
+    }
+  };
+
   return {
     conversas,
     mensagens,
@@ -139,6 +158,7 @@ export const useBotConversas = () => {
     conversaSelecionada,
     selecionarConversa,
     toggleBotConversa,
+    clearContext,
     refetch: fetchConversas,
   };
 };

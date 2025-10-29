@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBotWhatsApp } from "@/hooks/useBotWhatsApp";
 import { useBotConversas } from "@/hooks/useBotConversas";
 import { useNumerosBloqueados } from "@/hooks/useNumerosBloqueados";
-import { MessageCircle, TrendingUp, Calendar, RefreshCw, Phone, MessageSquare, Ban, Plus, X } from "lucide-react";
+import { MessageCircle, TrendingUp, Calendar, RefreshCw, Phone, MessageSquare, Ban, Plus, X, Eraser } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -32,6 +32,7 @@ const BotWhatsApp = () => {
     conversaSelecionada,
     selecionarConversa,
     toggleBotConversa,
+    clearContext,
   } = useBotConversas();
 
   const {
@@ -274,15 +275,25 @@ const BotWhatsApp = () => {
                           </div>
                         </div>
                       </button>
-                      <div className="px-4 pb-3 flex items-center gap-2">
-                        <Switch
-                          id={`bot-${conversa.id}`}
-                          checked={conversa.bot_ativo}
-                          onCheckedChange={(checked) => toggleBotConversa(conversa.id, checked)}
-                        />
-                        <Label htmlFor={`bot-${conversa.id}`} className="text-xs text-muted-foreground cursor-pointer">
-                          {conversa.bot_ativo ? 'Bot ativo' : 'Bot desativado'}
-                        </Label>
+                      <div className="px-4 pb-3 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            id={`bot-${conversa.id}`}
+                            checked={conversa.bot_ativo}
+                            onCheckedChange={(checked) => toggleBotConversa(conversa.id, checked)}
+                          />
+                          <Label htmlFor={`bot-${conversa.id}`} className="text-xs text-muted-foreground cursor-pointer">
+                            {conversa.bot_ativo ? 'Bot ativo' : 'Bot desativado'}
+                          </Label>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => clearContext(conversa.id)}
+                          title="Limpar memória da conversa"
+                        >
+                          <Eraser className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}

@@ -35,11 +35,10 @@ const Agendar = () => {
 
   const generateSlots = () => {
     const slots: string[] = [];
-    for (let h = 9; h <= 18; h++) {
-      for (let m = 0; m < 60; m += 30) {
-        const hh = String(h).padStart(2, "0");
-        const mm = String(m).padStart(2, "0");
-        slots.push(`${hh}:${mm}`);
+    for (let h = 8; h <= 20; h++) {
+      slots.push(`${String(h).padStart(2, "0")}:00`);
+      if (h < 20) {
+        slots.push(`${String(h).padStart(2, "0")}:30`);
       }
     }
     return slots;
@@ -57,11 +56,12 @@ const Agendar = () => {
   const calcularHorariosBloqueados = (horarioInicio: string, duracaoMinutos: number): string[] => {
     const [horas, minutos] = horarioInicio.split(':').map(Number);
     const inicioEmMinutos = horas * 60 + minutos;
-    const fimEmMinutos = inicioEmMinutos + duracaoMinutos;
+    // Adicionar buffer de 60 minutos
+    const fimEmMinutos = inicioEmMinutos + duracaoMinutos + 60;
     
     const horariosBloqueados: string[] = [];
     
-    // Gera todos os slots de 30 em 30 minutos desde o início até o fim
+    // Gera todos os slots de 30 em 30 minutos desde o início até o fim (com buffer)
     for (let min = inicioEmMinutos; min < fimEmMinutos; min += 30) {
       const h = Math.floor(min / 60);
       const m = min % 60;
