@@ -69,10 +69,18 @@ serve(async (req) => {
     if (!conversa) {
       const { data: novaConversa } = await supabase
         .from('bot_conversas')
-        .insert({ telefone, contexto: {} })
+        .insert({ telefone, contexto: {}, bot_ativo: true })
         .select()
         .single();
       conversa = novaConversa;
+    }
+
+    // Verificar se o bot está ativo para essa conversa específica
+    if (!conversa?.bot_ativo) {
+      console.log('🔇 Bot desativado para esta conversa:', telefone);
+      return new Response(JSON.stringify({ resposta: 'Bot desativado para esta conversa' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Registrar mensagem recebida
@@ -97,10 +105,10 @@ serve(async (req) => {
     // Verificar se já existe um agendamento confirmado (evitar duplicatas/re-processamento)
     const temAgendamentoRecente = agendamentosFuturos?.some(ag => {
       const diff = Date.now() - new Date(ag.created_at).getTime();
-      return diff < 60000; // Criado nos últimos 60 segundos
+      return diff < 30000; // Criado nos últimos 30 segundos
     });
 
-    if (temAgendamentoRecente) {
+    if (temAgendamentoRecente && contexto.etapa === 'criar_agendamento') {
       console.log('✅ Agendamento recente detectado, resetando contexto');
       contexto = {}; // Resetar contexto para evitar loop
       await supabase

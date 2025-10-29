@@ -7,6 +7,7 @@ export type BotConversa = {
   contexto: any;
   ultimo_contato: string;
   created_at: string;
+  bot_ativo: boolean;
 };
 
 export type BotMensagem = {
@@ -112,12 +113,32 @@ export const useBotConversas = () => {
     }
   };
 
+  const toggleBotConversa = async (conversaId: string, ativo: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('bot_conversas')
+        .update({ bot_ativo: ativo })
+        .eq('id', conversaId);
+
+      if (error) throw error;
+      
+      // Atualizar localmente
+      setConversas(prev => 
+        prev.map(c => c.id === conversaId ? { ...c, bot_ativo: ativo } : c)
+      );
+    } catch (error) {
+      console.error('Erro ao atualizar bot_ativo:', error);
+      throw error;
+    }
+  };
+
   return {
     conversas,
     mensagens,
     loading,
     conversaSelecionada,
     selecionarConversa,
+    toggleBotConversa,
     refetch: fetchConversas,
   };
 };

@@ -31,6 +31,7 @@ const BotWhatsApp = () => {
     loading: loadingConversas,
     conversaSelecionada,
     selecionarConversa,
+    toggleBotConversa,
   } = useBotConversas();
 
   const {
@@ -246,30 +247,44 @@ const BotWhatsApp = () => {
               <ScrollArea className="h-[500px] pr-4">
                 <div className="space-y-2">
                   {conversas.map((conversa) => (
-                    <button
+                    <div
                       key={conversa.id}
-                      onClick={() => selecionarConversa(conversa.id)}
-                      className={`w-full text-left p-4 rounded-lg border transition-colors ${
+                      className={`w-full rounded-lg border transition-colors ${
                         conversaSelecionada === conversa.id
                           ? 'bg-primary/10 border-primary'
                           : 'hover:bg-muted'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 p-2 rounded-full">
-                          <Phone className="h-4 w-4" />
+                      <button
+                        onClick={() => selecionarConversa(conversa.id)}
+                        className="w-full text-left p-4"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="bg-primary/10 p-2 rounded-full">
+                            <Phone className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{conversa.contexto?.cliente_nome || conversa.telefone.replace('@s.whatsapp.net','')}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(conversa.ultimo_contato), {
+                                addSuffix: true,
+                                locale: ptBR,
+                              })}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{conversa.contexto?.cliente_nome || conversa.telefone.replace('@s.whatsapp.net','')}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(conversa.ultimo_contato), {
-                              addSuffix: true,
-                              locale: ptBR,
-                            })}
-                          </p>
-                        </div>
+                      </button>
+                      <div className="px-4 pb-3 flex items-center gap-2">
+                        <Switch
+                          id={`bot-${conversa.id}`}
+                          checked={conversa.bot_ativo}
+                          onCheckedChange={(checked) => toggleBotConversa(conversa.id, checked)}
+                        />
+                        <Label htmlFor={`bot-${conversa.id}`} className="text-xs text-muted-foreground cursor-pointer">
+                          {conversa.bot_ativo ? 'Bot ativo' : 'Bot desativado'}
+                        </Label>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </ScrollArea>
