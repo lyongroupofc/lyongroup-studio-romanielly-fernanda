@@ -51,11 +51,12 @@ serve(async (req) => {
     let enviados = 0;
 
     for (const agendamento of agendamentos || []) {
+      const horarioFormatado = agendamento.horario.slice(0, 5); // HH:mm
       const mensagem = `🔔 *Lembrete de Agendamento*
 
 Olá ${agendamento.cliente_nome}!
 
-Você tem um agendamento marcado para *amanhã* (${new Date(dataAmanha).toLocaleDateString('pt-BR')}) às *${agendamento.horario}*.
+Você tem um agendamento marcado para *amanhã* (${new Date(dataAmanha).toLocaleDateString('pt-BR')}) às *${horarioFormatado}*.
 
 📌 Serviço: ${agendamento.servico_nome}
 
