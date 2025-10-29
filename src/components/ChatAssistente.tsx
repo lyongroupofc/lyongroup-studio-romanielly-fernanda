@@ -15,7 +15,7 @@ const ChatAssistente = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Olá! Eu sou a L&J, assistente virtual do Studio Jennifer Silva 💜 Como posso ajudar você hoje?",
+      content: "Olá! Eu sou a L&J 💜 Como posso te ajudar?",
     },
   ]);
   const [input, setInput] = useState("");
