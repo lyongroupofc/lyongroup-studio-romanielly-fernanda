@@ -35,10 +35,14 @@ const Agendar = () => {
 
   const generateSlots = () => {
     const slots: string[] = [];
-    for (let h = 8; h <= 20; h++) {
-      slots.push(`${String(h).padStart(2, "0")}:00`);
-      if (h < 20) {
-        slots.push(`${String(h).padStart(2, "0")}:30`);
+    // Funcionamento: 08:00 às 21:00 em intervalos de 30min
+    for (let h = 8; h <= 21; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        // Não gerar 21:30 (fechamos às 21:00)
+        if (h === 21 && m === 30) continue;
+        const hh = String(h).padStart(2, "0");
+        const mm = String(m).padStart(2, "0");
+        slots.push(`${hh}:${mm}`);
       }
     }
     return slots;
