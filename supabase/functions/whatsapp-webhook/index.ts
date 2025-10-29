@@ -558,9 +558,13 @@ serve(async (req) => {
         } else {
           // Gerar horários base (08:00 - 21:00, intervalos de 30min)
           const horariosBase: string[] = [];
-          for (let h = 8; h <= 20; h++) {
-            horariosBase.push(`${String(h).padStart(2, '0')}:00`);
-            if (h < 20) horariosBase.push(`${String(h).padStart(2, '0')}:30`);
+          for (let h = 8; h <= 21; h++) {
+            for (let m = 0; m < 60; m += 30) {
+              if (h === 21 && m === 30) continue; // não gerar 21:30
+              const hh = String(h).padStart(2, '0');
+              const mm = String(m).padStart(2, '0');
+              horariosBase.push(`${hh}:${mm}`);
+            }
           }
 
           // Buscar agendamentos do dia
@@ -876,28 +880,46 @@ serve(async (req) => {
       }
     }
 
-    // Se ainda não tem resposta, gerar resposta padrão baseada no contexto
+    // Se ainda não tem resposta, chamar IA (Lovable AI) para responder naturalmente
     if (!resposta) {
-      // Saudações
-      if (/^(oi|olá|ola|ei|eai|opa|bom dia|boa tarde|boa noite|tudo bem|como vai)/i.test(mensagemLower)) {
-        const saudacoes = [
-          'Oi, amor! Tudo bem sim, e você? 💜 Como posso te ajudar hoje?',
-          'Olá, querida! Tudo ótimo por aqui 😊 O que você precisa?',
-          'Oi! Tudo bem sim 💜 Quer agendar algum serviço?'
-        ];
-        resposta = saudacoes[Math.floor(Math.random() * saudacoes.length)];
-      }
-      // Perguntas sobre como funciona
-      else if (/(como funciona|como faço|como agendar|preciso agendar)/i.test(mensagemLower)) {
-        resposta = 'É super fácil, amor! Me conta qual serviço você quer e qual dia e horário prefere. Também posso te mostrar nossa lista de serviços se quiser! 💜';
-      }
-      // Perguntas sobre localização/endereço
-      else if (/(onde fica|endereço|endereco|localização|localizacao)/i.test(mensagemLower)) {
-        resposta = 'Me manda mensagem pelo chat que te passo todas as informações, querida! 💜';
-      }
-      // Ainda sem contexto - mensagem genérica
-      else if (!novoContexto.servico_id && !novoContexto.data) {
-        resposta = 'Oi, amor! 💜 Quer agendar algum serviço? Posso te mostrar nossa lista ou você pode me dizer qual você prefere!';
+      try {
+        const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+        const systemPrompt = `Você é a assistente do salão (Jenny). Responda SEMPRE em português do Brasil, com tom carinhoso e profissional.
+- O bot responde 24h. Não diga que estamos fechados fora do horário.
+- Horário de agendamentos do salão: 08:00 às 21:00, intervalos de 30 minutos.
+- Se o cliente sugerir um horário fora dessa janela, peça gentilmente para escolher um dentro de 08:00–21:00.
+- Para dúvidas de preço/serviço, seja objetiva. Se pedirem agendamento, confirme serviço, data e horário.
+- Se o cliente só cumprimenta, responda simpaticamente e se ofereça para ajudar.`;
+
+        if (!LOVABLE_API_KEY) {
+          resposta = 'Oi! Como posso te ajudar hoje? 💜';
+        } else {
+          const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                ...mensagensFormatadas
+              ],
+            }),
+          });
+
+          if (aiResp.ok) {
+            const data = await aiResp.json();
+            resposta = data.choices?.[0]?.message?.content?.trim() || 'Certo! Como posso te ajudar? 💜';
+          } else {
+            console.error('AI gateway error:', aiResp.status, await aiResp.text());
+            resposta = 'Certo! Como posso te ajudar? 💜';
+          }
+        }
+      } catch (e) {
+        console.error('AI fallback error:', e);
+        resposta = 'Certo! Como posso te ajudar? 💜';
       }
     }
 
