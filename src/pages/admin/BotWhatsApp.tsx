@@ -7,9 +7,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBotWhatsApp } from "@/hooks/useBotWhatsApp";
 import { useBotConversas } from "@/hooks/useBotConversas";
-import { MessageCircle, TrendingUp, Calendar, RefreshCw, Phone, MessageSquare } from "lucide-react";
+import { useNumerosBloqueados } from "@/hooks/useNumerosBloqueados";
+import { MessageCircle, TrendingUp, Calendar, RefreshCw, Phone, MessageSquare, Ban, Plus, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
 
 const BotWhatsApp = () => {
   const {
@@ -27,6 +32,29 @@ const BotWhatsApp = () => {
     conversaSelecionada,
     selecionarConversa,
   } = useBotConversas();
+
+  const {
+    numeros,
+    loading: loadingNumeros,
+    addNumero,
+    removeNumero,
+  } = useNumerosBloqueados();
+
+  const [openBloquearNumero, setOpenBloquearNumero] = useState(false);
+
+  const handleBloquearNumero = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    
+    await addNumero(
+      formData.get("numero") as string,
+      formData.get("motivo") as string || undefined
+    );
+    
+    setOpenBloquearNumero(false);
+    form.reset();
+  };
 
   if (loading) {
     return (
@@ -100,6 +128,93 @@ const BotWhatsApp = () => {
             </div>
             <Switch id="bot-ativo" checked={config.ativo} onCheckedChange={ativarBot} />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Números Bloqueados */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Ban className="h-5 w-5" />
+                Números Bloqueados
+              </CardTitle>
+              <CardDescription>
+                O bot não responderá números bloqueados (ex: números do próprio salão)
+              </CardDescription>
+            </div>
+            <Dialog open={openBloquearNumero} onOpenChange={setOpenBloquearNumero}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Bloquear Número
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Bloquear Número</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleBloquearNumero} className="space-y-4">
+                  <div>
+                    <Label htmlFor="numero">Número (com DDD)</Label>
+                    <Input 
+                      id="numero" 
+                      name="numero" 
+                      placeholder="5531999999999" 
+                      required 
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Digite apenas números com DDD (ex: 5531999999999)
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="motivo">Motivo (opcional)</Label>
+                    <Textarea 
+                      id="motivo" 
+                      name="motivo" 
+                      placeholder="Ex: Número do salão"
+                      rows={2}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full">Bloquear</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingNumeros ? (
+            <Skeleton className="h-20 w-full" />
+          ) : numeros.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              <Ban className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>Nenhum número bloqueado</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {numeros.map((numero) => (
+                <div
+                  key={numero.id}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div className="flex-1">
+                    <p className="font-medium">{numero.numero.replace('@s.whatsapp.net', '')}</p>
+                    {numero.motivo && (
+                      <p className="text-sm text-muted-foreground">{numero.motivo}</p>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeNumero(numero.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -43,6 +43,20 @@ serve(async (req) => {
       });
     }
 
+    // Verificar se o número está bloqueado
+    const { data: numeroBloqueado } = await supabase
+      .from('bot_numeros_bloqueados')
+      .select('id')
+      .eq('numero', telefone)
+      .maybeSingle();
+
+    if (numeroBloqueado) {
+      console.log('🚫 Número bloqueado:', telefone);
+      return new Response(JSON.stringify({ resposta: 'Número bloqueado' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Buscar ou criar conversa
     let { data: conversa } = await supabase
       .from('bot_conversas')

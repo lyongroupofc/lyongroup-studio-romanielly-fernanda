@@ -197,6 +197,27 @@ export type Database = {
           },
         ]
       }
+      bot_numeros_bloqueados: {
+        Row: {
+          created_at: string | null
+          id: string
+          motivo: string | null
+          numero: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          motivo?: string | null
+          numero: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          motivo?: string | null
+          numero?: string
+        }
+        Relationships: []
+      }
       bot_sessao: {
         Row: {
           created_at: string | null
