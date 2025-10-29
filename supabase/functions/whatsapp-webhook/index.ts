@@ -468,8 +468,7 @@ serve(async (req) => {
     const gerarSlotsBloqueados = (inicio: string, duracaoMin: number): string[] => {
       const [h, m] = inicio.split(':').map(Number);
       const start = h * 60 + m;
-      // Adicionar buffer de 60 min
-      const end = start + duracaoMin + 60;
+      const end = start + duracaoMin;
       const slots: string[] = [];
       for (let t = start; t < end; t += 30) {
         const hh = String(Math.floor(t / 60)).padStart(2, '0');
@@ -592,7 +591,7 @@ serve(async (req) => {
             for (const h of disponiveisFiltrados) {
               const [hh, mm] = h.split(':').map(Number);
               const inicioMin = hh * 60 + mm;
-              const fimMin = inicioMin + servicoAtual.duracao + 60; // com buffer
+              const fimMin = inicioMin + servicoAtual.duracao;
               if (fimMin <= 21 * 60) {
                 horariosValidos.push(h);
               }
@@ -744,7 +743,7 @@ serve(async (req) => {
             if (servEsc?.duracao) {
               const bloqueiosNecessarios = gerarSlotsBloqueados(novoContexto.horario, servEsc.duracao);
               const slotsIndisponiveis = bloqueiosNecessarios.filter((x) => bloqueados.has(x));
-              const horFimMin = parseInt(novoContexto.horario.split(':')[0]) * 60 + parseInt(novoContexto.horario.split(':')[1]) + servEsc.duracao + 60;
+              const horFimMin = parseInt(novoContexto.horario.split(':')[0]) * 60 + parseInt(novoContexto.horario.split(':')[1]) + servEsc.duracao;
               const ultrapassaHorario = (horFimMin > 21 * 60);
 
               if (slotsIndisponiveis.length > 0) {
@@ -877,6 +876,31 @@ serve(async (req) => {
       }
     }
 
+    // Se ainda não tem resposta, gerar resposta padrão baseada no contexto
+    if (!resposta) {
+      // Saudações
+      if (/^(oi|olá|ola|ei|eai|opa|bom dia|boa tarde|boa noite|tudo bem|como vai)/i.test(mensagemLower)) {
+        const saudacoes = [
+          'Oi, amor! Tudo bem sim, e você? 💜 Como posso te ajudar hoje?',
+          'Olá, querida! Tudo ótimo por aqui 😊 O que você precisa?',
+          'Oi! Tudo bem sim 💜 Quer agendar algum serviço?'
+        ];
+        resposta = saudacoes[Math.floor(Math.random() * saudacoes.length)];
+      }
+      // Perguntas sobre como funciona
+      else if (/(como funciona|como faço|como agendar|preciso agendar)/i.test(mensagemLower)) {
+        resposta = 'É super fácil, amor! Me conta qual serviço você quer e qual dia e horário prefere. Também posso te mostrar nossa lista de serviços se quiser! 💜';
+      }
+      // Perguntas sobre localização/endereço
+      else if (/(onde fica|endereço|endereco|localização|localizacao)/i.test(mensagemLower)) {
+        resposta = 'Me manda mensagem pelo chat que te passo todas as informações, querida! 💜';
+      }
+      // Ainda sem contexto - mensagem genérica
+      else if (!novoContexto.servico_id && !novoContexto.data) {
+        resposta = 'Oi, amor! 💜 Quer agendar algum serviço? Posso te mostrar nossa lista ou você pode me dizer qual você prefere!';
+      }
+    }
+
     // Atualizar contexto e último contato
     await supabase
       .from('bot_conversas')
@@ -886,13 +910,15 @@ serve(async (req) => {
       })
       .eq('id', conversa!.id);
 
-    // Registrar mensagem enviada
-    await supabase.from('bot_mensagens').insert({
-      conversa_id: conversa!.id,
-      telefone,
-      tipo: 'enviada',
-      conteudo: resposta,
-    });
+    // Registrar mensagem enviada (só se houver resposta)
+    if (resposta) {
+      await supabase.from('bot_mensagens').insert({
+        conversa_id: conversa!.id,
+        telefone,
+        tipo: 'enviada',
+        conteudo: resposta,
+      });
+    }
 
     console.log('💬 Resposta:', resposta);
 
