@@ -273,45 +273,10 @@ serve(async (req) => {
       resposta = `${s.nome} custa R$ ${Number(s.preco).toFixed(2).replace('.', ',')} e dura ${duracaoTexto}.`;
     }
 
-    // Só chama IA se ainda não geramos resposta específica
-    if (!resposta) {
-      console.log('🤖 Enviando para Lovable AI');
-      try {
-        const { data: chatData, error: chatError } = await supabase.functions.invoke('chat-assistente', {
-          body: { 
-            messages: mensagensFormatadas,
-            servicos: servicosFormatados
-          }
-        });
+    // Adiar chamada à IA: evitamos IA aqui para reduzir custos; resolução determinística abaixo
+    // resposta permanece null por enquanto
 
-        if (chatError) {
-          console.error('❌ Erro no Lovable AI:', chatError);
-          throw chatError;
-        }
-
-        resposta = chatData?.generatedText || null;
-      } catch (e) {
-        console.error('⚠️ Lovable AI indisponível. Ativando fallback...', e);
-        const nomesServicos = (servicos || []).map(s => s.nome);
-        const sugestaoServicos = nomesServicos.slice(0, 3).join(', ');
-
-        if (!contexto?.servico_id) {
-          resposta = `Olá! 💜 Qual serviço você quer agendar? Ex: ${sugestaoServicos} 🫶🏾`;
-        } else if (!contexto?.data) {
-          resposta = 'Perfeito! Para qual dia você prefere? ✨';
-        } else if (!contexto?.horario) {
-          resposta = 'E qual horário? 💆🏽‍♀️';
-        } else if (!contexto?.cliente_nome) {
-          resposta = 'Qual seu nome para confirmar o agendamento? 🫶🏾';
-        } else {
-          resposta = 'Tudo certo! Posso confirmar seu agendamento? ✨';
-        }
-      }
-    }
-
-    if (!resposta) {
-      resposta = 'Tive um pico de uso agora, mas já estou aqui! Pode repetir por favor?';
-    }
+    // Manter sem resposta aqui; definiremos um prompt determinístico abaixo se necessário
 
     // Detectar intenções e atualizar contexto
     let novoContexto = { ...contexto };
@@ -323,37 +288,12 @@ serve(async (req) => {
     let intencao: 'agendar' | 'cancelar' | 'reagendar' | 'conversa' = 'conversa';
     
     // Usar IA para detectar intenção se houver agendamentos futuros
+    // Detectar intenção sem IA para economizar créditos
     if (agendamentosFuturos && agendamentosFuturos.length > 0) {
-      try {
-        const promptIntencao = `Analise a seguinte mensagem do cliente e identifique a intenção:
-"${mensagem}"
-
-Contexto: O cliente já tem um agendamento marcado.
-
-Responda APENAS com uma dessas palavras:
-- "cancelar" se o cliente quer cancelar/desmarcar o agendamento
-- "reagendar" se o cliente quer remarcar/mudar horário/data
-- "agendar" se o cliente quer fazer um novo agendamento
-- "conversa" se é apenas uma conversa normal (agradecimento, confirmação, etc)`;
-
-        const { data: intencaoData } = await supabase.functions.invoke('chat-assistente', {
-          body: { 
-            messages: [{ role: 'user', content: promptIntencao }]
-          }
-        });
-
-        const detectedIntencao = (intencaoData?.generatedText || 'conversa').toLowerCase().trim();
-        if (['cancelar', 'reagendar', 'agendar', 'conversa'].includes(detectedIntencao)) {
-          intencao = detectedIntencao as typeof intencao;
-          console.log('🎯 Intenção detectada pela IA:', intencao);
-        }
-      } catch (e) {
-        console.error('⚠️ Erro ao detectar intenção, usando fallback');
-        if (/\b(cancelar|desmarcar|não quero mais|não vou conseguir)\b/i.test(mensagemLower)) {
-          intencao = 'cancelar';
-        } else if (/\b(reagendar|remarcar|mudar|trocar|preciso mudar|quero mudar|tenho que mudar)\b/i.test(mensagemLower)) {
-          intencao = 'reagendar';
-        }
+      if (/(?:\b|\s)(cancelar|desmarcar|nao quero mais|não quero mais|não vou conseguir|nao vou conseguir)(?:\b|\s)/i.test(mensagemLower)) {
+        intencao = 'cancelar';
+      } else if (/(?:\b|\s)(reagendar|remarcar|mudar|trocar|preciso mudar|quero mudar|tenho que mudar)(?:\b|\s)/i.test(mensagemLower)) {
+        intencao = 'reagendar';
       }
     }
 
@@ -450,33 +390,43 @@ Responda APENAS com uma dessas palavras:
     // Função auxiliar para calcular datas relativas
     const calcularData = (referencia: string): string | null => {
       const now = new Date();
-      const diasSemana = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
-      
-      if (referencia.includes('amanhã') || referencia.includes('amanha')) {
-        const amanha = new Date(now);
-        amanha.setDate(amanha.getDate() + 1);
-        return amanha.toISOString().split('T')[0];
+      // Normaliza (sem acentos) para facilitar matching
+      const ref = referencia
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+      const diasSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+
+      // Casos simples
+      if (ref.includes('amanha')) {
+        const d = new Date(now);
+        d.setDate(d.getDate() + 1);
+        return d.toISOString().split('T')[0];
       }
-      
-      if (referencia.includes('depois de amanhã') || referencia.includes('depois de amanha')) {
-        const depoisAmanha = new Date(now);
-        depoisAmanha.setDate(depoisAmanha.getDate() + 2);
-        return depoisAmanha.toISOString().split('T')[0];
+      if (ref.includes('depois de amanha')) {
+        const d = new Date(now);
+        d.setDate(d.getDate() + 2);
+        return d.toISOString().split('T')[0];
       }
-      
+
+      // "semana que vem" / "que vem" / "proxima"
+      const proximaSemana = /(semana que vem|que vem|proxima semana|proxima|pr.oxima)/.test(ref);
+
+      // Dia da semana (suporta "quinta feira", etc. por conter a palavra base)
       for (let i = 0; i < diasSemana.length; i++) {
-        if (referencia.includes(diasSemana[i])) {
-          const diaAtual = now.getDay();
+        if (ref.includes(diasSemana[i])) {
+          const diaAtual = now.getDay(); // 0(dom)..6(sab)
           let diasParaSomar = i - diaAtual;
-          
-          if (diasParaSomar <= 0) diasParaSomar += 7;
-          
+          if (diasParaSomar <= 0) diasParaSomar += 7; // próxima ocorrência
+          if (proximaSemana) diasParaSomar += 7; // força para a semana seguinte
+
           const dataCalculada = new Date(now);
           dataCalculada.setDate(dataCalculada.getDate() + diasParaSomar);
           return dataCalculada.toISOString().split('T')[0];
         }
       }
-      
+
       return null;
     };
 
