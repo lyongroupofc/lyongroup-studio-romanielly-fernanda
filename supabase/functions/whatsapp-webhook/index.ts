@@ -307,7 +307,8 @@ Responda APENAS com uma dessas palavras:
         
         if (!error) {
           const [yyyy, mm, dd] = agendamento.data.split('-');
-          resposta = `Tudo bem, amor! Seu agendamento de ${agendamento.servico_nome} do dia ${dd}/${mm} às ${agendamento.horario} foi cancelado. 💜 Se precisar agendar de novo, é só chamar!`;
+          const horarioFormatado = agendamento.horario.slice(0, 5); // HH:mm
+          resposta = `Tudo bem, amor! Seu agendamento de ${agendamento.servico_nome} do dia ${dd}/${mm} às ${horarioFormatado} foi cancelado. 💜 Se precisar agendar de novo, é só chamar!`;
           novoContexto = {}; // Resetar contexto
           console.log('✅ Cancelamento realizado');
         } else {
@@ -331,7 +332,8 @@ Responda APENAS com uma dessas palavras:
         novoContexto.cliente_nome = agendamento.cliente_nome;
         novoContexto.etapa = 'escolher_data';
         const [yyyy, mm, dd] = agendamento.data.split('-');
-        resposta = `Claro, amor! Vou remarcar seu ${agendamento.servico_nome} que estava agendado para ${dd}/${mm} às ${agendamento.horario}. Qual nova data você prefere? 💜`;
+        const horarioFormatado = agendamento.horario.slice(0, 5); // HH:mm
+        resposta = `Claro, amor! Vou remarcar seu ${agendamento.servico_nome} que estava agendado para ${dd}/${mm} às ${horarioFormatado}. Qual nova data você prefere? 💜`;
         console.log('🔄 Iniciando reagendamento');
       }
     }
