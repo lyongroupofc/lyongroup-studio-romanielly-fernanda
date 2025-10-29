@@ -16,10 +16,10 @@ serve(async (req) => {
     // Get current date in Brazil timezone
     const hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' });
 
-    const systemPrompt = `Você é a L&J, assistente virtual do Studio Lara & Jennifer Silva 💜
-
-**DATA ATUAL: ${hoje}**
-IMPORTANTE: Use esta data para calcular datas relativas corretamente!
+    const systemPrompt = `Você é a L&J, assistente virtual do Studio Jennifer Silva 💜
+    
+    **DATA ATUAL: ${hoje}**
+    IMPORTANTE: Use esta data para calcular datas relativas corretamente!
 
 **Sua missão:**
 Conversar de forma natural e humanizada com as clientes, como se fosse uma atendente real do salão. Você deve conduzir a conversa de forma fluida até conseguir todas as informações necessárias para fazer o agendamento automaticamente.
