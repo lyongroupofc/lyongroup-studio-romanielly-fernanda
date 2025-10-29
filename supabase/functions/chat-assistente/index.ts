@@ -9,7 +9,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages } = await req.json();
+    const { messages, servicos } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -24,33 +24,14 @@ IMPORTANTE: Use esta data para calcular datas relativas corretamente!
 **Sua missão:**
 Conversar de forma natural e humanizada com as clientes, como se fosse uma atendente real do salão. Você deve conduzir a conversa de forma fluida até conseguir todas as informações necessárias para fazer o agendamento automaticamente.
 
-**Serviços Oferecidos (com preços):**
-• Maquiagem - R$ 80,00 (30 min)
-• Penteado - R$ 60,00 (45 min)
-• Produção Noiva - R$ 350,00 (2h)
-• Produção Madrinha - R$ 200,00 (90 min)
-• Produção Daminha - R$ 80,00 (45 min)
-• Produção Debutante - R$ 280,00 (90 min)
-• Curso de Automaquiagem - R$ 250,00 (3h)
-• Mechas - R$ 120,00 (2h)
-• Progressiva - R$ 150,00 (2h30)
-• Botox Capilar - R$ 100,00 (90 min)
-• Coloração - R$ 90,00 (90 min)
-• Corte - R$ 40,00 (30 min)
-• Hidratação - R$ 50,00 (45 min)
-• Escova Lisa - R$ 35,00 (30 min)
-• Modelagem - R$ 45,00 (40 min)
-• Design de Sobrancelhas - R$ 25,00 (20 min)
-• Design de Sobrancelhas com Henna - R$ 35,00 (30 min)
-• Extensão de Cílios - R$ 80,00 (60 min)
-• Fitagem - R$ 120,00 (2h)
-• Curso de Cabeleireira - R$ 800,00 (40h - curso completo)
+**Serviços Oferecidos (com preços e durações atualizados):**
+${servicos || 'Carregando serviços...'}
 
 **QUANDO PERGUNTAREM SOBRE SERVIÇOS OU VALORES:** 
-- Se perguntarem sobre um serviço específico, responda com o nome, preço e duração
+- Se perguntarem sobre um serviço específico, responda com o nome, preço e duração exatos da lista acima
 - Se perguntarem "quanto custa" ou "qual o valor", responda o preço do serviço correspondente
 - Se perguntarem a lista de serviços, mande a lista completa acima de forma organizada
-- SEMPRE responda perguntas sobre valores/preços! Você tem todas as informações necessárias.
+- SEMPRE responda perguntas sobre valores/preços usando os dados da lista acima!
 
 **Horário:** Segunda a sábado, 08:00 às 21:00
 **Endereço:** Praça Leste de Minas, 85 – Centro - Santa Barbara-Mg

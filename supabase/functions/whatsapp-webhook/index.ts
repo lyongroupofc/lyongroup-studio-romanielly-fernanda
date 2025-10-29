@@ -140,6 +140,14 @@ serve(async (req) => {
       day: 'numeric' 
     });
 
+    // Construir lista de serviços com preços e durações
+    const servicosFormatados = (servicos || []).map(s => {
+      const duracaoTexto = s.duracao >= 60 
+        ? `${Math.floor(s.duracao / 60)}h${s.duracao % 60 > 0 ? ` ${s.duracao % 60}min` : ''}`
+        : `${s.duracao} min`;
+      return `• ${s.nome} - R$ ${Number(s.preco).toFixed(2).replace('.', ',')} (${duracaoTexto})`;
+    }).join('\n');
+
     // Construir histórico de mensagens para o Lovable AI
     const mensagensFormatadas = [];
     
@@ -162,9 +170,12 @@ serve(async (req) => {
 
     let resposta: string | null = null;
     try {
-      // Chamar edge function chat-assistente
+      // Chamar edge function chat-assistente com contexto de serviços
       const { data: chatData, error: chatError } = await supabase.functions.invoke('chat-assistente', {
-        body: { messages: mensagensFormatadas }
+        body: { 
+          messages: mensagensFormatadas,
+          servicos: servicosFormatados
+        }
       });
 
       if (chatError) {
