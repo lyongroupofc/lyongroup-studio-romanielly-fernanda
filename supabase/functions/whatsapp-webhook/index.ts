@@ -407,7 +407,7 @@ serve(async (req) => {
       ];
       const contemTermosNaoNome = /[0-9\/?.,!]/.test(candidato) || stop.some(w => lower.startsWith(w) || lower === w || lower.includes(` ${w} `));
       const palavras = candidato.split(/\s+/).filter(Boolean);
-      const duasPalavrasMin = palavras.length >= 2 && palavras.every(p => p.length >= 2 && !stop.includes(p.toLowerCase()));
+      const duasPalavrasMin = palavras.length >= 2 && palavras.every((p: string) => p.length >= 2 && !stop.includes(p.toLowerCase()));
       const somenteLetras = /^[A-Za-zÀ-ÿ' ]{2,60}$/.test(candidato);
       const ehNomeProvavel = somenteLetras && duasPalavrasMin && !contemTermosNaoNome;
       if (ehNomeProvavel) {
