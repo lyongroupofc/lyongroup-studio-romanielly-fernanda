@@ -387,6 +387,14 @@ serve(async (req) => {
       resposta = `Perfeito! ${nomeServ} anotado. Para qual dia você prefere? ✨`;
     }
 
+    console.log('📋 Status do contexto:', {
+      servico: !!novoContexto.servico_id,
+      data: !!novoContexto.data,
+      horario: !!novoContexto.horario,
+      nome: !!novoContexto.cliente_nome,
+      etapa: novoContexto.etapa
+    });
+
     // Função auxiliar para calcular datas relativas
     const calcularData = (referencia: string): string | null => {
       const now = new Date();
@@ -494,6 +502,17 @@ serve(async (req) => {
         novoContexto.data = dataProvisoria;
         novoContexto.etapa = 'escolher_horario';
         console.log('📅 Data detectada:', novoContexto.data);
+        
+        // Confirmar data formatada
+        const [y, m, d] = dataProvisoria.split('-').map(Number);
+        const dateObj = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+        const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+        const diaSemana = diasSemana[dateObj.getUTCDay()];
+        const dataFormatada = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
+        
+        if (!resposta) {
+          resposta = `Perfeito! Dia ${dataFormatada} (${diaSemana}), certo? Qual horário prefere? 💜`;
+        }
       }
     } else if (!novoContexto.data) {
       const dataRelativa = calcularData(mensagemLower);
@@ -505,6 +524,17 @@ serve(async (req) => {
           novoContexto.data = dataRelativa;
           novoContexto.etapa = 'escolher_horario';
           console.log('📅 Data detectada (relativa):', novoContexto.data);
+          
+          // Confirmar data formatada
+          const [y, m, d] = dataRelativa.split('-').map(Number);
+          const dateObj = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+          const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+          const diaSemana = diasSemana[dateObj.getUTCDay()];
+          const dataFormatada = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
+          
+          if (!resposta) {
+            resposta = `Perfeito! Dia ${dataFormatada} (${diaSemana}), certo? Qual horário prefere? 💜`;
+          }
         }
       }
 
@@ -886,17 +916,17 @@ serve(async (req) => {
         const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
         const systemPrompt = `Você é L&J Assistente Virtual do Studio Jennifer Silva. Responda SEMPRE em português do Brasil, com tom carinhoso e profissional.
 
-IMPORTANTE: Suas mensagens devem ser CURTAS (máximo 3 linhas), exceto quando listar serviços.
+IMPORTANTE: Suas mensagens devem ser CURTAS (máximo 2-3 linhas), exceto quando listar serviços disponíveis.
 
 Diretrizes:
 - O bot responde 24h. Não diga que estamos fechados.
 - Horário de agendamentos: 08:00 às 21:00, intervalos de 30min.
-- Quando o cliente mencionar uma data (como "segunda que vem", "dia 15", etc), SEMPRE confirme a data no formato: "dia DD/MM (dia da semana)". Exemplo: "Perfeito! Dia 15/11 (segunda-feira), certo? 💜"
+- Quando o cliente mencionar uma data (exemplo: "segunda que vem", "dia 15"), SEMPRE confirme no formato: "Perfeito! Dia DD/MM (dia da semana), certo? 💜"
 - Seja objetiva. Não pergunte múltiplas coisas de uma vez.
-- NÃO confirme agendamentos. Apenas pergunte o que falta (serviço, data ou horário).`;
+- Não use muitos emojis ou palavras demais.`;
 
         if (!LOVABLE_API_KEY) {
-          resposta = 'Oi! Como posso te ajudar hoje? 💜';
+          resposta = 'Oi! Como posso te ajudar? 💜';
         } else {
           const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
@@ -924,99 +954,6 @@ Diretrizes:
       } catch (e) {
         console.error('AI fallback error:', e);
         resposta = 'Certo! Como posso te ajudar? 💜';
-      }
-    }
-
-    // Após IA responder, verificar se temos todos os dados para criar agendamento
-    if (resposta && !novoContexto.agendamento_criado) {
-      const temTodosDados = novoContexto.cliente_nome && novoContexto.servico_id && 
-                           novoContexto.data && novoContexto.horario;
-      
-      if (temTodosDados) {
-        console.log('📝 Todos os dados coletados, criando agendamento automaticamente...');
-        
-        try {
-          // Buscar duração do serviço
-          const { data: servicoData } = await supabase
-            .from('servicos')
-            .select('duracao')
-            .eq('id', novoContexto.servico_id)
-            .single();
-          
-          const duracaoMin = servicoData?.duracao || 60;
-          
-          // Calcular horários que serão bloqueados
-          const calcularHorariosBloqueados = (inicio: string, duracao: number): string[] => {
-            const [h, m] = inicio.split(':').map(Number);
-            const bloqueados: string[] = [];
-            let minutos = h * 60 + m;
-            const minFim = minutos + duracao;
-            while (minutos < minFim) {
-              const hh = Math.floor(minutos / 60);
-              const mm = minutos % 60;
-              bloqueados.push(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
-              minutos += 30;
-            }
-            return bloqueados;
-          };
-          
-          const horariosNecessarios = calcularHorariosBloqueados(novoContexto.horario as string, duracaoMin);
-          
-          // Verificar disponibilidade
-          const { data: agendamentosExistentes } = await supabase
-            .from('agendamentos')
-            .select('horario')
-            .eq('data', novoContexto.data)
-            .in('status', ['Confirmado', 'Pendente']);
-          
-          const horariosOcupados = new Set(
-            (agendamentosExistentes || []).map((a) => a.horario.slice(0, 5))
-          );
-          
-          const conflito = horariosNecessarios.some(h => horariosOcupados.has(h));
-          
-          if (conflito) {
-            console.log('❌ Conflito de horário detectado');
-            resposta = 'Ops! Esse horário já foi ocupado. Me diga outro horário? 💜';
-          } else {
-            // Criar agendamento
-            const { data: agendamentoCriado, error: agendamentoError } = await supabase
-              .from('agendamentos')
-              .insert({
-                cliente_nome: novoContexto.cliente_nome,
-                cliente_telefone: telefone,
-                servico_id: novoContexto.servico_id,
-                servico_nome: novoContexto.servico_nome,
-                data: novoContexto.data,
-                horario: novoContexto.horario,
-                status: 'Confirmado',
-                origem: 'whatsapp',
-                bot_conversa_id: conversa!.id,
-              })
-              .select();
-
-            if (agendamentoError) {
-              console.error('❌ Erro ao criar agendamento:', agendamentoError);
-              resposta = 'Tive um problema ao confirmar. Pode tentar de novo? 💜';
-            } else {
-              console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
-              
-              // Formatar data bonita
-              const [yyyy, mm, dd] = (novoContexto.data as string).split('-').map(Number);
-              const d = new Date(Date.UTC(yyyy, mm - 1, dd, 12, 0, 0));
-              const diasSemana = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
-              const diaSemana = diasSemana[d.getUTCDay()];
-              const dataFormatada = `${String(dd).padStart(2,'0')}/${String(mm).padStart(2,'0')}`;
-              
-              resposta = `Prontinho, ${novoContexto.cliente_nome}! ✅\n\n${novoContexto.servico_nome} agendado para ${dataFormatada} (${diaSemana}) às ${novoContexto.horario}. Te espero aqui! 💜`;
-              
-              // Limpar contexto
-              novoContexto = { agendamento_criado: true };
-            }
-          }
-        } catch (error) {
-          console.error('❌ Erro ao criar agendamento automático:', error);
-        }
       }
     }
 
