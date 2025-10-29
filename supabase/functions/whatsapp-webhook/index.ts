@@ -451,41 +451,96 @@ serve(async (req) => {
             resposta = 'Esse horário já está ocupado. Pode escolher outro pra mim? 💜';
             novoContexto.etapa = 'escolher_horario';
           } else {
-            console.log('💾 Tentando criar agendamento:', {
-              cliente_nome: novoContexto.cliente_nome,
-              telefone,
-              servico_id: novoContexto.servico_id,
-              data: novoContexto.data,
-              horario: novoContexto.horario
-            });
+            // Validar horários suficientes para a duração do serviço
+            const servEsc = (servicos || []).find(s => s.id === novoContexto.servico_id);
+            if (servEsc?.duracao) {
+              const bloqueiosNecessarios = gerarSlotsBloqueados(novoContexto.horario, servEsc.duracao);
+              const slotsIndisponiveis = bloqueiosNecessarios.filter((x) => bloqueados.has(x));
+              const horFimMin = parseInt(novoContexto.horario.split(':')[0]) * 60 + parseInt(novoContexto.horario.split(':')[1]) + servEsc.duracao;
+              const ultrapassaHorario = (horFimMin > 21 * 60); // termina depois das 21:00
 
-            const { data: agendamentoCriado, error: agendamentoError } = await supabase
-              .from('agendamentos')
-              .insert({
-                cliente_nome: novoContexto.cliente_nome,
-                cliente_telefone: telefone,
-                servico_id: novoContexto.servico_id,
-                servico_nome: novoContexto.servico_nome,
-                data: novoContexto.data,
-                horario: novoContexto.horario,
-                status: 'Confirmado',
-                origem: 'whatsapp',
-                bot_conversa_id: conversa!.id,
-              })
-              .select();
+              if (slotsIndisponiveis.length > 0) {
+                resposta = `Esse horário não dá, amor. O ${servEsc.nome} precisa de ${servEsc.duracao} min e alguns horários já estão ocupados. Pode escolher outro? 💜`;
+                novoContexto.etapa = 'escolher_horario';
+              } else if (ultrapassaHorario) {
+                resposta = `Esse horário não funciona, querida. O ${servEsc.nome} leva ${servEsc.duracao} min e terminaria após 21h. Pode escolher um horário antes? 💜`;
+                novoContexto.etapa = 'escolher_horario';
+              } else {
+                // Tudo ok, criar o agendamento
+                console.log('💾 Tentando criar agendamento:', {
+                  cliente_nome: novoContexto.cliente_nome,
+                  telefone,
+                  servico_id: novoContexto.servico_id,
+                  data: novoContexto.data,
+                  horario: novoContexto.horario
+                });
 
-            if (agendamentoError) {
-              console.error('❌ Erro ao criar agendamento:', agendamentoError);
-            } else {
-              console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
-              // Confirmação padrão caso a IA não tenha confirmado
-              if (!resposta || resposta.trim() === '') {
-                try {
-                  const [yyyy, mm, dd] = (novoContexto.data as string).split('-');
-                  resposta = `Pronto! Agendei para ${dd}/${mm} às ${novoContexto.horario} 💜`;
-                } catch {}
+                const { data: agendamentoCriado, error: agendamentoError } = await supabase
+                  .from('agendamentos')
+                  .insert({
+                    cliente_nome: novoContexto.cliente_nome,
+                    cliente_telefone: telefone,
+                    servico_id: novoContexto.servico_id,
+                    servico_nome: novoContexto.servico_nome,
+                    data: novoContexto.data,
+                    horario: novoContexto.horario,
+                    status: 'Confirmado',
+                    origem: 'whatsapp',
+                    bot_conversa_id: conversa!.id,
+                  })
+                  .select();
+
+                if (agendamentoError) {
+                  console.error('❌ Erro ao criar agendamento:', agendamentoError);
+                } else {
+                  console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
+                  // Confirmação padrão caso a IA não tenha confirmado
+                  if (!resposta || resposta.trim() === '') {
+                    try {
+                      const [yyyy, mm, dd] = (novoContexto.data as string).split('-');
+                      resposta = `Pronto! Agendei para ${dd}/${mm} às ${novoContexto.horario} 💜`;
+                    } catch {}
+                  }
+                  novoContexto = {}; // Resetar contexto
+                }
               }
-              novoContexto = {}; // Resetar contexto
+            } else {
+              // Sem info de duração, prosseguir (fallback)
+              console.log('💾 Tentando criar agendamento (sem duração definida):', {
+                cliente_nome: novoContexto.cliente_nome,
+                telefone,
+                servico_id: novoContexto.servico_id,
+                data: novoContexto.data,
+                horario: novoContexto.horario
+              });
+
+              const { data: agendamentoCriado, error: agendamentoError } = await supabase
+                .from('agendamentos')
+                .insert({
+                  cliente_nome: novoContexto.cliente_nome,
+                  cliente_telefone: telefone,
+                  servico_id: novoContexto.servico_id,
+                  servico_nome: novoContexto.servico_nome,
+                  data: novoContexto.data,
+                  horario: novoContexto.horario,
+                  status: 'Confirmado',
+                  origem: 'whatsapp',
+                  bot_conversa_id: conversa!.id,
+                })
+                .select();
+
+              if (agendamentoError) {
+                console.error('❌ Erro ao criar agendamento:', agendamentoError);
+              } else {
+                console.log('✅ Agendamento criado com sucesso!', agendamentoCriado);
+                if (!resposta || resposta.trim() === '') {
+                  try {
+                    const [yyyy, mm, dd] = (novoContexto.data as string).split('-');
+                    resposta = `Pronto! Agendei para ${dd}/${mm} às ${novoContexto.horario} 💜`;
+                  } catch {}
+                }
+                novoContexto = {}; 
+              }
             }
           }
         }
