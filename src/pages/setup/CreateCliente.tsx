@@ -1,20 +1,29 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 const CreateCliente = () => {
   const [loading, setLoading] = useState(false);
+  const [secret, setSecret] = useState("");
   const navigate = useNavigate();
 
   const createCliente = async () => {
+    if (!secret) {
+      toast.error('Secret é obrigatório');
+      return;
+    }
+
     setLoading(true);
     try {
       // Criar usuário com role admin
       const { data, error } = await supabase.functions.invoke('criar-super-admin', {
         body: {
+          secret,
           email: 'jennifersilva@gmail.com',
           password: '96862422',
           nome: 'Jennifer Silva'
@@ -66,6 +75,18 @@ const CreateCliente = () => {
         <p className="text-muted-foreground mb-6 text-center">
           Criar conta para Jennifer Silva (Admin)
         </p>
+        <div className="space-y-4 mb-6">
+          <div>
+            <Label htmlFor="secret">Admin Creation Secret</Label>
+            <Input
+              id="secret"
+              type="password"
+              value={secret}
+              onChange={(e) => setSecret(e.target.value)}
+              placeholder="Digite o secret configurado"
+            />
+          </div>
+        </div>
         <Button 
           onClick={createCliente} 
           disabled={loading}

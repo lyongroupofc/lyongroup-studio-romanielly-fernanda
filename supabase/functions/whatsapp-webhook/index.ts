@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,7 +18,16 @@ serve(async (req) => {
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { telefone, mensagem } = await req.json();
+    
+    // Validate webhook input
+    const webhookSchema = z.object({
+      telefone: z.string().min(1, 'Phone number required').max(50, 'Phone number too long'),
+      mensagem: z.string().min(1, 'Message required').max(5000, 'Message too long')
+    });
+    
+    const body = await req.json();
+    const validated = webhookSchema.parse(body);
+    const { telefone, mensagem } = validated;
 
     console.log('📱 Mensagem recebida:', { telefone, mensagem });
 
@@ -470,6 +480,18 @@ ${profissionaisFormatados}
 
   } catch (error) {
     console.error('❌ Erro:', error);
+    
+    // Handle Zod validation errors
+    if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid input', details: 'errors' in error ? error.errors : [] }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        },
+      );
+    }
+    
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Erro desconhecido' 
     }), {
