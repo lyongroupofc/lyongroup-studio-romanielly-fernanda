@@ -2,33 +2,57 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { Loader2 } from "lucide-react";
 import Index from "./pages/Index";
-import Login from "./pages/Login";
 import Agendar from "./pages/Agendar";
 import Obrigado from "./pages/Obrigado";
-import AdminLayout from "./pages/admin/AdminLayout";
-import Dashboard from "./pages/admin/Dashboard";
-import Agenda from "./pages/admin/Agenda";
-import Servicos from "./pages/admin/Servicos";
-import Profissionais from "./pages/admin/Profissionais";
-import Faturamento from "./pages/admin/Faturamento";
-import BotWhatsApp from "./pages/admin/BotWhatsApp";
-import ChatAssistente from "./pages/admin/ChatAssistente";
 import NotFound from "./pages/NotFound";
-import ProtectedRoute from "./components/ProtectedRoute";
+import Login from "./pages/Login";
+import AdminLayout from "./pages/admin/AdminLayout";
 import SuperAdminLayout from "./pages/super-admin/SuperAdminLayout";
-import SuperAdminDashboard from "./pages/super-admin/Dashboard";
-import Clientes from "./pages/super-admin/Clientes";
-import MonitoramentoIA from "./pages/super-admin/MonitoramentoIA";
-import Custos from "./pages/super-admin/Custos";
-import Logs from "./pages/super-admin/Logs";
-import Configuracoes from "./pages/super-admin/Configuracoes";
-import CreateSuperAdmin from "./pages/setup/CreateSuperAdmin";
-import ResetSuperAdminPassword from "./pages/setup/ResetSuperAdminPassword";
-import CreateCliente from "./pages/setup/CreateCliente";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-const queryClient = new QueryClient();
+// Lazy load admin pages
+const Dashboard = lazy(() => import("./pages/admin/Dashboard"));
+const Agenda = lazy(() => import("./pages/admin/Agenda"));
+const Servicos = lazy(() => import("./pages/admin/Servicos"));
+const Profissionais = lazy(() => import("./pages/admin/Profissionais"));
+const Faturamento = lazy(() => import("./pages/admin/Faturamento"));
+const BotWhatsApp = lazy(() => import("./pages/admin/BotWhatsApp"));
+const ChatAssistente = lazy(() => import("./pages/admin/ChatAssistente"));
+
+// Lazy load setup pages
+const CreateSuperAdmin = lazy(() => import("./pages/setup/CreateSuperAdmin"));
+const ResetSuperAdminPassword = lazy(() => import("./pages/setup/ResetSuperAdminPassword"));
+const CreateCliente = lazy(() => import("./pages/setup/CreateCliente"));
+
+// Lazy load super admin pages
+const SuperAdminDashboard = lazy(() => import("./pages/super-admin/Dashboard"));
+const Clientes = lazy(() => import("./pages/super-admin/Clientes"));
+const Configuracoes = lazy(() => import("./pages/super-admin/Configuracoes"));
+const MonitoramentoIA = lazy(() => import("./pages/super-admin/MonitoramentoIA"));
+const Custos = lazy(() => import("./pages/super-admin/Custos"));
+const Logs = lazy(() => import("./pages/super-admin/Logs"));
+
+// Loading component
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[60vh]">
+    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+  </div>
+);
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutos
+      gcTime: 10 * 60 * 1000, // 10 minutos
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -39,28 +63,92 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/setup" element={<CreateSuperAdmin />} />
-          <Route path="/reset-password" element={<ResetSuperAdminPassword />} />
-          <Route path="/setup-cliente" element={<CreateCliente />} />
+          <Route path="/setup" element={
+            <Suspense fallback={<PageLoader />}>
+              <CreateSuperAdmin />
+            </Suspense>
+          } />
+          <Route path="/reset-password" element={
+            <Suspense fallback={<PageLoader />}>
+              <ResetSuperAdminPassword />
+            </Suspense>
+          } />
+          <Route path="/setup-cliente" element={
+            <Suspense fallback={<PageLoader />}>
+              <CreateCliente />
+            </Suspense>
+          } />
           <Route path="/agendar" element={<Agendar />} />
           <Route path="/obrigado" element={<Obrigado />} />
           <Route path="/super-admin" element={<ProtectedRoute requiredRole="super_admin"><SuperAdminLayout /></ProtectedRoute>}>
-            <Route index element={<SuperAdminDashboard />} />
-            <Route path="clientes" element={<Clientes />} />
-            <Route path="ia" element={<MonitoramentoIA />} />
-            <Route path="custos" element={<Custos />} />
-            <Route path="logs" element={<Logs />} />
-            <Route path="config" element={<Configuracoes />} />
+            <Route index element={
+              <Suspense fallback={<PageLoader />}>
+                <SuperAdminDashboard />
+              </Suspense>
+            } />
+            <Route path="clientes" element={
+              <Suspense fallback={<PageLoader />}>
+                <Clientes />
+              </Suspense>
+            } />
+            <Route path="ia" element={
+              <Suspense fallback={<PageLoader />}>
+                <MonitoramentoIA />
+              </Suspense>
+            } />
+            <Route path="custos" element={
+              <Suspense fallback={<PageLoader />}>
+                <Custos />
+              </Suspense>
+            } />
+            <Route path="logs" element={
+              <Suspense fallback={<PageLoader />}>
+                <Logs />
+              </Suspense>
+            } />
+            <Route path="config" element={
+              <Suspense fallback={<PageLoader />}>
+                <Configuracoes />
+              </Suspense>
+            } />
           </Route>
           
           <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
-            <Route index element={<Dashboard />} />
-            <Route path="agenda" element={<Agenda />} />
-            <Route path="servicos" element={<Servicos />} />
-            <Route path="profissionais" element={<Profissionais />} />
-            <Route path="faturamento" element={<Faturamento />} />
-            <Route path="bot-whatsapp" element={<BotWhatsApp />} />
-            <Route path="chat-assistente" element={<ChatAssistente />} />
+            <Route index element={
+              <Suspense fallback={<PageLoader />}>
+                <Dashboard />
+              </Suspense>
+            } />
+            <Route path="agenda" element={
+              <Suspense fallback={<PageLoader />}>
+                <Agenda />
+              </Suspense>
+            } />
+            <Route path="servicos" element={
+              <Suspense fallback={<PageLoader />}>
+                <Servicos />
+              </Suspense>
+            } />
+            <Route path="profissionais" element={
+              <Suspense fallback={<PageLoader />}>
+                <Profissionais />
+              </Suspense>
+            } />
+            <Route path="faturamento" element={
+              <Suspense fallback={<PageLoader />}>
+                <Faturamento />
+              </Suspense>
+            } />
+            <Route path="bot-whatsapp" element={
+              <Suspense fallback={<PageLoader />}>
+                <BotWhatsApp />
+              </Suspense>
+            } />
+            <Route path="chat-assistente" element={
+              <Suspense fallback={<PageLoader />}>
+                <ChatAssistente />
+              </Suspense>
+            } />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

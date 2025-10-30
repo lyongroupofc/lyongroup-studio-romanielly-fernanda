@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
@@ -26,15 +26,10 @@ const Agenda = () => {
   const [openSideSheet, setOpenSideSheet] = useState(false);
   const [selectedAgendamento, setSelectedAgendamento] = useState<Agendamento | null>(null);
 
-  const { agendamentos, loading: loadingAgendamentos, addAgendamento, updateAgendamento, deleteAgendamento, refetch } = useAgendamentos();
+  const { agendamentos, loading: loadingAgendamentos, addAgendamento, updateAgendamento, deleteAgendamento } = useAgendamentos();
   const { getConfig, updateConfig } = useAgendaConfig();
   const { servicos, loading: loadingServicos } = useServicos();
   const { profissionais, loading: loadingProfissionais } = useProfissionais();
-
-  // Refetch ao montar componente para pegar novos agendamentos
-  useEffect(() => {
-    refetch();
-  }, []);
 
   const [formData, setFormData] = useState({
     nome: "",
@@ -97,34 +92,34 @@ const Agenda = () => {
     return horariosBloqueados;
   };
 
-  const getAvailableSlots = (d: Date | undefined) => {
-    if (!d) return [];
-    const dayData = getDayData(d);
-    if (dayData.fechado) return [];
+  const getAvailableSlots = useMemo(() => {
+    return (d: Date | undefined) => {
+      if (!d) return [];
+      const dayData = getDayData(d);
+      if (dayData.fechado) return [];
 
-    const dateStr = fmtKey(d);
-    const agendamentosDay = agendamentos.filter((a) => a.data === dateStr);
-    
-    // Calcula todos os horários bloqueados considerando a duração de cada serviço
-    const todosBloqueados = new Set<string>();
-    
-    agendamentosDay.forEach(ag => {
-      const servico = servicos.find(s => s.id === ag.servico_id);
-      if (servico) {
-        const horariosBloqueados = calcularHorariosBloqueados(ag.horario, servico.duracao);
-        horariosBloqueados.forEach(h => todosBloqueados.add(h));
-      } else {
-        // Se não encontrar o serviço, bloqueia apenas o horário inicial
-        todosBloqueados.add(ag.horario);
-      }
-    });
-    
-    // Adiciona horários bloqueados manualmente
-    dayData.horariosBloqueados.forEach(h => todosBloqueados.add(h));
+      const dateStr = fmtKey(d);
+      const agendamentosDay = agendamentos.filter((a) => a.data === dateStr);
+      
+      // Calcula todos os horários bloqueados considerando a duração de cada serviço
+      const todosBloqueados = new Set<string>();
+      
+      agendamentosDay.forEach(ag => {
+        const servico = servicos.find(s => s.id === ag.servico_id);
+        if (servico) {
+          const horariosBloqueados = calcularHorariosBloqueados(ag.horario, servico.duracao);
+          horariosBloqueados.forEach(h => todosBloqueados.add(h));
+        } else {
+          todosBloqueados.add(ag.horario);
+        }
+      });
+      
+      dayData.horariosBloqueados.forEach(h => todosBloqueados.add(h));
 
-    const base = [...generateSlots(), ...dayData.horariosExtras];
-    return base.filter((t) => !todosBloqueados.has(t)).sort();
-  };
+      const base = [...generateSlots(), ...dayData.horariosExtras];
+      return base.filter((t) => !todosBloqueados.has(t)).sort();
+    };
+  }, [agendamentos, servicos]);
 
   const getServiceStartSlots = (d: Date | undefined, servicoId?: string) => {
     if (!d || !servicoId) return [];
