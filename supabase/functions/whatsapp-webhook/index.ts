@@ -327,12 +327,13 @@ ${profissionaisFormatados}
             continue;
           }
 
-          // Gerar todos os slots ocupados
+          // Gerar todos os slots ocupados (excluindo agendamentos da própria pessoa)
           const { data: agendamentosExistentes } = await supabase
             .from('agendamentos')
             .select('horario, servico_id')
             .eq('data', args.data)
-            .neq('status', 'Cancelado');
+            .neq('status', 'Cancelado')
+            .neq('cliente_telefone', telefone); // Ignorar agendamentos da própria pessoa ao verificar disponibilidade
 
           const slotsOcupados = new Set<string>();
           
