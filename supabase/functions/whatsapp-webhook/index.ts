@@ -169,11 +169,11 @@ ${profissionaisFormatados}
 1. NÃO funcionamos aos domingos - sempre informe isso se cliente escolher domingo
 2. Para agendar, você PRECISA de: serviço, data, horário e nome da cliente
 3. O TELEFONE já está disponível no sistema - NÃO PERGUNTE o telefone da cliente
-4. Use a ferramenta criar_agendamento SOMENTE quando tiver TODAS as informações (serviço, data, horário e nome)
-5. A ferramenta vai validar se há disponibilidade e criar o agendamento automaticamente
-6. Se não houver vaga, a ferramenta vai retornar sugestões de horários alternativos
-7. Sempre confirme os dados antes de agendar
-
+4. Escolha SEMPRE um serviço usando exatamente um dos nomes listados em "Serviços Disponíveis". Não invente nomes.
+5. Não invente IDs de serviço. Se não souber o servico_id, deixe-o em branco; o sistema resolve pelo nome.
+6. Use a ferramenta criar_agendamento SOMENTE quando tiver TODAS as informações (serviço, data, horário e nome)
+7. A ferramenta vai validar se há disponibilidade e criar o agendamento automaticamente
+8. Se não houver vaga, a ferramenta vai retornar sugestões de horários alternativos
 **Política de Cancelamento:**
 - Cancelamento: permitido até 5 dias antes
 - Reagendamento: permitido até 2 dias antes
@@ -198,13 +198,13 @@ ${profissionaisFormatados}
         type: "function",
           function: {
           name: "criar_agendamento",
-          description: "Cria um agendamento no sistema. IMPORTANTE: Esta ferramenta valida automaticamente a disponibilidade considerando a duração do serviço. Use apenas quando tiver TODOS os dados: serviço_id, data (YYYY-MM-DD), horario (HH:MM) e cliente_nome. O telefone já está disponível no contexto da conversa.",
+          description: "Cria um agendamento no sistema. IMPORTANTE: Esta ferramenta valida automaticamente a disponibilidade considerando a duração do serviço. Use apenas quando tiver TODOS os dados: servico_nome, data (YYYY-MM-DD), horario (HH:MM) e cliente_nome. O telefone já está disponível no contexto da conversa. Não invente IDs de serviço; se não souber o servico_id, deixe-o vazio que o sistema resolve pelo nome.",
           parameters: {
             type: "object",
             properties: {
               servico_id: {
                 type: "string",
-                description: "ID do serviço escolhido"
+                description: "ID do serviço escolhido (opcional)"
               },
               servico_nome: {
                 type: "string",
@@ -223,7 +223,7 @@ ${profissionaisFormatados}
                 description: "Nome completo da cliente"
               }
             },
-            required: ["servico_id", "servico_nome", "data", "horario", "cliente_nome"]
+            required: ["servico_nome", "data", "horario", "cliente_nome"]
           }
         }
       }
@@ -267,12 +267,36 @@ ${profissionaisFormatados}
           const args = JSON.parse(toolCall.function.arguments);
           console.log('📝 Criando agendamento:', args);
 
-          // Validar disponibilidade
-          const servico = servicos?.find(s => s.id === args.servico_id);
+          // Resolver serviço por ID válido ou por nome normalizado
+          const normalize = (s: string) => s
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          let servico = servicos?.find(s => s.id === args.servico_id);
+
+          if (!servico && args.servico_nome) {
+            const alvo = normalize(args.servico_nome);
+            servico = servicos?.find(s => normalize(s.nome) === alvo)
+              ?? servicos?.find(s => normalize(s.nome).includes(alvo) || alvo.includes(normalize(s.nome)));
+          }
+
+          // Fallback raro: alguns modelos podem enviar o preço no campo servico_id
+          if (!servico && args.servico_id && /^[0-9]+([.,][0-9]+)?$/.test(String(args.servico_id))) {
+            const precoAlvo = Number(String(args.servico_id).replace(',', '.'));
+            servico = servicos?.find(s => Number(s.preco) === precoAlvo);
+          }
+
           if (!servico) {
-            resposta = 'Ops, não encontrei esse serviço. Pode escolher outro?';
+            resposta = 'Ops, não encontrei esse serviço. Pode escolher um nome exatamente como na lista acima?';
             continue;
           }
+
+          // Garanta consistência dos argumentos resolvidos
+          args.servico_id = servico.id;
+          args.servico_nome = servico.nome;
 
           // Verificar se é domingo
           const dataAgendamento = new Date(args.data + 'T12:00:00');
