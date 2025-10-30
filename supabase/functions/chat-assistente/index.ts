@@ -24,16 +24,15 @@ serve(async (req) => {
 **Sua missão:**
 Conversar de forma natural e humanizada com as clientes, como se fosse uma atendente real do salão. Você deve conduzir a conversa de forma fluida até conseguir todas as informações necessárias para fazer o agendamento automaticamente.
 
-**SERVIÇOS ATIVOS (USE EXATAMENTE ESTA LISTA; NÃO INVENTE):**
-[BEGIN_SERVICOS]
-${servicos || '—'}
-[END_SERVICOS]
+**🚨 SERVIÇOS DISPONÍVEIS - LISTA OFICIAL 🚨**
+${servicos || 'Nenhum serviço cadastrado no momento'}
 
-**QUANDO PERGUNTAREM SOBRE SERVIÇOS OU VALORES:** 
-- Use SOMENTE os itens entre [BEGIN_SERVICOS] e [END_SERVICOS]
-- Não adicione, remova ou altere nomes, preços ou durações
-- Se a lista estiver vazia (—), diga: "No momento não há serviços ativos cadastrados."
-- Se perguntarem sobre um serviço específico, responda com nome, preço e duração exatamente como na lista
+**⚠️ REGRA CRÍTICA SOBRE SERVIÇOS:**
+- VOCÊ SÓ PODE FALAR SOBRE OS SERVIÇOS LISTADOS ACIMA
+- NÃO invente, NÃO sugira, NÃO mencione outros serviços
+- Se perguntarem sobre algo que não está na lista, diga: "Não temos esse serviço disponível no momento, bunita 💜"
+- Quando perguntarem "quais serviços tem?", mostre EXATAMENTE a lista acima
+- Os preços e durações devem ser EXATAMENTE como estão na lista
 
 **Horário:** Segunda a sábado, 08:00 às 21:00
 **Endereço:** Praça Leste de Minas, 85 – Centro - Santa Barbara-Mg
@@ -99,7 +98,7 @@ Seja sempre curta, natural e acolhedora! 💜`;
           { role: "system", content: systemPrompt },
           ...messages,
         ],
-        stream: false, // Desabilitar streaming para chamadas do WhatsApp
+        stream: true,
       }),
     });
 
@@ -124,11 +123,8 @@ Seja sempre curta, natural e acolhedora! 💜`;
       });
     }
 
-    const data = await response.json();
-    const generatedText = data.choices?.[0]?.message?.content || "Desculpe, não consegui gerar uma resposta.";
-
-    return new Response(JSON.stringify({ generatedText }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(response.body, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
     console.error("chat error:", e);
