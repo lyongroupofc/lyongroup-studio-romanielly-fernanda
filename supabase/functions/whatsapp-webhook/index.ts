@@ -380,8 +380,11 @@ ${profissionaisFormatados}
             // Gerar sugestões de horários disponíveis
             const horariosDisponiveis: string[] = [];
             
-            for (let h = 8; h <= 20; h++) {
+            for (let h = 8; h <= 21; h++) {
               for (let m = 0; m < 60; m += 30) {
+                // Não gerar 21:30 (fechamos às 21:00)
+                if (h === 21 && m === 30) continue;
+                
                 const horario = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                 const [hh, mm] = horario.split(':').map(Number);
                 const inicio = hh * 60 + mm;
