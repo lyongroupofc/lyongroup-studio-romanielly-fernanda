@@ -287,12 +287,17 @@ const BotWhatsApp = () => {
                           </Label>
                         </div>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          onClick={() => clearContext(conversa.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            clearContext(conversa.id);
+                          }}
                           title="Limpar memória da conversa"
+                          className="h-8"
                         >
-                          <Eraser className="h-4 w-4" />
+                          <Eraser className="h-3 w-3 mr-1" />
+                          <span className="text-xs">Limpar</span>
                         </Button>
                       </div>
                     </div>

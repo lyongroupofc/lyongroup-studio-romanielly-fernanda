@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export type BotConversa = {
   id: string;
@@ -145,8 +146,11 @@ export const useBotConversas = () => {
       setConversas(prev => 
         prev.map(c => c.id === conversaId ? { ...c, contexto: {} } : c)
       );
+      
+      toast.success("Memória da conversa limpa!");
     } catch (error) {
       console.error('Erro ao limpar contexto:', error);
+      toast.error("Erro ao limpar memória da conversa");
       throw error;
     }
   };
