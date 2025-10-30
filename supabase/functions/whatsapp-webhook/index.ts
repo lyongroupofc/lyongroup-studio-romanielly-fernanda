@@ -121,8 +121,21 @@ serve(async (req) => {
       content: mensagem
     });
 
+    // Data atual para contexto da IA
+    const hoje = new Date();
+    const dataAtualFormatada = hoje.toLocaleDateString('pt-BR', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
     // System prompt
     const systemPrompt = `Você é a L&J, assistente virtual do Studio Jennifer Silva, um salão de beleza especializado em cabelos afro e cacheados.
+
+**DATA ATUAL: ${dataAtualFormatada}**
+**HOJE É: ${hoje.getDate().toString().padStart(2, '0')}/${(hoje.getMonth() + 1).toString().padStart(2, '0')}/${hoje.getFullYear()}**
+Use sempre esta data como referência para validar agendamentos. Qualquer data que o cliente mencionar deve ser comparada com a data de hoje.
 
 **Sua Personalidade:**
 - Acolhedora, empática e carinhosa
