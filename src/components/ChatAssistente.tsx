@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useServicos } from "@/hooks/useServicos";
+import { useProfissionais } from "@/hooks/useProfissionais";
 
 type Message = {
   role: "user" | "assistant";
@@ -14,6 +15,7 @@ type Message = {
 
 const ChatAssistente = () => {
   const { servicos } = useServicos();
+  const { profissionais } = useProfissionais();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -35,12 +37,20 @@ const ChatAssistente = () => {
     const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-assistente`;
 
     // Preparar lista de serviços formatada
-    const servicosFormatados = servicos.map(s => {
-      const duracaoTexto = s.duracao >= 60 
-        ? `${Math.floor(s.duracao / 60)}h${s.duracao % 60 > 0 ? ` ${s.duracao % 60}min` : ''}`
-        : `${s.duracao} min`;
-      return `• ${s.nome} - R$ ${Number(s.preco).toFixed(2).replace('.', ',')} (${duracaoTexto})`;
-    }).join('\n');
+    const servicosFormatados = servicos
+      .filter(s => s.ativo)
+      .map(s => {
+        const duracaoTexto = s.duracao >= 60 
+          ? `${Math.floor(s.duracao / 60)}h${s.duracao % 60 > 0 ? ` ${s.duracao % 60}min` : ''}`
+          : `${s.duracao} min`;
+        return `• ${s.nome} (ID: ${s.id}) - R$ ${Number(s.preco).toFixed(2).replace('.', ',')} (${duracaoTexto})`;
+      }).join('\n');
+
+    // Preparar lista de profissionais formatada
+    const profissionaisFormatados = profissionais
+      .filter(p => p.ativo)
+      .map(p => `• ${p.nome} (ID: ${p.id})`)
+      .join('\n');
 
     try {
       const resp = await fetch(CHAT_URL, {
@@ -51,7 +61,8 @@ const ChatAssistente = () => {
         },
         body: JSON.stringify({ 
           messages: [...messages, { role: "user", content: userMessage }],
-          servicos: servicosFormatados
+          servicos: servicosFormatados,
+          profissionais: profissionaisFormatados
         }),
       });
 
