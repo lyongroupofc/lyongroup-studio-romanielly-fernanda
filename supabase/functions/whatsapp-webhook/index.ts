@@ -418,21 +418,13 @@ ${profissionaisFormatados}
             continue;
           }
 
-          // Verificar se já existe agendamento para este telefone (evitar duplicidade ao remarcar)
-          const { data: agendamentoExistente } = await supabase
+          // Remover quaisquer agendamentos anteriores desse telefone (evita duplicidade ao remarcar)
+          await supabase
             .from('agendamentos')
-            .select('id')
+            .delete()
             .eq('cliente_telefone', telefone)
-            .neq('status', 'Cancelado')
-            .maybeSingle();
+            .neq('status', 'Cancelado');
 
-          // Se existe, deletar o antigo antes de criar o novo (remarcar)
-          if (agendamentoExistente) {
-            await supabase
-              .from('agendamentos')
-              .delete()
-              .eq('id', agendamentoExistente.id);
-          }
 
           // Criar novo agendamento
           const { data: novoAgendamento, error: erroAgendamento } = await supabase
