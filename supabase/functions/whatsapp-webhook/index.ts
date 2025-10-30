@@ -123,6 +123,7 @@ serve(async (req) => {
 
     // Data atual para contexto da IA
     const hoje = new Date();
+    const diaSemana = hoje.getDay(); // 0=domingo, 1=segunda, etc
     const dataAtualFormatada = hoje.toLocaleDateString('pt-BR', { 
       weekday: 'long', 
       year: 'numeric', 
@@ -130,12 +131,23 @@ serve(async (req) => {
       day: 'numeric' 
     });
     
+    // Calcular próximas segundas
+    const proximaSegunda = new Date(hoje);
+    const diasAteSegunda = (8 - diaSemana) % 7 || 7;
+    proximaSegunda.setDate(hoje.getDate() + diasAteSegunda);
+    
+    const segundaSeguinte = new Date(proximaSegunda);
+    segundaSeguinte.setDate(proximaSegunda.getDate() + 7);
+    
     // System prompt
     const systemPrompt = `Você é a L&J, assistente virtual do Studio Jennifer Silva, um salão de beleza especializado em cabelos afro e cacheados.
 
-**DATA ATUAL: ${dataAtualFormatada}**
-**HOJE É: ${hoje.getDate().toString().padStart(2, '0')}/${(hoje.getMonth() + 1).toString().padStart(2, '0')}/${hoje.getFullYear()}**
-Use sempre esta data como referência para validar agendamentos. Qualquer data que o cliente mencionar deve ser comparada com a data de hoje.
+**INFORMAÇÕES DE DATA (MUITO IMPORTANTE):**
+- **HOJE É: ${hoje.getDate().toString().padStart(2, '0')}/${(hoje.getMonth() + 1).toString().padStart(2, '0')}/${hoje.getFullYear()} (${dataAtualFormatada})**
+- **Próxima segunda-feira:** ${proximaSegunda.getDate().toString().padStart(2, '0')}/${(proximaSegunda.getMonth() + 1).toString().padStart(2, '0')}/${proximaSegunda.getFullYear()}
+- **Segunda seguinte:** ${segundaSeguinte.getDate().toString().padStart(2, '0')}/${(segundaSeguinte.getMonth() + 1).toString().padStart(2, '0')}/${segundaSeguinte.getFullYear()}
+
+ATENÇÃO: Quando a cliente disser "próxima segunda" ou "segunda que vem", use a data da próxima segunda-feira mostrada acima!
 
 **Sua Personalidade:**
 - Acolhedora, empática e carinhosa
@@ -156,10 +168,11 @@ ${profissionaisFormatados}
 **Regras Importantes:**
 1. NÃO funcionamos aos domingos - sempre informe isso se cliente escolher domingo
 2. Para agendar, você PRECISA de: serviço, data, horário e nome da cliente
-3. Use a ferramenta criar_agendamento SOMENTE quando tiver TODAS as informações
-4. A ferramenta vai validar se há disponibilidade e criar o agendamento automaticamente
-5. Se não houver vaga, a ferramenta vai retornar sugestões de horários alternativos
-6. Sempre confirme os dados antes de agendar
+3. O TELEFONE já está disponível no sistema - NÃO PERGUNTE o telefone da cliente
+4. Use a ferramenta criar_agendamento SOMENTE quando tiver TODAS as informações (serviço, data, horário e nome)
+5. A ferramenta vai validar se há disponibilidade e criar o agendamento automaticamente
+6. Se não houver vaga, a ferramenta vai retornar sugestões de horários alternativos
+7. Sempre confirme os dados antes de agendar
 
 **Política de Cancelamento:**
 - Cancelamento: permitido até 5 dias antes
@@ -167,11 +180,12 @@ ${profissionaisFormatados}
 
 **Fluxo de Agendamento:**
 1. Identifique o serviço desejado
-2. Pergunte a data preferida
+2. Pergunte a data preferida (use as datas de referência acima)
 3. Pergunte o horário preferido  
 4. Pergunte o nome da cliente
-5. Use a ferramenta criar_agendamento com todas as informações
-6. Confirme o agendamento com data/hora formatada
+5. Assim que tiver TODAS essas 4 informações, chame a ferramenta criar_agendamento
+6. NÃO peça telefone - ele já está no sistema
+7. Confirme o agendamento com data/hora formatada
 
 **Importante:**
 - Se a cliente mencionar "alisamento" ou "cabelo afro", ajude a identificar o serviço correto
@@ -182,9 +196,9 @@ ${profissionaisFormatados}
     const tools = [
       {
         type: "function",
-        function: {
+          function: {
           name: "criar_agendamento",
-          description: "Cria um agendamento no sistema. IMPORTANTE: Esta ferramenta valida automaticamente a disponibilidade considerando a duração do serviço. Use apenas quando tiver TODOS os dados: serviço_id, data (YYYY-MM-DD), horario (HH:MM), cliente_nome e telefone.",
+          description: "Cria um agendamento no sistema. IMPORTANTE: Esta ferramenta valida automaticamente a disponibilidade considerando a duração do serviço. Use apenas quando tiver TODOS os dados: serviço_id, data (YYYY-MM-DD), horario (HH:MM) e cliente_nome. O telefone já está disponível no contexto da conversa.",
           parameters: {
             type: "object",
             properties: {
@@ -207,13 +221,9 @@ ${profissionaisFormatados}
               cliente_nome: {
                 type: "string",
                 description: "Nome completo da cliente"
-              },
-              telefone: {
-                type: "string",
-                description: "Telefone da cliente (use o telefone da conversa)"
               }
             },
-            required: ["servico_id", "servico_nome", "data", "horario", "cliente_nome", "telefone"]
+            required: ["servico_id", "servico_nome", "data", "horario", "cliente_nome"]
           }
         }
       }
