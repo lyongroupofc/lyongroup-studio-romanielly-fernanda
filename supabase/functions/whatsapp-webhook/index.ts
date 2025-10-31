@@ -32,8 +32,12 @@ serve(async (req) => {
 
     console.log('📱 Mensagem recebida:', { telefone, mensagem, instancia });
 
-    // Verificar se bot está ativo globalmente (EXCETO para instância 'Bot disparo')
-    if (instancia !== 'Bot disparo') {
+    // Instâncias de automação que sempre funcionam (ignoram config global)
+    const instanciasAutomacao = ['Bot disparo', 'Automações Agencia'];
+    const isInstanciaAutomacao = instanciasAutomacao.includes(instancia || '');
+
+    // Verificar se bot está ativo globalmente (EXCETO para instâncias de automação)
+    if (!isInstanciaAutomacao) {
       const { data: configAtivo } = await supabase
         .from('bot_config')
         .select('valor')
@@ -47,7 +51,7 @@ serve(async (req) => {
         });
       }
     } else {
-      console.log('✅ Instância Bot disparo - ignorando config global');
+      console.log(`✅ Instância de automação (${instancia}) - ignorando config global`);
     }
 
     // Verificar se número está bloqueado
