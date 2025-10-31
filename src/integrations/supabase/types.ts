@@ -53,6 +53,7 @@ export type Database = {
           data: string
           horario: string
           id: string
+          instancia: string | null
           observacoes: string | null
           origem: string | null
           profissional_id: string | null
@@ -69,6 +70,7 @@ export type Database = {
           data: string
           horario: string
           id?: string
+          instancia?: string | null
           observacoes?: string | null
           origem?: string | null
           profissional_id?: string | null
@@ -85,6 +87,7 @@ export type Database = {
           data?: string
           horario?: string
           id?: string
+          instancia?: string | null
           observacoes?: string | null
           origem?: string | null
           profissional_id?: string | null
@@ -144,6 +147,7 @@ export type Database = {
           contexto: Json | null
           created_at: string | null
           id: string
+          instancia: string | null
           telefone: string
           ultimo_contato: string | null
         }
@@ -152,6 +156,7 @@ export type Database = {
           contexto?: Json | null
           created_at?: string | null
           id?: string
+          instancia?: string | null
           telefone: string
           ultimo_contato?: string | null
         }
@@ -160,6 +165,7 @@ export type Database = {
           contexto?: Json | null
           created_at?: string | null
           id?: string
+          instancia?: string | null
           telefone?: string
           ultimo_contato?: string | null
         }

@@ -22,12 +22,13 @@ serve(async (req) => {
     // Validate webhook input
     const webhookSchema = z.object({
       telefone: z.string().min(1, 'Phone number required').max(50, 'Phone number too long'),
-      mensagem: z.string().min(1, 'Message required').max(5000, 'Message too long')
+      mensagem: z.string().min(1, 'Message required').max(5000, 'Message too long'),
+      instancia: z.string().optional()
     });
     
     const body = await req.json();
     const validated = webhookSchema.parse(body);
-    const { telefone, mensagem } = validated;
+    const { telefone, mensagem, instancia } = validated;
 
     console.log('📱 Mensagem recebida:', { telefone, mensagem });
 
@@ -60,16 +61,26 @@ serve(async (req) => {
     }
 
     // Buscar ou criar conversa
-    let { data: conversa } = await supabase
+    let query = supabase
       .from('bot_conversas')
       .select('*')
-      .eq('telefone', telefone)
-      .maybeSingle();
+      .eq('telefone', telefone);
+    
+    if (instancia) {
+      query = query.eq('instancia', instancia);
+    }
+    
+    let { data: conversa } = await query.maybeSingle();
 
     if (!conversa) {
       const { data: novaConversa } = await supabase
         .from('bot_conversas')
-        .insert({ telefone, contexto: {}, bot_ativo: true })
+        .insert({ 
+          telefone, 
+          contexto: {}, 
+          bot_ativo: true,
+          instancia: instancia || 'default'
+        })
         .select()
         .single();
       conversa = novaConversa;
@@ -458,6 +469,7 @@ Jenifer Cristina da Silva
               status: 'Confirmado',
               origem: 'whatsapp',
               bot_conversa_id: conversa.id,
+              instancia: instancia || 'default',
             })
             .select()
             .single();
