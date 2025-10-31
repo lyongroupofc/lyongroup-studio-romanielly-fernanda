@@ -30,20 +30,24 @@ serve(async (req) => {
     const validated = webhookSchema.parse(body);
     const { telefone, mensagem, instancia } = validated;
 
-    console.log('📱 Mensagem recebida:', { telefone, mensagem });
+    console.log('📱 Mensagem recebida:', { telefone, mensagem, instancia });
 
-    // Verificar se bot está ativo globalmente
-    const { data: configAtivo } = await supabase
-      .from('bot_config')
-      .select('valor')
-      .eq('chave', 'ativo')
-      .maybeSingle();
+    // Verificar se bot está ativo globalmente (EXCETO para instância 'Bot disparo')
+    if (instancia !== 'Bot disparo') {
+      const { data: configAtivo } = await supabase
+        .from('bot_config')
+        .select('valor')
+        .eq('chave', 'ativo')
+        .maybeSingle();
 
-    if (configAtivo?.valor?.valor === false) {
-      console.log('🤖 Bot desativado globalmente');
-      return new Response(JSON.stringify({ resposta: 'Bot desativado' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      if (configAtivo?.valor?.valor === false) {
+        console.log('🤖 Bot desativado globalmente');
+        return new Response(JSON.stringify({ resposta: 'Bot desativado' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      console.log('✅ Instância Bot disparo - ignorando config global');
     }
 
     // Verificar se número está bloqueado
