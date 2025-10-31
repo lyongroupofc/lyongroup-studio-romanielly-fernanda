@@ -14,16 +14,468 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agenda_config: {
+        Row: {
+          created_at: string | null
+          data: string
+          fechado: boolean | null
+          horarios_bloqueados: string[] | null
+          horarios_extras: string[] | null
+          id: string
+          observacoes: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data: string
+          fechado?: boolean | null
+          horarios_bloqueados?: string[] | null
+          horarios_extras?: string[] | null
+          id?: string
+          observacoes?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data?: string
+          fechado?: boolean | null
+          horarios_bloqueados?: string[] | null
+          horarios_extras?: string[] | null
+          id?: string
+          observacoes?: string | null
+        }
+        Relationships: []
+      }
+      agendamentos: {
+        Row: {
+          bot_conversa_id: string | null
+          cliente_nome: string
+          cliente_telefone: string
+          created_at: string | null
+          data: string
+          horario: string
+          id: string
+          observacoes: string | null
+          origem: string | null
+          profissional_id: string | null
+          profissional_nome: string | null
+          servico_id: string | null
+          servico_nome: string
+          status: string | null
+        }
+        Insert: {
+          bot_conversa_id?: string | null
+          cliente_nome: string
+          cliente_telefone: string
+          created_at?: string | null
+          data: string
+          horario: string
+          id?: string
+          observacoes?: string | null
+          origem?: string | null
+          profissional_id?: string | null
+          profissional_nome?: string | null
+          servico_id?: string | null
+          servico_nome: string
+          status?: string | null
+        }
+        Update: {
+          bot_conversa_id?: string | null
+          cliente_nome?: string
+          cliente_telefone?: string
+          created_at?: string | null
+          data?: string
+          horario?: string
+          id?: string
+          observacoes?: string | null
+          origem?: string | null
+          profissional_id?: string | null
+          profissional_nome?: string | null
+          servico_id?: string | null
+          servico_nome?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_bot_conversa_id_fkey"
+            columns: ["bot_conversa_id"]
+            isOneToOne: false
+            referencedRelation: "bot_conversas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_profissional_id_fkey"
+            columns: ["profissional_id"]
+            isOneToOne: false
+            referencedRelation: "profissionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_config: {
+        Row: {
+          chave: string
+          id: string
+          updated_at: string | null
+          valor: Json
+        }
+        Insert: {
+          chave: string
+          id?: string
+          updated_at?: string | null
+          valor?: Json
+        }
+        Update: {
+          chave?: string
+          id?: string
+          updated_at?: string | null
+          valor?: Json
+        }
+        Relationships: []
+      }
+      bot_conversas: {
+        Row: {
+          bot_ativo: boolean
+          contexto: Json | null
+          created_at: string | null
+          id: string
+          telefone: string
+          ultimo_contato: string | null
+        }
+        Insert: {
+          bot_ativo?: boolean
+          contexto?: Json | null
+          created_at?: string | null
+          id?: string
+          telefone: string
+          ultimo_contato?: string | null
+        }
+        Update: {
+          bot_ativo?: boolean
+          contexto?: Json | null
+          created_at?: string | null
+          id?: string
+          telefone?: string
+          ultimo_contato?: string | null
+        }
+        Relationships: []
+      }
+      bot_mensagens: {
+        Row: {
+          conteudo: string
+          conversa_id: string | null
+          id: string
+          telefone: string
+          timestamp: string | null
+          tipo: string
+        }
+        Insert: {
+          conteudo: string
+          conversa_id?: string | null
+          id?: string
+          telefone: string
+          timestamp?: string | null
+          tipo: string
+        }
+        Update: {
+          conteudo?: string
+          conversa_id?: string | null
+          id?: string
+          telefone?: string
+          timestamp?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_mensagens_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "bot_conversas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_numeros_bloqueados: {
+        Row: {
+          created_at: string | null
+          id: string
+          motivo: string | null
+          numero: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          motivo?: string | null
+          numero: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          motivo?: string | null
+          numero?: string
+        }
+        Relationships: []
+      }
+      bot_sessao: {
+        Row: {
+          created_at: string | null
+          dados_sessao: Json | null
+          id: string
+          qr_code: string | null
+          status: string
+          ultima_atividade: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          dados_sessao?: Json | null
+          id?: string
+          qr_code?: string | null
+          status?: string
+          ultima_atividade?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          dados_sessao?: Json | null
+          id?: string
+          qr_code?: string | null
+          status?: string
+          ultima_atividade?: string | null
+        }
+        Relationships: []
+      }
+      pagamentos: {
+        Row: {
+          agendamento_id: string | null
+          cliente_nome: string
+          created_at: string | null
+          data: string
+          id: string
+          metodo_pagamento: string | null
+          servico: string
+          status: string | null
+          valor: number
+        }
+        Insert: {
+          agendamento_id?: string | null
+          cliente_nome: string
+          created_at?: string | null
+          data: string
+          id?: string
+          metodo_pagamento?: string | null
+          servico: string
+          status?: string | null
+          valor: number
+        }
+        Update: {
+          agendamento_id?: string | null
+          cliente_nome?: string
+          created_at?: string | null
+          data?: string
+          id?: string
+          metodo_pagamento?: string | null
+          servico?: string
+          status?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          nome: string
+          telefone: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id: string
+          nome: string
+          telefone?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          nome?: string
+          telefone?: string | null
+        }
+        Relationships: []
+      }
+      profissionais: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          email: string | null
+          especialidades: string[] | null
+          id: string
+          nome: string
+          telefone: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          email?: string | null
+          especialidades?: string[] | null
+          id?: string
+          nome: string
+          telefone?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          email?: string | null
+          especialidades?: string[] | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+        }
+        Relationships: []
+      }
+      servicos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          duracao: number
+          id: string
+          nome: string
+          preco: number
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          duracao: number
+          id?: string
+          nome: string
+          preco: number
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          duracao?: number
+          id?: string
+          nome?: string
+          preco?: number
+        }
+        Relationships: []
+      }
+      sistema_logs: {
+        Row: {
+          created_at: string | null
+          detalhes: Json | null
+          id: string
+          mensagem: string
+          severidade: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string | null
+          detalhes?: Json | null
+          id?: string
+          mensagem: string
+          severidade: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string | null
+          detalhes?: Json | null
+          id?: string
+          mensagem?: string
+          severidade?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      uso_ia: {
+        Row: {
+          created_at: string | null
+          custo_estimado: number | null
+          data: string
+          gemini_erro: number | null
+          gemini_sucesso: number | null
+          id: string
+          lovable_erro: number | null
+          lovable_sucesso: number | null
+          total_requisicoes: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          custo_estimado?: number | null
+          data: string
+          gemini_erro?: number | null
+          gemini_sucesso?: number | null
+          id?: string
+          lovable_erro?: number | null
+          lovable_sucesso?: number | null
+          total_requisicoes?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          custo_estimado?: number | null
+          data?: string
+          gemini_erro?: number | null
+          gemini_sucesso?: number | null
+          id?: string
+          lovable_erro?: number | null
+          lovable_sucesso?: number | null
+          total_requisicoes?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "admin" | "profissional"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +602,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "admin", "profissional"],
+    },
   },
 } as const
