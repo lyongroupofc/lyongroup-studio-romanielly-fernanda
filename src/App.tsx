@@ -25,7 +25,6 @@ const ChatAssistente = lazy(() => import("./pages/admin/ChatAssistente"));
 
 // Lazy load setup pages
 const CreateSuperAdmin = lazy(() => import("./pages/setup/CreateSuperAdmin"));
-const ResetSuperAdminPassword = lazy(() => import("./pages/setup/ResetSuperAdminPassword"));
 const CreateCliente = lazy(() => import("./pages/setup/CreateCliente"));
 
 // Lazy load super admin pages
@@ -66,11 +65,6 @@ const App = () => (
           <Route path="/setup" element={
             <Suspense fallback={<PageLoader />}>
               <CreateSuperAdmin />
-            </Suspense>
-          } />
-          <Route path="/reset-password" element={
-            <Suspense fallback={<PageLoader />}>
-              <ResetSuperAdminPassword />
             </Suspense>
           } />
           <Route path="/setup-cliente" element={
