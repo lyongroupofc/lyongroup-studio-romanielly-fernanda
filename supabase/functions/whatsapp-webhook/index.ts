@@ -33,8 +33,17 @@ serve(async (req) => {
     console.log('📱 Mensagem recebida:', { telefone, mensagem, instancia });
 
     // Instâncias de automação que sempre funcionam (ignoram config global)
-    const instanciasAutomacao = ['Bot disparo', 'Automações Agencia'];
-    const isInstanciaAutomacao = instanciasAutomacao.includes(instancia || '');
+    // Normaliza nome da instância para evitar erros de hífen/acentos/maiusc.
+    const normalizeInst = (s?: string) => (s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s\-_]+/g, ' ')
+      .trim();
+
+    const instanciasAutomacaoRaw = ['Bot disparo', 'Automações Agencia', 'Automações-Agencia'];
+    const instanciasAutomacao = instanciasAutomacaoRaw.map(normalizeInst);
+    const isInstanciaAutomacao = instanciasAutomacao.includes(normalizeInst(instancia));
 
     // Verificar se bot está ativo globalmente (EXCETO para instâncias de automação)
     if (!isInstanciaAutomacao) {
