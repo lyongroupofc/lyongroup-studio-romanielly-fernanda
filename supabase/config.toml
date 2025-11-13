@@ -1,7 +1,1 @@
-project_id = "wznggmjqbaazqvzyekbz"
-
-[functions.whatsapp-webhook]
-verify_jwt = false
-
-[functions.whatsapp-lembretes-recorrentes]
-verify_jwt = false
+project_id = "tusqthowtpnocokpqzcs"
