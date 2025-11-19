@@ -17,6 +17,24 @@ import { useAgendaConfig } from "@/hooks/useAgendaConfig";
 import { useServicos } from "@/hooks/useServicos";
 import { useProfissionais } from "@/hooks/useProfissionais";
 
+// Feriados nacionais brasileiros (formato MM-DD)
+const feriadosNacionais = [
+  "01-01", // Ano Novo
+  "04-21", // Tiradentes
+  "05-01", // Dia do Trabalho
+  "09-07", // Independência
+  "10-12", // Nossa Senhora Aparecida
+  "11-02", // Finados
+  "11-15", // Proclamação da República
+  "12-25", // Natal
+];
+
+// Função para verificar se uma data é feriado
+const isFeriado = (date: Date): boolean => {
+  const mmdd = format(date, "MM-dd");
+  return feriadosNacionais.includes(mmdd);
+};
+
 const Agenda = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [openNovoDialog, setOpenNovoDialog] = useState(false);
@@ -197,10 +215,11 @@ const Agenda = () => {
   };
 
   const modifiers = {
-    disponivel: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && !isDayFull(d),
-    fechado: (d: Date) => !isBefore(d, startOfToday()) && getDayData(d).fechado,
-    cheio: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && isDayFull(d),
-    past: (d: Date) => isBefore(d, startOfToday()),
+    disponivel: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && !isDayFull(d) && !isFeriado(d),
+    fechado: (d: Date) => !isBefore(d, startOfToday()) && getDayData(d).fechado && !isFeriado(d),
+    cheio: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && isDayFull(d) && !isFeriado(d),
+    past: (d: Date) => isBefore(d, startOfToday()) && !isFeriado(d),
+    feriado: (d: Date) => isFeriado(d),
   };
 
   const modifiersStyles = {
@@ -208,6 +227,7 @@ const Agenda = () => {
     fechado: { backgroundColor: "hsl(var(--destructive) / 0.2)", color: "hsl(var(--destructive))", fontWeight: "600" },
     cheio: { backgroundColor: "hsl(280 65% 60% / 0.2)", color: "hsl(280 65% 60%)", fontWeight: "600" },
     past: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", opacity: 0.6 },
+    feriado: { backgroundColor: "hsl(var(--holiday) / 0.25)", color: "hsl(var(--holiday))", fontWeight: "700", border: "2px solid hsl(var(--holiday))" },
   };
 
   const handleDayClick = (day: Date | undefined) => {

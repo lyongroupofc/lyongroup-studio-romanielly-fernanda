@@ -64,6 +64,10 @@ All colors MUST be HSL.
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
+    /* Holiday - Dourado para feriados */
+    --holiday: 43 85% 58%;
+    --holiday-foreground: 40 30% 15%;
+
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 40 20% 20%;
