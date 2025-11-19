@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Circle, Square, Triangle } from "lucide-react";
+import { Circle, Square, Triangle, Sparkles, Heart, Star } from "lucide-react";
 
 interface Shape {
   id: number;
-  Icon: typeof Circle | typeof Square | typeof Triangle;
+  Icon: typeof Circle | typeof Square | typeof Triangle | typeof Sparkles | typeof Heart | typeof Star;
   x: number;
   y: number;
   size: number;
@@ -16,8 +16,9 @@ export const AnimatedBackground = () => {
   const [shapes, setShapes] = useState<Shape[]>([]);
 
   useEffect(() => {
-    const icons = [Circle, Square, Triangle];
-    const newShapes: Shape[] = Array.from({ length: 15 }, (_, i) => ({
+    // Ícones relacionados a nail design: estrelas, corações, sparkles, formas geométricas
+    const icons = [Sparkles, Heart, Star, Circle, Square, Triangle];
+    const newShapes: Shape[] = Array.from({ length: 20 }, (_, i) => ({
       id: i,
       Icon: icons[Math.floor(Math.random() * icons.length)],
       x: Math.random() * 100,
@@ -31,7 +32,7 @@ export const AnimatedBackground = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-[0.08] -z-10">
+    <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-[0.15] z-0">
       {shapes.map((shape) => {
         const Icon = shape.Icon;
         return (
