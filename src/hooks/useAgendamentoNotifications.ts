@@ -13,10 +13,11 @@ export const useAgendamentoNotifications = () => {
   const [notifications, setNotifications] = useState<AgendamentoNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Função para tocar o som de notificação
+  // Função para tocar o som de notificação - som suave e elegante
   const playNotificationSound = useCallback(() => {
-    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBjiR1/LNeSoFJHfH8N+RQAoUXrTp66hVFApGn+DyvmwhBg==');
-    audio.volume = 0.5;
+    // Som de sino delicado e feminino
+    const audio = new Audio('data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAASAAAeMwAUFBQUFCIiIiIiIjAwMDAwPj4+Pj4+TExMTExZWVlZWVlnZ2dnZ3V1dXV1dYODg4ODkZGRkZGRn5+fn5+frKysrKy6urq6urrIyMjIyNbW1tbW1uTk5OTk8vLy8vLy//////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAHjOZTf9/AAAAAAD/+xDEAAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
+    audio.volume = 0.25; // Volume mais baixo e suave
     audio.play().catch(err => console.log('Não foi possível tocar o som:', err));
   }, []);
 
