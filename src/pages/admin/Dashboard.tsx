@@ -106,15 +106,16 @@ const Dashboard = () => {
       <AnimatedBackground />
       
       {/* Header Minimalista */}
-      <Card className="p-6 bg-gradient-to-br from-primary/5 via-primary-hover/5 to-accent/5 border-primary/20">
+      <Card className="p-4 sm:p-6 bg-gradient-to-br from-primary/5 via-primary-hover/5 to-accent/5 border-primary/20">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-xl sm:text-2xl font-bold">
               {getGreeting()}, Seja bem-vinda!
             </h1>
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              {format(currentTime, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
+              <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">{format(currentTime, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+              <span className="sm:hidden">{format(currentTime, "dd/MM/yyyy", { locale: ptBR })}</span>
             </p>
           </div>
         </div>
@@ -124,18 +125,18 @@ const Dashboard = () => {
       <MotivationalMessage />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat) => (
-          <Card key={stat.title} className="p-6 hover-lift">
+          <Card key={stat.title} className="p-4 sm:p-6 hover-lift">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">
                   {stat.title}
                 </p>
-                <p className="text-3xl font-bold">{stat.value}</p>
+                <p className="text-2xl sm:text-3xl font-bold">{stat.value}</p>
               </div>
-              <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+              <div className={`p-2 sm:p-3 rounded-xl ${stat.bgColor}`}>
+                <stat.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${stat.color}`} />
               </div>
             </div>
           </Card>
@@ -143,19 +144,20 @@ const Dashboard = () => {
       </div>
 
       {/* Resumo Diário */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Resumo do Dia</h2>
+      <Card className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6">
+          <h2 className="text-lg sm:text-xl font-semibold">Resumo do Dia</h2>
           <Button variant="outline" size="sm" onClick={() => setShowTotal(!showTotal)}>
             {showTotal ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
-            {showTotal ? "Ocultar" : "Mostrar"} valores
+            <span className="hidden sm:inline">{showTotal ? "Ocultar" : "Mostrar"} valores</span>
+            <span className="sm:hidden">{showTotal ? "Ocultar" : "Mostrar"}</span>
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {todayStats.map((stat) => (
             <div key={stat.label} className="space-y-2">
-              <p className="text-sm text-muted-foreground">{stat.label}</p>
-              <p className="text-2xl font-bold">
+              <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
+              <p className="text-xl sm:text-2xl font-bold">
                 {stat.label === "Faturamento do Dia" ? (showTotal ? stat.value : "R$ •••,••") : stat.value}
               </p>
             </div>
@@ -164,28 +166,29 @@ const Dashboard = () => {
       </Card>
 
       {/* Atalhos Rápidos */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-6">Atalhos Rápidos</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button className="h-auto py-4 flex-col gap-2" onClick={() => navigate("/admin/agenda")}> 
-            <Plus className="w-5 h-5" />
-            <span>Novo Agendamento</span>
+      <Card className="p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Atalhos Rápidos</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <Button className="h-auto py-3 sm:py-4 flex-col gap-2" onClick={() => navigate("/admin/agenda")}> 
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-sm sm:text-base">Novo Agendamento</span>
           </Button>
-          <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate("/admin/servicos")}>
-            <Plus className="w-5 h-5" />
-            <span>Novo Serviço</span>
+          <Button variant="outline" className="h-auto py-3 sm:py-4 flex-col gap-2" onClick={() => navigate("/admin/servicos")}>
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-sm sm:text-base">Novo Serviço</span>
           </Button>
-          <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate("/admin/profissionais")}>
-            <Plus className="w-5 h-5" />
-            <span>Novo Profissional</span>
+          <Button variant="outline" className="h-auto py-3 sm:py-4 flex-col gap-2" onClick={() => navigate("/admin/profissionais")}>
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-sm sm:text-base">Novo Profissional</span>
           </Button>
         </div>
       </Card>
 
       {/* Gráfico de Agendamentos e Faturamento */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-6">
-          Evolução de Agendamentos e Faturamento (Últimos 7 Dias)
+      <Card className="p-4 sm:p-6">
+        <h2 className="text-base sm:text-xl font-semibold mb-4 sm:mb-6">
+          <span className="hidden sm:inline">Evolução de Agendamentos e Faturamento (Últimos 7 Dias)</span>
+          <span className="sm:hidden">Últimos 7 Dias</span>
         </h2>
         {loadingAgendamentos || loadingPagamentos ? (
           <div className="h-80 flex items-center justify-center bg-muted rounded-lg">
