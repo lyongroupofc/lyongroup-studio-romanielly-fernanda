@@ -240,11 +240,11 @@ Jenifer Cristina da Silva
 - Seja específica sobre qual serviço está sendo agendado
 - Sempre confirme os dados antes de chamar a ferramenta`;
 
-    // Definir ferramenta de agendamento
+    // Definir ferramentas disponíveis
     const tools = [
       {
         type: "function",
-          function: {
+        function: {
           name: "criar_agendamento",
           description: "Cria um agendamento no sistema. IMPORTANTE: Esta ferramenta valida automaticamente a disponibilidade considerando a duração do serviço. Use apenas quando tiver TODOS os dados: servico_nome, data (YYYY-MM-DD), horario (HH:MM) e cliente_nome. O telefone já está disponível no contexto da conversa. Não invente IDs de serviço; se não souber o servico_id, deixe-o vazio que o sistema resolve pelo nome.",
           parameters: {
@@ -272,6 +272,35 @@ Jenifer Cristina da Silva
               }
             },
             required: ["servico_nome", "data", "horario", "cliente_nome"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "consultar_agendamento",
+          description: "Consulta os agendamentos ativos do cliente. Use para verificar se o cliente já tem agendamento antes de cancelar ou reagendar.",
+          parameters: {
+            type: "object",
+            properties: {},
+            required: []
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "cancelar_agendamento",
+          description: "Cancela o agendamento do cliente. IMPORTANTE: Só pode cancelar até 5 dias antes. Sempre consulte o agendamento primeiro para confirmar os dados.",
+          parameters: {
+            type: "object",
+            properties: {
+              confirmar: {
+                type: "boolean",
+                description: "Deve ser true para confirmar o cancelamento"
+              }
+            },
+            required: ["confirmar"]
           }
         }
       }
@@ -311,6 +340,80 @@ Jenifer Cristina da Silva
     // Processar tool calls
     if (toolCalls && toolCalls.length > 0) {
       for (const toolCall of toolCalls) {
+        if (toolCall.function.name === 'consultar_agendamento') {
+          console.log('🔍 Consultando agendamento...');
+          
+          const { data: agendamentosAtivos } = await supabase
+            .from('agendamentos')
+            .select('*')
+            .eq('cliente_telefone', telefone)
+            .neq('status', 'Cancelado')
+            .order('data', { ascending: true })
+            .order('horario', { ascending: true });
+
+          if (!agendamentosAtivos || agendamentosAtivos.length === 0) {
+            resposta = 'Você não tem nenhum agendamento ativo no momento, amor. Quer agendar algo? 💜';
+          } else {
+            const agendamento = agendamentosAtivos[0];
+            const [yyyy, mm, dd] = agendamento.data.split('-');
+            resposta = `Encontrei seu agendamento: ${agendamento.servico_nome} no dia ${dd}/${mm}/${yyyy} às ${agendamento.horario}. 💜`;
+          }
+          continue;
+        }
+
+        if (toolCall.function.name === 'cancelar_agendamento') {
+          const args = JSON.parse(toolCall.function.arguments);
+          console.log('❌ Cancelando agendamento...');
+
+          const { data: agendamentosAtivos } = await supabase
+            .from('agendamentos')
+            .select('*')
+            .eq('cliente_telefone', telefone)
+            .neq('status', 'Cancelado')
+            .order('data', { ascending: true })
+            .limit(1);
+
+          if (!agendamentosAtivos || agendamentosAtivos.length === 0) {
+            resposta = 'Você não tem nenhum agendamento ativo para cancelar, amor. 💜';
+            continue;
+          }
+
+          const agendamento = agendamentosAtivos[0];
+          
+          // Verificar se está dentro do prazo (5 dias antes)
+          const hoje = new Date();
+          hoje.setHours(0, 0, 0, 0);
+          const dataAgendamento = new Date(agendamento.data + 'T00:00:00');
+          const diasRestantes = Math.floor((dataAgendamento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+
+          if (diasRestantes < 5) {
+            resposta = `Desculpa amor, mas não é possível cancelar com menos de 5 dias de antecedência. Seu agendamento é daqui ${diasRestantes} dia(s). Entre em contato direto para casos especiais. 💜`;
+            continue;
+          }
+
+          if (args.confirmar) {
+            const { error } = await supabase
+              .from('agendamentos')
+              .update({ status: 'Cancelado' })
+              .eq('id', agendamento.id);
+
+            if (error) {
+              console.error('Erro ao cancelar:', error);
+              resposta = 'Ops, tive um problema ao cancelar. Pode tentar novamente? 💜';
+            } else {
+              const [yyyy, mm, dd] = agendamento.data.split('-');
+              resposta = `Agendamento cancelado com sucesso! Era ${agendamento.servico_nome} no dia ${dd}/${mm}/${yyyy} às ${agendamento.horario}. Espero te ver em breve! 💜`;
+              
+              // Limpar contexto após cancelamento
+              await supabase
+                .from('bot_conversas')
+                .update({ contexto: {} })
+                .eq('id', conversa.id);
+            }
+          }
+          continue;
+        }
+
         if (toolCall.function.name === 'criar_agendamento') {
           const args = JSON.parse(toolCall.function.arguments);
           console.log('📝 Criando agendamento:', args);
