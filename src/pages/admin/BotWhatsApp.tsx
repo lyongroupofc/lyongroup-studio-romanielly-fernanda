@@ -14,10 +14,7 @@ import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 const BotWhatsApp = () => {
   const {
@@ -46,7 +43,6 @@ const BotWhatsApp = () => {
   } = useNumerosBloqueados();
 
   const [openBloquearNumero, setOpenBloquearNumero] = useState(false);
-  const [limpandoDados, setLimpandoDados] = useState(false);
 
   const handleBloquearNumero = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -60,28 +56,6 @@ const BotWhatsApp = () => {
     
     setOpenBloquearNumero(false);
     form.reset();
-  };
-
-  const handleLimparDados = async () => {
-    setLimpandoDados(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('limpar-dados-teste', {
-        body: { all: true }
-      });
-
-      if (error) throw error;
-
-      toast.success("Todos os dados foram limpos com sucesso!");
-      
-      // Atualizar dados
-      refetch();
-      
-    } catch (error) {
-      console.error('Erro ao limpar dados:', error);
-      toast.error("Erro ao limpar dados");
-    } finally {
-      setLimpandoDados(false);
-    }
   };
 
   if (loading) {
@@ -382,50 +356,6 @@ const BotWhatsApp = () => {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Limpeza de Dados */}
-      <Card className="border-destructive/50">
-        <CardHeader>
-          <CardTitle className="text-destructive flex items-center gap-2">
-            <Eraser className="h-5 w-5" />
-            Limpeza de Dados
-          </CardTitle>
-          <CardDescription>
-            Limpar todos os dados para entregar o painel limpo
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" disabled={limpandoDados}>
-                <Eraser className="h-4 w-4 mr-2" />
-                {limpandoDados ? "Limpando..." : "Limpar Todos os Dados"}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta ação irá remover permanentemente:
-                  <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li>Todos os agendamentos</li>
-                    <li>Todas as conversas do bot</li>
-                    <li>Todas as mensagens</li>
-                  </ul>
-                  <br />
-                  <strong>Esta ação não pode ser desfeita!</strong>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleLimparDados} className="bg-destructive hover:bg-destructive/90">
-                  Sim, limpar tudo
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </CardContent>
       </Card>
     </div>
