@@ -106,25 +106,48 @@ const Dashboard = () => {
       <AnimatedBackground />
       
       {/* Header com saudação dinâmica */}
-      <div className="p-6 rounded-xl gradient-primary shadow-soft">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Palette className="w-8 h-8 text-primary-foreground" />
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground">
-                {getGreeting()}, Seja bem-vinda!
-              </h1>
-              <p className="text-primary-foreground/90 text-sm md:text-base mt-1">
-                {format(currentTime, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              </p>
+      <div className="relative overflow-hidden rounded-xl shadow-soft">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-hover to-accent opacity-95"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-foreground/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/20 rounded-full -ml-48 -mb-48 blur-3xl"></div>
+        
+        <div className="relative p-8 md:p-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-primary-foreground/10 backdrop-blur-sm rounded-xl border border-primary-foreground/20">
+                  <Gem className="w-8 h-8 text-primary-foreground" />
+                </div>
+                <div>
+                  <p className="text-primary-foreground/80 text-sm font-medium tracking-wide uppercase">
+                    Studio Romanielly Fernanda
+                  </p>
+                  <h1 className="text-3xl md:text-4xl font-bold text-primary-foreground">
+                    {getGreeting()}, Seja bem-vinda!
+                  </h1>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 text-primary-foreground/90">
+                <Calendar className="w-4 h-4" />
+                <p className="text-sm md:text-base font-medium">
+                  {format(currentTime, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </p>
+              </div>
+              
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-foreground/10 backdrop-blur-sm rounded-lg border border-primary-foreground/20">
+                <Sparkle className="w-4 h-4 text-primary-foreground" />
+                <span className="text-sm font-medium text-primary-foreground">Painel Administrativo</span>
+              </div>
             </div>
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center gap-2 text-primary-foreground">
-              <Clock className="w-5 h-5" />
-              <span className="text-2xl md:text-3xl font-bold tabular-nums">
-                {format(currentTime, "HH:mm:ss")}
-              </span>
+            
+            <div className="flex flex-col items-end gap-3">
+              <div className="flex items-center gap-3 px-6 py-4 bg-primary-foreground/10 backdrop-blur-sm rounded-xl border border-primary-foreground/20">
+                <Clock className="w-6 h-6 text-primary-foreground" />
+                <span className="text-3xl md:text-4xl font-bold tabular-nums text-primary-foreground">
+                  {format(currentTime, "HH:mm:ss")}
+                </span>
+              </div>
             </div>
           </div>
         </div>
