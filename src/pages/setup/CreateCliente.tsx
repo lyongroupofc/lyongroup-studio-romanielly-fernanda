@@ -21,41 +21,17 @@ const CreateCliente = () => {
     setLoading(true);
     try {
       // Criar usuário com role admin
-      const { data, error } = await supabase.functions.invoke('criar-super-admin', {
+      const { data, error } = await supabase.functions.invoke('criar-usuario', {
         body: {
           secret,
-          email: 'jennifersilva@gmail.com',
-          password: '96862422',
-          nome: 'Jennifer Silva'
+          email: 'romanielly@gmail.com',
+          password: '96469394',
+          nome: 'Romanielly Fernanda',
+          role: 'admin'
         }
       });
 
       if (error) throw error;
-
-      // Agora atualizar a role para 'admin' ao invés de 'super_admin'
-      const { data: { user } } = await supabase.auth.signInWithPassword({
-        email: 'yenworksmkt@gmail.com',
-        password: 'Aformula21@'
-      });
-
-      if (user) {
-        // Buscar o ID do usuário criado
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', 'jennifersilva@gmail.com')
-          .single();
-
-        if (profiles) {
-          // Atualizar role para admin
-          await supabase
-            .from('user_roles')
-            .update({ role: 'admin' })
-            .eq('user_id', profiles.id);
-        }
-
-        await supabase.auth.signOut();
-      }
 
       toast.success('Cliente criado com sucesso!');
       setTimeout(() => {
@@ -73,7 +49,7 @@ const CreateCliente = () => {
       <Card className="w-full max-w-md p-8">
         <h1 className="text-2xl font-bold mb-4 text-center">Setup Cliente</h1>
         <p className="text-muted-foreground mb-6 text-center">
-          Criar conta para Jennifer Silva (Admin)
+          Criar conta para Romanielly Fernanda (Admin)
         </p>
         <div className="space-y-4 mb-6">
           <div>
