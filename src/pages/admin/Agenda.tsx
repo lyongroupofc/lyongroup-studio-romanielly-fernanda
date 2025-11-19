@@ -48,7 +48,7 @@ const Agenda = () => {
   const [highlightedAgendamento, setHighlightedAgendamento] = useState<string | null>(null);
 
   const { agendamentos, loading: loadingAgendamentos, addAgendamento, updateAgendamento, deleteAgendamento } = useAgendamentos();
-  const { configs, getConfig, updateConfig } = useAgendaConfig();
+  const { configs, getConfig, updateConfig, refetch } = useAgendaConfig();
   const { servicos, loading: loadingServicos } = useServicos();
   const { profissionais, loading: loadingProfissionais } = useProfissionais();
 
@@ -329,10 +329,12 @@ const Agenda = () => {
         horarios_bloqueados: gerenciarData.horariosBloqueados,
         horarios_extras: gerenciarData.horariosExtras,
       });
-      toast.success("Configuração atualizada!");
+      await refetch();
+      toast.success("Configuração atualizada com sucesso!");
       setOpenGerenciarDialog(false);
     } catch (error) {
-      // Erro já tratado no hook
+      console.error("Erro ao salvar configuração:", error);
+      toast.error("Erro ao salvar configuração");
     }
   };
 
