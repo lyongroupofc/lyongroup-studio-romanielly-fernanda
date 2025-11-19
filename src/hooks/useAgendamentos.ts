@@ -81,7 +81,10 @@ export const useAgendamentos = () => {
 
       if (error) throw error;
       setAgendamentos([...agendamentos, data]);
-      toast.success("Agendamento criado com sucesso!");
+      toast.success("Agendamento criado com sucesso!", {
+        position: "top-center",
+        duration: 3000,
+      });
       return data;
     } catch (error: any) {
       console.error("Erro ao criar agendamento:", error);
