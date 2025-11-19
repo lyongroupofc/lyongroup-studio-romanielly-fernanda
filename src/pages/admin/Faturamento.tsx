@@ -271,28 +271,6 @@ const Faturamento = () => {
       </div>
 
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-6">{labelGrafico}</h2>
-        {pagamentos.length === 0 ? (
-          <div className="h-80 flex items-center justify-center bg-muted rounded-lg">
-            <p className="text-muted-foreground">Os dados serão exibidos conforme você registrar pagamentos</p>
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={dadosGrafico}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="dia" className="text-xs" />
-              <YAxis className="text-xs" />
-              <Tooltip
-                formatter={(value: number) => [`R$ ${value.toFixed(2).replace(".", ",")}`, "Faturamento"]}
-                contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
-              />
-              <Bar dataKey="valor" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </Card>
-
-      <Card className="p-6">
         <h2 className="text-xl font-semibold mb-6">Agendamentos Pendentes de Pagamento</h2>
         {loadingAgendamentos ? (
           <p className="text-muted-foreground text-center py-8">Carregando...</p>
@@ -330,6 +308,28 @@ const Faturamento = () => {
               </tbody>
             </table>
           </div>
+        )}
+      </Card>
+
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold mb-6">{labelGrafico}</h2>
+        {pagamentos.length === 0 ? (
+          <div className="h-80 flex items-center justify-center bg-muted rounded-lg">
+            <p className="text-muted-foreground">Os dados serão exibidos conforme você registrar pagamentos</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={dadosGrafico}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis dataKey="dia" className="text-xs" />
+              <YAxis className="text-xs" />
+              <Tooltip
+                formatter={(value: number) => [`R$ ${value.toFixed(2).replace(".", ",")}`, "Faturamento"]}
+                contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+              />
+              <Bar dataKey="valor" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         )}
       </Card>
 
