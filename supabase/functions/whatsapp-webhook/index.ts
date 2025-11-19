@@ -445,10 +445,17 @@ Romanielly Fernanda
           args.servico_id = servico.id;
           args.servico_nome = servico.nome;
 
-          // Verificar se é domingo
+          // Verificar se é domingo ou segunda (dias fechados)
           const dataAgendamento = new Date(args.data + 'T12:00:00');
-          if (dataAgendamento.getDay() === 0) {
+          const dayOfWeek = dataAgendamento.getDay();
+          
+          if (dayOfWeek === 0) {
             resposta = 'Desculpa amor, não funcionamos aos domingos. Pode escolher outra data? 💜';
+            continue;
+          }
+          
+          if (dayOfWeek === 1) {
+            resposta = 'Desculpa amor, não funcionamos às segundas-feiras. Pode escolher outra data? 💜';
             continue;
           }
 
@@ -493,10 +500,34 @@ Romanielly Fernanda
           // Adicionar slots bloqueados manualmente
           (config?.horarios_bloqueados || []).forEach((h: string) => slotsOcupados.add(h));
 
-          // Verificar se o horário solicitado está disponível
+          // Verificar se o horário solicitado está dentro do horário de funcionamento
           const [h, m] = args.horario.split(':').map(Number);
           const inicioMin = h * 60 + m;
           const fimMin = inicioMin + servico.duracao;
+          
+          // Determinar horários de funcionamento do dia
+          let startHour = 8;
+          let endHour = 13;
+          
+          if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
+            startHour = 13;
+            endHour = 20;
+          } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
+            startHour = 9;
+            endHour = 19;
+          } else if (dayOfWeek === 6) { // Sábado
+            startHour = 8;
+            endHour = 13;
+          }
+          
+          // Verificar se está dentro do horário de funcionamento
+          const startMin = startHour * 60;
+          const endMin = endHour * 60;
+          
+          if (inicioMin < startMin || fimMin > endMin) {
+            resposta = `Desculpa amor, esse horário está fora do nosso funcionamento. Funcionamos das ${String(startHour).padStart(2, '0')}:00 às ${String(endHour).padStart(2, '0')}:00 nesse dia. Pode escolher outro horário? 💜`;
+            continue;
+          }
 
           // Verificar se todos os slots necessários estão disponíveis
           let disponivel = true;
@@ -515,20 +546,43 @@ Romanielly Fernanda
           }
 
           if (!disponivel) {
-            // Gerar sugestões de horários disponíveis
+            // Determinar horários de funcionamento do dia
+            const dayOfWeek = dataAgendamento.getDay();
+            let startHour = 8;
+            let endHour = 13;
+            
+            // Segunda (1): Fechado
+            // Terça (2) e Quarta (3): 13:00 às 20:00
+            // Quinta (4) e Sexta (5): 09:00 às 19:00
+            // Sábado (6): 08:00 às 13:00
+            // Domingo (0): Fechado
+            
+            if (dayOfWeek === 1) { // Segunda
+              resposta = 'Desculpa amor, não funcionamos às segundas-feiras. Pode escolher outro dia? 💜';
+              continue;
+            } else if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
+              startHour = 13;
+              endHour = 20;
+            } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
+              startHour = 9;
+              endHour = 19;
+            } else if (dayOfWeek === 6) { // Sábado
+              startHour = 8;
+              endHour = 13;
+            }
+            
+            // Gerar sugestões de horários disponíveis dentro do horário de funcionamento
             const horariosDisponiveis: string[] = [];
             
-            for (let h = 8; h <= 21; h++) {
+            for (let h = startHour; h < endHour; h++) {
               for (let m = 0; m < 60; m += 30) {
-                // Não gerar 21:30 (fechamos às 21:00)
-                if (h === 21 && m === 30) continue;
-                
                 const horario = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                 const [hh, mm] = horario.split(':').map(Number);
                 const inicio = hh * 60 + mm;
                 const fim = inicio + servico.duracao;
                 
-                if (fim > 21 * 60) continue;
+                // Verificar se o serviço termina dentro do horário de funcionamento
+                if (fim > endHour * 60) continue;
                 
                 let isDisponivel = true;
                 for (let t = inicio; t < fim; t += 30) {
@@ -544,6 +598,29 @@ Romanielly Fernanda
                 }
               }
             }
+            
+            // Incluir horários extras da config se houver
+            (config?.horarios_extras || []).forEach((horarioExtra: string) => {
+              const [hh, mm] = horarioExtra.split(':').map(Number);
+              const inicio = hh * 60 + mm;
+              const fim = inicio + servico.duracao;
+              
+              let isDisponivel = true;
+              for (let t = inicio; t < fim; t += 30) {
+                const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+                if (slotsOcupados.has(slotCheck)) {
+                  isDisponivel = false;
+                  break;
+                }
+              }
+              
+              if (isDisponivel && !horariosDisponiveis.includes(horarioExtra)) {
+                horariosDisponiveis.push(horarioExtra);
+              }
+            });
+            
+            // Ordenar horários
+            horariosDisponiveis.sort();
 
             if (horariosDisponiveis.length > 0) {
               const [yyyy, mm, dd] = args.data.split('-');
