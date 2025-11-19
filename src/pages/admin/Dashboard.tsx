@@ -1,18 +1,36 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, DollarSign, Clock, Plus, Sparkles, Eye, EyeOff } from "lucide-react";
+import { Calendar, Users, DollarSign, Clock, Plus, Eye, EyeOff, Palette, Brush, Sparkle, Gem } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { usePagamentos } from "@/hooks/usePagamentos";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
+import { MotivationalMessage } from "@/components/MotivationalMessage";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [showTotal, setShowTotal] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const { agendamentos, loading: loadingAgendamentos } = useAgendamentos();
   const { pagamentos, loading: loadingPagamentos } = usePagamentos();
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getGreeting = () => {
+    const hour = currentTime.getHours();
+    if (hour >= 5 && hour < 12) return "Bom dia";
+    if (hour >= 12 && hour < 18) return "Boa tarde";
+    return "Boa noite";
+  };
 
   // Cálculos de estatísticas
   const hoje = format(new Date(), "yyyy-MM-dd");
@@ -50,7 +68,7 @@ const Dashboard = () => {
     {
       title: "Agendamentos do Mês",
       value: agendamentosMes.toString(),
-      icon: Calendar,
+      icon: Brush,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
@@ -64,14 +82,14 @@ const Dashboard = () => {
     {
       title: "Clientes Pendentes",
       value: clientesPendentes.toString(),
-      icon: Clock,
+      icon: Sparkle,
       color: "text-warning",
       bgColor: "bg-warning/10",
     },
     {
       title: "Agendamentos Hoje",
       value: agendamentosHoje.toString(),
-      icon: Calendar,
+      icon: Gem,
       color: "text-accent-foreground",
       bgColor: "bg-accent",
     },
@@ -84,19 +102,36 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Header com saudação */}
-      <div className="flex items-center gap-3 p-6 rounded-xl gradient-primary shadow-soft">
-        <Sparkles className="w-8 h-8 text-white" />
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white">
-            Bem-vinda, Lara & Jennifer Silva ✨
-          </h1>
-          <p className="text-white/90 text-lg">
-            Que o seu dia seja incrível!
-          </p>
+    <div className="space-y-8 relative">
+      <AnimatedBackground />
+      
+      {/* Header com saudação dinâmica */}
+      <div className="p-6 rounded-xl gradient-primary shadow-soft">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Palette className="w-8 h-8 text-primary-foreground" />
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground">
+                {getGreeting()}, Seja bem-vinda!
+              </h1>
+              <p className="text-primary-foreground/90 text-sm md:text-base mt-1">
+                {format(currentTime, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2 text-primary-foreground">
+              <Clock className="w-5 h-5" />
+              <span className="text-2xl md:text-3xl font-bold tabular-nums">
+                {format(currentTime, "HH:mm:ss")}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Mensagem Motivacional */}
+      <MotivationalMessage />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
