@@ -221,39 +221,39 @@ const BotWhatsApp = () => {
       </Card>
 
       {/* Conversas */}
-      <Card>
-        <CardHeader>
+      <Card className="bg-[#e5ddd5]">
+        <CardHeader className="bg-[#008069] text-white rounded-t-lg">
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
             Conversas Recentes
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-white/80">
             Acompanhe as conversas do bot em tempo real
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4">
           {loadingConversas ? (
             <div className="space-y-2">
               <Skeleton className="h-20 w-full" />
               <Skeleton className="h-20 w-full" />
             </div>
           ) : conversas.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground bg-white rounded-lg">
               <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>Nenhuma conversa ainda</p>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
               {/* Lista de Conversas */}
-              <ScrollArea className="h-[500px] pr-4">
+              <ScrollArea className="h-[500px] pr-4 bg-white rounded-lg p-2">
                 <div className="space-y-2">
                   {conversas.map((conversa) => (
                     <div
                       key={conversa.id}
                       className={`w-full rounded-lg border transition-colors ${
                         conversaSelecionada === conversa.id
-                          ? 'bg-primary/10 border-primary'
-                          : 'hover:bg-muted'
+                          ? 'bg-[#f0f2f5] border-[#008069]'
+                          : 'hover:bg-[#f0f2f5]'
                       }`}
                     >
                       <button
@@ -261,8 +261,8 @@ const BotWhatsApp = () => {
                         className="w-full text-left p-4"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="bg-primary/10 p-2 rounded-full">
-                            <Phone className="h-4 w-4" />
+                          <div className="bg-[#25d366] p-2 rounded-full">
+                            <Phone className="h-4 w-4 text-white" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{conversa.contexto?.cliente_nome || conversa.telefone.replace('@s.whatsapp.net','')}</p>
@@ -306,39 +306,48 @@ const BotWhatsApp = () => {
               </ScrollArea>
 
               {/* Mensagens */}
-              <div className="border rounded-lg">
+              <div className="border rounded-lg bg-[#e5ddd5] overflow-hidden">
                 {conversaSelecionada ? (
-                  <ScrollArea className="h-[500px] p-4">
-                    <div className="space-y-3">
-                      {mensagens[conversaSelecionada]?.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className={`flex ${
-                            msg.tipo === 'enviada' ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
+                  <>
+                    <div className="bg-[#008069] p-3 text-white flex items-center gap-3">
+                      <Phone className="h-5 w-5" />
+                      <span className="font-medium">
+                        {conversas.find(c => c.id === conversaSelecionada)?.contexto?.cliente_nome || 
+                         conversas.find(c => c.id === conversaSelecionada)?.telefone.replace('@s.whatsapp.net', '')}
+                      </span>
+                    </div>
+                    <ScrollArea className="h-[452px] p-4">
+                      <div className="space-y-3">
+                        {mensagens[conversaSelecionada]?.map((msg) => (
                           <div
-                            className={`max-w-[80%] rounded-lg p-3 ${
-                              msg.tipo === 'enviada'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted'
+                            key={msg.id}
+                            className={`flex ${
+                              msg.tipo === 'enviada' ? 'justify-end' : 'justify-start'
                             }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap">{msg.conteudo}</p>
-                            <p className="text-xs opacity-70 mt-1">
-                              {new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </p>
+                            <div
+                              className={`max-w-[80%] rounded-lg p-3 shadow-sm ${
+                                msg.tipo === 'enviada'
+                                  ? 'bg-[#dcf8c6]'
+                                  : 'bg-white'
+                              }`}
+                            >
+                              <p className="text-sm whitespace-pre-wrap text-gray-800">{msg.conteudo}</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </>
                 ) : (
-                  <div className="h-[500px] flex items-center justify-center text-muted-foreground">
-                    <div className="text-center">
+                  <div className="h-[500px] flex items-center justify-center bg-white">
+                    <div className="text-center text-muted-foreground">
                       <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
                       <p>Selecione uma conversa</p>
                     </div>
