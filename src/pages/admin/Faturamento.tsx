@@ -177,24 +177,6 @@ const Faturamento = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="p-6 hover-lift">
-            <div className="flex items-center gap-4">
-              <div className={`p-3 bg-primary/10 rounded-xl`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className="text-2xl font-bold">
-                  {showTotal ? stat.value : "R$ •••,••"}
-                </p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
       <Card className="p-6">
         <h2 className="text-xl font-semibold mb-4">Filtrar por Período</h2>
         <div className="flex flex-wrap gap-4 items-end">
@@ -269,6 +251,24 @@ const Faturamento = () => {
           </div>
         )}
       </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat) => (
+          <Card key={stat.label} className="p-6 hover-lift">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 bg-primary/10 rounded-xl`}>
+                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <p className="text-2xl font-bold">
+                  {showTotal ? stat.value : "R$ •••,••"}
+                </p>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
 
       <Card className="p-6">
         <h2 className="text-xl font-semibold mb-6">{labelGrafico}</h2>
