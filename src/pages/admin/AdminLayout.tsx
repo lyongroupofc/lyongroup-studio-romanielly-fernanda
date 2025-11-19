@@ -40,7 +40,7 @@ const menuItems = [
 
 function AppSidebar() {
   const { signOut } = useAuth();
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -57,6 +57,12 @@ function AppSidebar() {
       return location.pathname === path;
     }
     return location.pathname.startsWith(path);
+  };
+
+  const handleNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
   };
 
   return (
@@ -106,6 +112,7 @@ function AppSidebar() {
                       end={item.path === "/admin"}
                       className="hover:bg-muted/50 transition-colors"
                       activeClassName="bg-muted text-primary font-medium"
+                      onClick={handleNavClick}
                     >
                       <item.icon className="w-4 h-4" />
                       {!collapsed && <span>{item.label}</span>}
