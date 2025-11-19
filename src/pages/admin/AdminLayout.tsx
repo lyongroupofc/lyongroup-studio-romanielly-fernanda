@@ -27,7 +27,6 @@ const AdminLayout = () => {
     { icon: Users, label: "Profissionais", path: "/admin/profissionais" },
     { icon: DollarSign, label: "Faturamento", path: "/admin/faturamento" },
     { icon: MessageCircle, label: "Bot WhatsApp", path: "/admin/bot-whatsapp" },
-    { icon: Bot, label: "Chat L&J", path: "/admin/chat-assistente" },
   ];
 
   return (
@@ -44,7 +43,7 @@ const AdminLayout = () => {
           {/* Logo */}
           <div className="p-6 border-b">
             <h2 className="text-xl font-bold gradient-primary bg-clip-text text-transparent">
-              Salão Jennifer Silva
+              Studio Romanielly Fernanda
             </h2>
           </div>
 
