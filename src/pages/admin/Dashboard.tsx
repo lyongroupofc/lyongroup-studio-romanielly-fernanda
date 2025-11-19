@@ -86,7 +86,7 @@ const Dashboard = () => {
       bgColor: "bg-success/10",
     },
     {
-      title: "Clientes Pendentes",
+      title: "Clientes Pendentes de Atendimento",
       value: stats.clientesPendentes.toString(),
       icon: Sparkle,
       color: "text-warning",
