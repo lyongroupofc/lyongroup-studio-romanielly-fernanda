@@ -652,17 +652,13 @@ Romanielly Fernanda
             const [yyyyAnt, mmAnt, ddAnt] = agendamentoAnterior.data.split('-');
             observacoesReagendamento = `Reagendado de ${ddAnt}/${mmAnt}/${yyyyAnt} às ${agendamentoAnterior.horario}`;
             
-            // Atualizar agendamento anterior com status "Reagendado" e observações
-            const obsAnterior = `Reagendado para ${dd}/${mm}/${yyyy} às ${args.horario}`;
+            // Deletar agendamento anterior para evitar conflito na agenda
             await supabase
               .from('agendamentos')
-              .update({ 
-                status: 'Reagendado',
-                observacoes: agendamentoAnterior.observacoes 
-                  ? `${agendamentoAnterior.observacoes} | ${obsAnterior}`
-                  : obsAnterior
-              })
+              .delete()
               .eq('id', agendamentoAnterior.id);
+            
+            console.log('🗑️ Agendamento anterior deletado:', agendamentoAnterior.id);
           }
 
           // Criar novo agendamento
