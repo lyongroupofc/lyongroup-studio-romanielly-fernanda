@@ -195,6 +195,9 @@ ${profissionaisFormatados}
 - Segunda a Sábado: 08:00 às 21:00
 - Domingo: FECHADO
 
+**Localização:**
+📍 Rua Jordano Mafra, 1015 - São Bernardo
+
 **INFORMAÇÕES DE PAGAMENTO:**
 
 **Dados para pagamento:**
