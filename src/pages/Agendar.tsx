@@ -33,31 +33,32 @@ const Agendar = () => {
 
   const fmtKey = (d: Date) => format(d, "yyyy-MM-dd");
 
-  const generateSlots = () => {
-    if (!date) return [];
+  const generateSlots = (d?: Date) => {
+    if (!d) return [];
     
-    const dayOfWeek = date.getDay();
+    const dayOfWeek = d.getDay();
     const slots: string[] = [];
     
-    // Terça (2): 13:00 às 20:00
+    // Segunda (1): Fechado
+    // Terça (2) e Quarta (3): 13:00 às 20:00
     // Quinta (4) e Sexta (5): 09:00 às 19:00
     // Sábado (6): 08:00 às 13:00
-    // Outros dias: fechado
+    // Domingo (0): Fechado
     
     let startHour = 8;
     let endHour = 13;
     
-    if (dayOfWeek === 2) { // Terça
+    if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
       startHour = 13;
       endHour = 20;
-    } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta ou Sexta
+    } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
       startHour = 9;
       endHour = 19;
     } else if (dayOfWeek === 6) { // Sábado
       startHour = 8;
       endHour = 13;
     } else {
-      return []; // Outros dias fechados
+      return []; // Segunda e Domingo fechados
     }
     
     for (let h = startHour; h <= endHour; h++) {
@@ -76,8 +77,8 @@ const Agendar = () => {
     const config = getConfig(fmtKey(d));
     const dayOfWeek = d.getDay();
     
-    // Fechado se: domingo (0), segunda (1), quarta (3) OU se configuração manual diz fechado
-    const fechadoPorDia = dayOfWeek === 0 || dayOfWeek === 1 || dayOfWeek === 3;
+    // Fechado se: domingo (0) ou segunda (1) OU se configuração manual diz fechado
+    const fechadoPorDia = dayOfWeek === 0 || dayOfWeek === 1;
     
     return {
       fechado: config?.fechado || fechadoPorDia,
@@ -129,7 +130,7 @@ const Agendar = () => {
     // Adiciona horários bloqueados manualmente
     dayData.horariosBloqueados.forEach(h => todosBloqueados.add(h));
     
-    const base = [...generateSlots(), ...dayData.horariosExtras];
+    const base = [...generateSlots(d), ...dayData.horariosExtras];
     return base.filter((t) => !todosBloqueados.has(t)).sort();
   };
 

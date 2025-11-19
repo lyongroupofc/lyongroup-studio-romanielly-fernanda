@@ -50,13 +50,38 @@ const Agenda = () => {
 
   const fmtKey = (d: Date) => format(d, "yyyy-MM-dd");
 
-  const generateSlots = () => {
+  const generateSlots = (d?: Date) => {
     const slots: string[] = [];
-    // Funcionamento: 08:00 às 21:00 em intervalos de 30min
-    for (let h = 8; h <= 21; h++) {
+    if (!d) return slots;
+    
+    const dayOfWeek = d.getDay();
+    
+    // Segunda (1): Fechado
+    // Terça (2) e Quarta (3): 13:00 às 20:00
+    // Quinta (4) e Sexta (5): 09:00 às 19:00
+    // Sábado (6): 08:00 às 13:00
+    // Domingo (0): Fechado
+    
+    let startHour = 8;
+    let endHour = 13;
+    
+    if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
+      startHour = 13;
+      endHour = 20;
+    } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
+      startHour = 9;
+      endHour = 19;
+    } else if (dayOfWeek === 6) { // Sábado
+      startHour = 8;
+      endHour = 13;
+    } else {
+      return []; // Segunda e Domingo fechados
+    }
+    
+    for (let h = startHour; h <= endHour; h++) {
       for (let m = 0; m < 60; m += 30) {
-        // Não gerar 21:30 (fechamos às 21:00)
-        if (h === 21 && m === 30) continue;
+        // Não gerar horário de fechamento + 30min
+        if (h === endHour && m === 30) continue;
         const hh = String(h).padStart(2, "0");
         const mm = String(m).padStart(2, "0");
         slots.push(`${hh}:${mm}`);
@@ -67,8 +92,13 @@ const Agenda = () => {
 
   const getDayData = (d: Date) => {
     const config = getConfig(fmtKey(d));
+    const dayOfWeek = d.getDay();
+    
+    // Fechado se: domingo (0) ou segunda (1) OU se configuração manual diz fechado
+    const fechadoPorDia = dayOfWeek === 0 || dayOfWeek === 1;
+    
     return {
-      fechado: config?.fechado || isSunday(d),
+      fechado: config?.fechado || fechadoPorDia,
       horariosBloqueados: config?.horarios_bloqueados || [],
       horariosExtras: config?.horarios_extras || [],
     };
@@ -116,7 +146,7 @@ const Agenda = () => {
       
       dayData.horariosBloqueados.forEach(h => todosBloqueados.add(h));
 
-      const base = [...generateSlots(), ...dayData.horariosExtras];
+      const base = [...generateSlots(d), ...dayData.horariosExtras];
       return base.filter((t) => !todosBloqueados.has(t)).sort();
     };
   }, [agendamentos, servicos]);
@@ -129,7 +159,18 @@ const Agenda = () => {
     if (!serv) return base;
 
     const steps = Math.ceil(serv.duracao / 30); // número de slots de 30min necessários
-    const limiteMinutos = 21 * 60; // 21:00
+    
+    // Determina horário de fechamento baseado no dia da semana
+    const dayOfWeek = d.getDay();
+    let limiteMinutos = 13 * 60; // Padrão sábado
+    
+    if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
+      limiteMinutos = 20 * 60;
+    } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
+      limiteMinutos = 19 * 60;
+    } else if (dayOfWeek === 6) { // Sábado
+      limiteMinutos = 13 * 60;
+    }
 
     const toMin = (t: string) => {
       const [h, m] = t.split(":").map(Number);
@@ -140,7 +181,7 @@ const Agenda = () => {
     return base.filter((start) => {
       const inicio = toMin(start);
       const fim = inicio + serv.duracao;
-      if (fim > limiteMinutos) return false; // precisa terminar até 21:00
+      if (fim > limiteMinutos) return false; // precisa terminar antes do horário de fechamento
       for (let k = 0; k < steps; k++) {
         const slot = toHHMM(inicio + k * 30);
         if (!baseSet.has(slot)) return false;
