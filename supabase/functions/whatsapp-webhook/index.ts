@@ -555,13 +555,38 @@ Romanielly Fernanda
             continue;
           }
 
-          // Remover quaisquer agendamentos anteriores desse telefone (evita duplicidade ao remarcar)
-          await supabase
+          // Extrair data formatada do novo agendamento
+          const [yyyy, mm, dd] = args.data.split('-');
+          
+          // Buscar agendamento anterior ativo para reagendamento
+          const { data: agendamentoAnterior } = await supabase
             .from('agendamentos')
-            .delete()
+            .select('*')
             .eq('cliente_telefone', telefone)
-            .neq('status', 'Cancelado');
+            .neq('status', 'Cancelado')
+            .order('data', { ascending: true })
+            .limit(1)
+            .maybeSingle();
 
+          let observacoesReagendamento = null;
+          
+          // Se há agendamento anterior, é um reagendamento
+          if (agendamentoAnterior) {
+            const [yyyyAnt, mmAnt, ddAnt] = agendamentoAnterior.data.split('-');
+            observacoesReagendamento = `Reagendado de ${ddAnt}/${mmAnt}/${yyyyAnt} às ${agendamentoAnterior.horario}`;
+            
+            // Atualizar agendamento anterior com status "Reagendado" e observações
+            const obsAnterior = `Reagendado para ${dd}/${mm}/${yyyy} às ${args.horario}`;
+            await supabase
+              .from('agendamentos')
+              .update({ 
+                status: 'Reagendado',
+                observacoes: agendamentoAnterior.observacoes 
+                  ? `${agendamentoAnterior.observacoes} | ${obsAnterior}`
+                  : obsAnterior
+              })
+              .eq('id', agendamentoAnterior.id);
+          }
 
           // Criar novo agendamento
           const { data: novoAgendamento, error: erroAgendamento } = await supabase
@@ -577,6 +602,7 @@ Romanielly Fernanda
               origem: 'whatsapp',
               bot_conversa_id: conversa.id,
               instancia: instancia || 'default',
+              observacoes: observacoesReagendamento,
             })
             .select()
             .single();
@@ -590,7 +616,6 @@ Romanielly Fernanda
           console.log('✅ Agendamento criado:', novoAgendamento);
 
           // Formatar resposta de confirmação
-          const [yyyy, mm, dd] = args.data.split('-');
           const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
           const diaSemana = diasSemana[dataAgendamento.getUTCDay()];
           
