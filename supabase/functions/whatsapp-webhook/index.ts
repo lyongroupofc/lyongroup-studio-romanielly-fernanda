@@ -195,12 +195,7 @@ ${profissionaisFormatados}
 - Segunda a Sábado: 08:00 às 21:00
 - Domingo: FECHADO
 
-**INFORMAÇÕES DE PAGAMENTO (MUITO IMPORTANTE):**
-A forma de pagamento é 50% adiantado para efetivar o agendamento, caso contrário o serviço não pode ser agendado!
-
-E os outros 50% até no máximo 1 (um) dia antes do dia do evento!
-
-Agendamento feito com menos de uma semana o pagamento é feito integral no ato do agendamento!
+**INFORMAÇÕES DE PAGAMENTO:**
 
 **Dados para pagamento:**
 Pix: 19083573000154 | CNPJ
