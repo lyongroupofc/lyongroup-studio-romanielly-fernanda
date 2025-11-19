@@ -159,7 +159,7 @@ const Dashboard = () => {
             <span className="sm:hidden">{showTotal ? "Ocultar" : "Mostrar"}</span>
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6">
           {todayStats.map((stat) => (
             <div key={stat.label} className="space-y-2">
               <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
@@ -169,6 +169,30 @@ const Dashboard = () => {
             </div>
           ))}
         </div>
+        
+        {/* Lista de Clientes Agendados Hoje */}
+        {stats.agendamentosHoje > 0 && (
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Agendamentos de Hoje</h3>
+            <div className="space-y-2">
+              {agendamentos
+                .filter(ag => ag.data === stats.hoje && ag.status !== 'Cancelado' && ag.status !== 'Reagendado')
+                .sort((a, b) => a.horario.localeCompare(b.horario))
+                .map((ag) => (
+                  <div 
+                    key={ag.id} 
+                    className="flex items-center justify-between p-2 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <span className="text-sm font-medium">{ag.cliente_nome}</span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">{ag.horario.substring(0, 5)}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Atalhos Rápidos */}
