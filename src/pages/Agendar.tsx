@@ -15,6 +15,24 @@ import { useProfissionais } from "@/hooks/useProfissionais";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { useAgendaConfig } from "@/hooks/useAgendaConfig";
 
+// Feriados nacionais brasileiros (formato MM-DD)
+const feriadosNacionais = [
+  "01-01", // Ano Novo
+  "04-21", // Tiradentes
+  "05-01", // Dia do Trabalho
+  "09-07", // Independência
+  "10-12", // Nossa Senhora Aparecida
+  "11-02", // Finados
+  "11-15", // Proclamação da República
+  "12-25", // Natal
+];
+
+// Função para verificar se uma data é feriado
+const isFeriado = (date: Date): boolean => {
+  const mmdd = format(date, "MM-dd");
+  return feriadosNacionais.includes(mmdd);
+};
+
 const Agendar = () => {
   const navigate = useNavigate();
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -282,18 +300,20 @@ const Agendar = () => {
                   onSelect={setDate}
                   locale={ptBR}
                   modifiers={{
-                    disponivel: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && !isDayFull(d),
-                    fechado: (d: Date) => !isBefore(d, startOfToday()) && getDayData(d).fechado,
-                    cheio: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && isDayFull(d),
-                    past: (d: Date) => isBefore(d, startOfToday()),
+                    disponivel: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && !isDayFull(d) && !isFeriado(d),
+                    fechado: (d: Date) => !isBefore(d, startOfToday()) && getDayData(d).fechado && !isFeriado(d),
+                    cheio: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && isDayFull(d) && !isFeriado(d),
+                    past: (d: Date) => isBefore(d, startOfToday()) && !isFeriado(d),
+                    feriado: (d: Date) => isFeriado(d),
                   }}
                   modifiersStyles={{
                     disponivel: { backgroundColor: "hsl(var(--success) / 0.2)", color: "hsl(var(--success))" },
                     fechado: { backgroundColor: "hsl(var(--destructive) / 0.2)", color: "hsl(var(--destructive))" },
                     cheio: { backgroundColor: "hsl(280 65% 60% / 0.2)", color: "hsl(280 65% 60%)" },
                     past: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", opacity: 0.6 },
+                    feriado: { backgroundColor: "hsl(var(--holiday) / 0.25)", color: "hsl(var(--holiday))", fontWeight: "700", border: "2px solid hsl(var(--holiday))" },
                   }}
-                  disabled={(d) => isBefore(d, startOfToday()) || getDayData(d).fechado}
+                  disabled={(d) => isBefore(d, startOfToday()) || getDayData(d).fechado || isFeriado(d)}
                   className="rounded-md border shadow-sm pointer-events-auto"
                 />
               </div>
