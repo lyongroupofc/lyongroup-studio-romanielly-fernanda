@@ -21,11 +21,18 @@ export const usePagamentos = () => {
   const fetchPagamentos = async () => {
     try {
       setLoading(true);
+      // Buscar apenas pagamentos dos últimos 90 dias para performance
+      const dataLimite = new Date();
+      dataLimite.setDate(dataLimite.getDate() - 90);
+      const dataLimiteStr = dataLimite.toISOString().split('T')[0];
+
       const { data, error } = await supabase
         .from("pagamentos")
         .select("*")
+        .gte("data", dataLimiteStr)
         .order("data", { ascending: false })
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
       if (error) throw error;
       setPagamentos(data || []);

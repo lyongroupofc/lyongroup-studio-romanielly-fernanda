@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Users, DollarSign, Plus, Eye, EyeOff, Palette, Brush, Sparkle, Gem } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { usePagamentos } from "@/hooks/usePagamentos";
 import { format } from "date-fns";
@@ -32,63 +32,69 @@ const Dashboard = () => {
     return "Boa noite";
   };
 
-  // Cálculos de estatísticas
-  const hoje = format(new Date(), "yyyy-MM-dd");
-  const mesAtual = format(new Date(), "yyyy-MM");
-  
-  const agendamentosMes = agendamentos.filter(ag => ag.data?.startsWith(mesAtual)).length;
-  const agendamentosHoje = agendamentos.filter(ag => ag.data === hoje).length;
-  const clientesAtendidos = agendamentos.filter(ag => ag.status === "Concluído").length;
-  const clientesPendentes = agendamentos.filter(ag => ag.status === "Confirmado" && ag.data >= hoje).length;
-  
-  const faturamentoHoje = pagamentos
-    .filter(p => p.data === hoje)
-    .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
-  
-  // Dados para o gráfico dos últimos 7 dias
-  const ultimosDias = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
-    return format(date, "yyyy-MM-dd");
-  });
-
-  const dadosGrafico = ultimosDias.map((data) => {
-    const faturamentoDia = pagamentos
-      .filter((p) => p.data === data)
+  // Cálculos de estatísticas com useMemo para performance
+  const stats = useMemo(() => {
+    const hoje = format(new Date(), "yyyy-MM-dd");
+    const mesAtual = format(new Date(), "yyyy-MM");
+    
+    const agendamentosMes = agendamentos.filter(ag => ag.data?.startsWith(mesAtual)).length;
+    const agendamentosHoje = agendamentos.filter(ag => ag.data === hoje).length;
+    const clientesAtendidos = agendamentos.filter(ag => ag.status === "Concluído").length;
+    const clientesPendentes = agendamentos.filter(ag => ag.status === "Confirmado" && ag.data >= hoje).length;
+    
+    const faturamentoHoje = pagamentos
+      .filter(p => p.data === hoje)
       .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
-    const agendamentosDia = agendamentos.filter(ag => ag.data === data).length;
-    return {
-      dia: format(new Date(data), "dd/MM"),
-      faturamento: faturamentoDia,
-      agendamentos: agendamentosDia,
-    };
-  });
 
-  const stats = [
+    return { agendamentosMes, agendamentosHoje, clientesAtendidos, clientesPendentes, faturamentoHoje, hoje };
+  }, [agendamentos, pagamentos]);
+  
+  // Dados para o gráfico dos últimos 7 dias com useMemo
+  const dadosGrafico = useMemo(() => {
+    const ultimosDias = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - i));
+      return format(date, "yyyy-MM-dd");
+    });
+
+    return ultimosDias.map((data) => {
+      const faturamentoDia = pagamentos
+        .filter((p) => p.data === data)
+        .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
+      const agendamentosDia = agendamentos.filter(ag => ag.data === data).length;
+      return {
+        dia: format(new Date(data), "dd/MM"),
+        faturamento: faturamentoDia,
+        agendamentos: agendamentosDia,
+      };
+    });
+  }, [agendamentos, pagamentos]);
+
+  const statsCards = [
     {
       title: "Agendamentos do Mês",
-      value: agendamentosMes.toString(),
+      value: stats.agendamentosMes.toString(),
       icon: Brush,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
     {
       title: "Clientes Atendidos",
-      value: clientesAtendidos.toString(),
+      value: stats.clientesAtendidos.toString(),
       icon: Users,
       color: "text-success",
       bgColor: "bg-success/10",
     },
     {
       title: "Clientes Pendentes",
-      value: clientesPendentes.toString(),
+      value: stats.clientesPendentes.toString(),
       icon: Sparkle,
       color: "text-warning",
       bgColor: "bg-warning/10",
     },
     {
       title: "Agendamentos Hoje",
-      value: agendamentosHoje.toString(),
+      value: stats.agendamentosHoje.toString(),
       icon: Gem,
       color: "text-accent-foreground",
       bgColor: "bg-accent",
@@ -96,8 +102,8 @@ const Dashboard = () => {
   ];
 
   const todayStats = [
-    { label: "Atendimentos Hoje", value: agendamentosHoje.toString() },
-    { label: "Faturamento do Dia", value: `R$ ${faturamentoHoje.toFixed(2).replace(".", ",")}` },
+    { label: "Atendimentos Hoje", value: stats.agendamentosHoje.toString() },
+    { label: "Faturamento do Dia", value: `R$ ${stats.faturamentoHoje.toFixed(2).replace(".", ",")}` },
     { label: "Total de Agendamentos", value: agendamentos.length.toString() },
   ];
 
@@ -126,7 +132,7 @@ const Dashboard = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {stats.map((stat) => (
+        {statsCards.map((stat) => (
           <Card key={stat.title} className="p-4 sm:p-6 hover-lift">
             <div className="flex items-center justify-between">
               <div>
