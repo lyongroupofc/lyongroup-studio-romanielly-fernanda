@@ -637,37 +637,66 @@ Romanielly Fernanda
           
           // Buscar agendamento anterior ativo para reagendamento (apenas agendamentos futuros ou de hoje)
           const dataHoje = new Date().toISOString().split('T')[0];
-          const { data: agendamentoAnterior } = await supabase
+          console.log('📅 Data de hoje:', dataHoje, '| Data novo agendamento:', args.data);
+          
+          const { data: agendamentoAnterior, error: erroConsulta } = await supabase
             .from('agendamentos')
             .select('*')
             .eq('cliente_telefone', telefone)
             .neq('status', 'Cancelado')
             .gte('data', dataHoje)
             .order('data', { ascending: true })
+            .order('horario', { ascending: true })
             .limit(1)
             .maybeSingle();
           
-          console.log('🔍 Agendamento anterior encontrado:', agendamentoAnterior);
+          console.log('🔍 Busca agendamento anterior - telefone:', telefone);
+          console.log('🔍 Resultado:', agendamentoAnterior);
+          console.log('🔍 Erro na consulta:', erroConsulta);
 
           let observacoesReagendamento = null;
           
           // Se há agendamento anterior, é um reagendamento
-          if (agendamentoAnterior) {
+          if (agendamentoAnterior && agendamentoAnterior.id) {
             const [yyyyAnt, mmAnt, ddAnt] = agendamentoAnterior.data.split('-');
             observacoesReagendamento = `Reagendado de ${ddAnt}/${mmAnt}/${yyyyAnt} às ${agendamentoAnterior.horario}`;
             
-            // Deletar agendamento anterior para evitar conflito na agenda
-            console.log('🔄 Tentando deletar agendamento anterior:', agendamentoAnterior.id);
-            const { error: erroDelete } = await supabase
+            console.log('🗑️ INICIANDO DELETE do agendamento:', {
+              id: agendamentoAnterior.id,
+              cliente: agendamentoAnterior.cliente_nome,
+              data: agendamentoAnterior.data,
+              horario: agendamentoAnterior.horario
+            });
+            
+            // Deletar agendamento anterior usando service_role que bypassa RLS
+            const { data: deleteResult, error: erroDelete } = await supabase
               .from('agendamentos')
               .delete()
-              .eq('id', agendamentoAnterior.id);
+              .eq('id', agendamentoAnterior.id)
+              .select();
             
             if (erroDelete) {
-              console.error('❌ Erro ao deletar agendamento anterior:', erroDelete);
+              console.error('❌ ERRO ao deletar agendamento:', erroDelete);
+              console.error('❌ Detalhes do erro:', JSON.stringify(erroDelete));
             } else {
-              console.log('✅ Agendamento anterior deletado com sucesso:', agendamentoAnterior.id);
+              console.log('✅ DELETE executado com sucesso!');
+              console.log('✅ Linhas deletadas:', deleteResult);
             }
+            
+            // Verificar se realmente foi deletado
+            const { data: verificacao } = await supabase
+              .from('agendamentos')
+              .select('id')
+              .eq('id', agendamentoAnterior.id)
+              .maybeSingle();
+            
+            if (verificacao) {
+              console.error('⚠️ ATENÇÃO: Agendamento ainda existe no banco após delete!');
+            } else {
+              console.log('✅ CONFIRMADO: Agendamento foi removido do banco');
+            }
+          } else {
+            console.log('ℹ️ Nenhum agendamento anterior encontrado - primeiro agendamento');
           }
 
           // Criar novo agendamento
