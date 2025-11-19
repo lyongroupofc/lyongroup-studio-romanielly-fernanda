@@ -34,12 +34,36 @@ const Agendar = () => {
   const fmtKey = (d: Date) => format(d, "yyyy-MM-dd");
 
   const generateSlots = () => {
+    if (!date) return [];
+    
+    const dayOfWeek = date.getDay();
     const slots: string[] = [];
-    // Funcionamento: 08:00 às 21:00 em intervalos de 30min
-    for (let h = 8; h <= 21; h++) {
+    
+    // Terça (2): 13:00 às 20:00
+    // Quinta (4) e Sexta (5): 09:00 às 19:00
+    // Sábado (6): 08:00 às 13:00
+    // Outros dias: fechado
+    
+    let startHour = 8;
+    let endHour = 13;
+    
+    if (dayOfWeek === 2) { // Terça
+      startHour = 13;
+      endHour = 20;
+    } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta ou Sexta
+      startHour = 9;
+      endHour = 19;
+    } else if (dayOfWeek === 6) { // Sábado
+      startHour = 8;
+      endHour = 13;
+    } else {
+      return []; // Outros dias fechados
+    }
+    
+    for (let h = startHour; h <= endHour; h++) {
       for (let m = 0; m < 60; m += 30) {
-        // Não gerar 21:30 (fechamos às 21:00)
-        if (h === 21 && m === 30) continue;
+        // Não gerar horário de fechamento + 30min
+        if (h === endHour && m === 30) continue;
         const hh = String(h).padStart(2, "0");
         const mm = String(m).padStart(2, "0");
         slots.push(`${hh}:${mm}`);
@@ -50,8 +74,13 @@ const Agendar = () => {
 
   const getDayData = (d: Date) => {
     const config = getConfig(fmtKey(d));
+    const dayOfWeek = d.getDay();
+    
+    // Fechado se: domingo (0), segunda (1), quarta (3) OU se configuração manual diz fechado
+    const fechadoPorDia = dayOfWeek === 0 || dayOfWeek === 1 || dayOfWeek === 3;
+    
     return {
-      fechado: config?.fechado || isSunday(d),
+      fechado: config?.fechado || fechadoPorDia,
       horariosBloqueados: config?.horarios_bloqueados || [],
       horariosExtras: config?.horarios_extras || [],
     };
@@ -167,7 +196,7 @@ const Agendar = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-primary mb-4">
             <Sparkles className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-4xl font-bold mb-2">Agende seu Horário</h1>
+          <h1 className="text-4xl font-bold mb-2">Studio Romanielly Fernanda</h1>
           <p className="text-lg text-muted-foreground">
             Escolha o melhor dia e horário para você ✨
           </p>

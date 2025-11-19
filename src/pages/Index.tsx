@@ -11,7 +11,7 @@ const Index = () => {
             <Sparkles className="w-10 h-10 text-white" />
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight">Studio Jennifer Silva</h1>
+          <h1 className="text-5xl md:text-6xl font-bold tracking-tight">Studio Romanielly Fernanda</h1>
 
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
             Beleza e bem-estar em um só lugar. Agende seu horário de forma prática e rápida! ✨

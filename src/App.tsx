@@ -11,7 +11,6 @@ import Obrigado from "./pages/Obrigado";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import AdminLayout from "./pages/admin/AdminLayout";
-import SuperAdminLayout from "./pages/super-admin/SuperAdminLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // Lazy load admin pages
@@ -21,19 +20,9 @@ const Servicos = lazy(() => import("./pages/admin/Servicos"));
 const Profissionais = lazy(() => import("./pages/admin/Profissionais"));
 const Faturamento = lazy(() => import("./pages/admin/Faturamento"));
 const BotWhatsApp = lazy(() => import("./pages/admin/BotWhatsApp"));
-const ChatAssistente = lazy(() => import("./pages/admin/ChatAssistente"));
 
 // Lazy load setup pages
-const CreateSuperAdmin = lazy(() => import("./pages/setup/CreateSuperAdmin"));
 const CreateCliente = lazy(() => import("./pages/setup/CreateCliente"));
-
-// Lazy load super admin pages
-const SuperAdminDashboard = lazy(() => import("./pages/super-admin/Dashboard"));
-const Clientes = lazy(() => import("./pages/super-admin/Clientes"));
-const Configuracoes = lazy(() => import("./pages/super-admin/Configuracoes"));
-const MonitoramentoIA = lazy(() => import("./pages/super-admin/MonitoramentoIA"));
-const Custos = lazy(() => import("./pages/super-admin/Custos"));
-const Logs = lazy(() => import("./pages/super-admin/Logs"));
 
 // Loading component
 const PageLoader = () => (
@@ -62,11 +51,6 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/setup" element={
-            <Suspense fallback={<PageLoader />}>
-              <CreateSuperAdmin />
-            </Suspense>
-          } />
           <Route path="/setup-cliente" element={
             <Suspense fallback={<PageLoader />}>
               <CreateCliente />
@@ -74,38 +58,6 @@ const App = () => (
           } />
           <Route path="/agendar" element={<Agendar />} />
           <Route path="/obrigado" element={<Obrigado />} />
-          <Route path="/super-admin" element={<ProtectedRoute requiredRole="super_admin"><SuperAdminLayout /></ProtectedRoute>}>
-            <Route index element={
-              <Suspense fallback={<PageLoader />}>
-                <SuperAdminDashboard />
-              </Suspense>
-            } />
-            <Route path="clientes" element={
-              <Suspense fallback={<PageLoader />}>
-                <Clientes />
-              </Suspense>
-            } />
-            <Route path="ia" element={
-              <Suspense fallback={<PageLoader />}>
-                <MonitoramentoIA />
-              </Suspense>
-            } />
-            <Route path="custos" element={
-              <Suspense fallback={<PageLoader />}>
-                <Custos />
-              </Suspense>
-            } />
-            <Route path="logs" element={
-              <Suspense fallback={<PageLoader />}>
-                <Logs />
-              </Suspense>
-            } />
-            <Route path="config" element={
-              <Suspense fallback={<PageLoader />}>
-                <Configuracoes />
-              </Suspense>
-            } />
-          </Route>
           
           <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
             <Route index element={
@@ -138,12 +90,8 @@ const App = () => (
                 <BotWhatsApp />
               </Suspense>
             } />
-            <Route path="chat-assistente" element={
-              <Suspense fallback={<PageLoader />}>
-                <ChatAssistente />
-              </Suspense>
-            } />
           </Route>
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
