@@ -330,8 +330,26 @@ const Agenda = () => {
         horarios_extras: gerenciarData.horariosExtras,
       });
       await refetch();
-      toast.success("Configuração atualizada com sucesso!");
+      
+      // Feedback detalhado
+      const mensagens = [];
+      if (gerenciarData.fechado) {
+        mensagens.push("Dia marcado como fechado");
+      }
+      if (gerenciarData.horariosBloqueados.length > 0) {
+        mensagens.push(`${gerenciarData.horariosBloqueados.length} horário(s) bloqueado(s)`);
+      }
+      if (gerenciarData.horariosExtras.length > 0) {
+        mensagens.push(`${gerenciarData.horariosExtras.length} horário(s) extra(s) adicionado(s)`);
+      }
+      
+      toast.success(
+        mensagens.length > 0 
+          ? `✅ Configuração salva: ${mensagens.join(", ")}` 
+          : "✅ Configuração atualizada com sucesso!"
+      );
       setOpenGerenciarDialog(false);
+      setOpenSideSheet(true); // Reabre o side sheet para mostrar mudanças
     } catch (error) {
       console.error("Erro ao salvar configuração:", error);
       toast.error("Erro ao salvar configuração");
