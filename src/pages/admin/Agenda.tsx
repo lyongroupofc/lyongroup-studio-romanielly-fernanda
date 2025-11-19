@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { useAgendamentos, type Agendamento } from "@/hooks/useAgendamentos";
 import { useAgendaConfig } from "@/hooks/useAgendaConfig";
 import { useServicos } from "@/hooks/useServicos";
 import { useProfissionais } from "@/hooks/useProfissionais";
+import { useSearchParams } from "react-router-dom";
 
 // Feriados nacionais brasileiros (formato MM-DD)
 const feriadosNacionais = [
@@ -36,6 +37,7 @@ const isFeriado = (date: Date): boolean => {
 };
 
 const Agenda = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [openNovoDialog, setOpenNovoDialog] = useState(false);
   const [openReservarDialog, setOpenReservarDialog] = useState(false);
@@ -43,11 +45,34 @@ const Agenda = () => {
   const [openDetalhesDialog, setOpenDetalhesDialog] = useState(false);
   const [openSideSheet, setOpenSideSheet] = useState(false);
   const [selectedAgendamento, setSelectedAgendamento] = useState<Agendamento | null>(null);
+  const [highlightedAgendamento, setHighlightedAgendamento] = useState<string | null>(null);
 
   const { agendamentos, loading: loadingAgendamentos, addAgendamento, updateAgendamento, deleteAgendamento } = useAgendamentos();
   const { getConfig, updateConfig } = useAgendaConfig();
   const { servicos, loading: loadingServicos } = useServicos();
   const { profissionais, loading: loadingProfissionais } = useProfissionais();
+
+  // Processar parâmetros de query para notificações
+  useEffect(() => {
+    const dateParam = searchParams.get('date');
+    const highlightParam = searchParams.get('highlight');
+    
+    if (dateParam) {
+      const [year, month, day] = dateParam.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      setSelectedDate(date);
+      setOpenSideSheet(true);
+    }
+    
+    if (highlightParam) {
+      setHighlightedAgendamento(highlightParam);
+      // Limpar o highlight após 3 segundos
+      setTimeout(() => {
+        setHighlightedAgendamento(null);
+        setSearchParams({});
+      }, 3000);
+    }
+  }, [searchParams, setSearchParams]);
 
   const [formData, setFormData] = useState({
     nome: "",
@@ -374,10 +399,18 @@ const Agenda = () => {
           ) : (
             <div className="space-y-3">
               {agendamentosHoje.map((agendamento) => (
-                <Card key={agendamento.id} className="p-4 hover-lift cursor-pointer" onClick={() => {
-                  setSelectedAgendamento(agendamento);
-                  setOpenDetalhesDialog(true);
-                }}>
+                <Card 
+                  key={agendamento.id} 
+                  className={`p-4 hover-lift cursor-pointer transition-all ${
+                    highlightedAgendamento === agendamento.id 
+                      ? 'ring-2 ring-primary ring-offset-2 bg-primary/5 animate-pulse' 
+                      : ''
+                  }`}
+                  onClick={() => {
+                    setSelectedAgendamento(agendamento);
+                    setOpenDetalhesDialog(true);
+                  }}
+                >
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -431,11 +464,19 @@ const Agenda = () => {
               ) : (
                 <div className="space-y-2">
                   {agendamentosDia.map((agendamento) => (
-                    <Card key={agendamento.id} className="p-3 hover-lift cursor-pointer" onClick={() => {
-                      setSelectedAgendamento(agendamento);
-                      setOpenDetalhesDialog(true);
-                      setOpenSideSheet(false);
-                    }}>
+                    <Card 
+                      key={agendamento.id} 
+                      className={`p-3 hover-lift cursor-pointer transition-all ${
+                        highlightedAgendamento === agendamento.id 
+                          ? 'ring-2 ring-primary ring-offset-2 bg-primary/5 animate-pulse' 
+                          : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedAgendamento(agendamento);
+                        setOpenDetalhesDialog(true);
+                        setOpenSideSheet(false);
+                      }}
+                    >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <Clock className="w-3 h-3 text-primary" />

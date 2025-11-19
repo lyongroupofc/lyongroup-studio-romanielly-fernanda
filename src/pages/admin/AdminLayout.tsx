@@ -28,6 +28,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/NotificationBell";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
@@ -149,8 +150,9 @@ const AdminLayout = () => {
         <div className="flex-1 flex flex-col">
           {/* Header com Trigger */}
           <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="flex h-14 items-center px-4">
+            <div className="flex h-14 items-center justify-between px-4">
               <SidebarTrigger className="mr-2" />
+              <NotificationBell />
             </div>
           </header>
 
