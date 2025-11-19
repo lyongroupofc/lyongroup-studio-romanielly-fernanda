@@ -635,15 +635,19 @@ Romanielly Fernanda
           // Extrair data formatada do novo agendamento
           const [yyyy, mm, dd] = args.data.split('-');
           
-          // Buscar agendamento anterior ativo para reagendamento
+          // Buscar agendamento anterior ativo para reagendamento (apenas agendamentos futuros ou de hoje)
+          const dataHoje = new Date().toISOString().split('T')[0];
           const { data: agendamentoAnterior } = await supabase
             .from('agendamentos')
             .select('*')
             .eq('cliente_telefone', telefone)
             .neq('status', 'Cancelado')
+            .gte('data', dataHoje)
             .order('data', { ascending: true })
             .limit(1)
             .maybeSingle();
+          
+          console.log('🔍 Agendamento anterior encontrado:', agendamentoAnterior);
 
           let observacoesReagendamento = null;
           
@@ -653,12 +657,17 @@ Romanielly Fernanda
             observacoesReagendamento = `Reagendado de ${ddAnt}/${mmAnt}/${yyyyAnt} às ${agendamentoAnterior.horario}`;
             
             // Deletar agendamento anterior para evitar conflito na agenda
-            await supabase
+            console.log('🔄 Tentando deletar agendamento anterior:', agendamentoAnterior.id);
+            const { error: erroDelete } = await supabase
               .from('agendamentos')
               .delete()
               .eq('id', agendamentoAnterior.id);
             
-            console.log('🗑️ Agendamento anterior deletado:', agendamentoAnterior.id);
+            if (erroDelete) {
+              console.error('❌ Erro ao deletar agendamento anterior:', erroDelete);
+            } else {
+              console.log('✅ Agendamento anterior deletado com sucesso:', agendamentoAnterior.id);
+            }
           }
 
           // Criar novo agendamento
