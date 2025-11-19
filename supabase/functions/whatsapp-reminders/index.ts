@@ -80,6 +80,18 @@ Até amanhã! 💇‍♀️`;
       if (sendResponse.ok) {
         enviados++;
         console.log(`✅ Lembrete enviado para ${agendamento.cliente_nome}`);
+        
+        // Registrar lembrete enviado
+        await supabase
+          .from('lembretes_enviados')
+          .insert({
+            agendamento_id: agendamento.id,
+            cliente_nome: agendamento.cliente_nome,
+            cliente_telefone: agendamento.cliente_telefone,
+            servico_nome: agendamento.servico_nome,
+            tipo_lembrete: 'dia_anterior',
+            data_envio: new Date().toISOString(),
+          });
       } else {
         console.error(`❌ Erro ao enviar para ${agendamento.cliente_nome}`);
       }
@@ -91,6 +103,7 @@ Até amanhã! 💇‍♀️`;
     return new Response(JSON.stringify({ 
       total: agendamentos?.length || 0,
       enviados,
+      remindersCount: enviados,
       mensagem: `${enviados} lembretes enviados com sucesso`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

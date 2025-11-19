@@ -10,6 +10,7 @@ import {
   LogOut,
   Clock,
   Sparkle,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { NavLink } from "@/components/NavLink";
@@ -37,6 +38,7 @@ const menuItems = [
   { icon: Users, label: "Profissionais", path: "/admin/profissionais" },
   { icon: DollarSign, label: "Faturamento", path: "/admin/faturamento" },
   { icon: MessageCircle, label: "Bot WhatsApp", path: "/admin/bot-whatsapp" },
+  { icon: Bell, label: "Lembretes", path: "/admin/lembretes" },
 ];
 
 function AppSidebar() {
