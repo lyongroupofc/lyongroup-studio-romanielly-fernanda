@@ -48,7 +48,7 @@ const Agenda = () => {
   const [highlightedAgendamento, setHighlightedAgendamento] = useState<string | null>(null);
 
   const { agendamentos, loading: loadingAgendamentos, addAgendamento, updateAgendamento, deleteAgendamento } = useAgendamentos();
-  const { getConfig, updateConfig } = useAgendaConfig();
+  const { configs, getConfig, updateConfig } = useAgendaConfig();
   const { servicos, loading: loadingServicos } = useServicos();
   const { profissionais, loading: loadingProfissionais } = useProfissionais();
 
@@ -192,7 +192,7 @@ const Agenda = () => {
       const base = [...generateSlots(d), ...dayData.horariosExtras];
       return base.filter((t) => !todosBloqueados.has(t)).sort();
     };
-  }, [agendamentos, servicos]);
+  }, [agendamentos, servicos, configs]);
 
   const getServiceStartSlots = (d: Date | undefined, servicoId?: string) => {
     if (!d || !servicoId) return [];
