@@ -201,8 +201,8 @@ ${profissionaisFormatados}
 **INFORMAÇÕES DE PAGAMENTO:**
 
 **Dados para pagamento:**
-Pix: 19083573000154 | CNPJ
-Romanielly Fernanda
+Pix: 35884146000121 | CNPJ
+Romanielly - Banco Sicoob
 
 **Formas de pagamento aceitas:**
 - Cartão de débito
