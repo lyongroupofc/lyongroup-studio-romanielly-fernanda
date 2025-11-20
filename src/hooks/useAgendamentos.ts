@@ -117,6 +117,26 @@ export const useAgendamentos = () => {
     }
   };
 
+  const cancelAgendamento = async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("agendamentos")
+        .update({ status: "Cancelado" })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      setAgendamentos(agendamentos.map(a => a.id === id ? data : a));
+      toast.success("Agendamento cancelado!");
+      return data;
+    } catch (error) {
+      console.error("Erro ao cancelar agendamento:", error);
+      toast.error("Erro ao cancelar agendamento");
+      throw error;
+    }
+  };
+
   const deleteAgendamento = async (id: string) => {
     try {
       const { error } = await supabase
@@ -144,6 +164,7 @@ export const useAgendamentos = () => {
     addAgendamento,
     updateAgendamento,
     deleteAgendamento,
+    cancelAgendamento,
     getAgendamentosByData,
     refetch: fetchAgendamentos
   };

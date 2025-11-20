@@ -1,8 +1,7 @@
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
+import { easter } from "date-easter";
 
 // Feriados FIXOS nacionais brasileiros e municipais de Santa Bárbara - MG (formato MM-DD)
-// NOTA: Carnaval, Sexta-feira Santa e Corpus Christi são feriados MÓVEIS e suas datas mudam a cada ano
-// Por isso, devem ser configurados manualmente no sistema quando necessário
 export const feriadosNacionais = [
   "01-01", // Ano Novo (Nacional)
   "04-21", // Tiradentes (Nacional)
@@ -16,16 +15,8 @@ export const feriadosNacionais = [
   "12-25", // Natal (Nacional)
 ];
 
-// Feriados móveis para 2025 (precisam ser atualizados anualmente)
-export const feriadosMoveis2025 = [
-  "2025-03-03", // Carnaval - Segunda
-  "2025-03-04", // Carnaval - Terça
-  "2025-04-18", // Sexta-feira Santa
-  "2025-06-19", // Corpus Christi
-];
-
-// Nomes dos feriados para exibição
-export const nomesFeriados: Record<string, string> = {
+// Nomes dos feriados FIXOS para exibição
+export const nomesFeriadosFixos: Record<string, string> = {
   "01-01": "Ano Novo",
   "04-21": "Tiradentes",
   "05-01": "Dia do Trabalho",
@@ -36,22 +27,53 @@ export const nomesFeriados: Record<string, string> = {
   "11-20": "Dia da Consciência Negra",
   "12-04": "Santa Bárbara - Padroeira da Cidade",
   "12-25": "Natal",
-  "2025-03-03": "Carnaval",
-  "2025-03-04": "Carnaval",
-  "2025-04-18": "Sexta-feira Santa",
-  "2025-06-19": "Corpus Christi",
+};
+
+// Nomes dos feriados MÓVEIS para exibição
+const nomesFeriadosMoveis: Record<string, string> = {
+  "carnaval-seg": "Carnaval",
+  "carnaval-ter": "Carnaval",
+  "sexta-santa": "Sexta-feira Santa",
+  "corpus-christi": "Corpus Christi",
+};
+
+// Calcula feriados móveis para um determinado ano
+const calcularFeriadosMoveis = (ano: number): Record<string, string> => {
+  const feriadosMoveis: Record<string, string> = {};
+  
+  // Calcula a Páscoa usando o algoritmo
+  const pascoa = easter(ano);
+  const dataPascoa = new Date(ano, pascoa.month - 1, pascoa.day);
+  
+  // Carnaval: 47 dias antes da Páscoa (segunda e terça)
+  const carnavalSeg = addDays(dataPascoa, -47);
+  const carnavalTer = addDays(dataPascoa, -46);
+  feriadosMoveis[format(carnavalSeg, "yyyy-MM-dd")] = nomesFeriadosMoveis["carnaval-seg"];
+  feriadosMoveis[format(carnavalTer, "yyyy-MM-dd")] = nomesFeriadosMoveis["carnaval-ter"];
+  
+  // Sexta-feira Santa: 2 dias antes da Páscoa
+  const sextaSanta = addDays(dataPascoa, -2);
+  feriadosMoveis[format(sextaSanta, "yyyy-MM-dd")] = nomesFeriadosMoveis["sexta-santa"];
+  
+  // Corpus Christi: 60 dias após a Páscoa
+  const corpusChristi = addDays(dataPascoa, 60);
+  feriadosMoveis[format(corpusChristi, "yyyy-MM-dd")] = nomesFeriadosMoveis["corpus-christi"];
+  
+  return feriadosMoveis;
 };
 
 // Função para verificar se uma data é feriado (fixo ou móvel)
 export const isFeriado = (date: Date): boolean => {
   const mmdd = format(date, "MM-dd");
   const yyyymmdd = format(date, "yyyy-MM-dd");
+  const ano = date.getFullYear();
   
   // Verifica feriados fixos
   if (feriadosNacionais.includes(mmdd)) return true;
   
-  // Verifica feriados móveis de 2025
-  if (feriadosMoveis2025.includes(yyyymmdd)) return true;
+  // Calcula e verifica feriados móveis do ano
+  const feriadosMoveis = calcularFeriadosMoveis(ano);
+  if (feriadosMoveis[yyyymmdd]) return true;
   
   return false;
 };
@@ -60,8 +82,14 @@ export const isFeriado = (date: Date): boolean => {
 export const getNomeFeriado = (date: Date): string | null => {
   const mmdd = format(date, "MM-dd");
   const yyyymmdd = format(date, "yyyy-MM-dd");
+  const ano = date.getFullYear();
   
-  return nomesFeriados[yyyymmdd] || nomesFeriados[mmdd] || null;
+  // Verifica feriados fixos primeiro
+  if (nomesFeriadosFixos[mmdd]) return nomesFeriadosFixos[mmdd];
+  
+  // Calcula e verifica feriados móveis do ano
+  const feriadosMoveis = calcularFeriadosMoveis(ano);
+  return feriadosMoveis[yyyymmdd] || null;
 };
 
 // Função para formatar data no formato YYYY-MM-DD

@@ -30,7 +30,7 @@ const Agenda = () => {
   const [selectedAgendamento, setSelectedAgendamento] = useState<Agendamento | null>(null);
   const [highlightedAgendamento, setHighlightedAgendamento] = useState<string | null>(null);
 
-  const { agendamentos, loading: loadingAgendamentos, addAgendamento, updateAgendamento, deleteAgendamento } = useAgendamentos();
+  const { agendamentos, loading: loadingAgendamentos, addAgendamento, updateAgendamento, deleteAgendamento, cancelAgendamento } = useAgendamentos();
   const { configs, getConfig, updateConfig, refetch } = useAgendaConfig();
   const { servicos, loading: loadingServicos } = useServicos();
   const { profissionais, loading: loadingProfissionais } = useProfissionais();
@@ -813,13 +813,22 @@ const Agenda = () => {
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setOpenDetalhesDialog(false)}>Fechar</Button>
-                {!isBefore(new Date(selectedAgendamento.data), startOfToday()) && (
+                {!isBefore(new Date(selectedAgendamento.data), startOfToday()) && selectedAgendamento.status !== "Cancelado" && (
+                  <Button variant="destructive" onClick={async () => {
+                    await cancelAgendamento(selectedAgendamento.id);
+                    setOpenDetalhesDialog(false);
+                    setSelectedAgendamento(null);
+                  }}>
+                    Cancelar Agendamento
+                  </Button>
+                )}
+                {selectedAgendamento.status === "Cancelado" && (
                   <Button variant="destructive" onClick={async () => {
                     await deleteAgendamento(selectedAgendamento.id);
                     setOpenDetalhesDialog(false);
                     setSelectedAgendamento(null);
                   }}>
-                    Cancelar Agendamento
+                    Excluir Agendamento
                   </Button>
                 )}
               </div>
