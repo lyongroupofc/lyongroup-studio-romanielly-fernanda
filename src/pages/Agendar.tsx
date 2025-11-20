@@ -109,7 +109,6 @@ const Agendar = () => {
   const getAvailableSlots = (d: Date | undefined) => {
     if (!d) return [];
     const dayData = getDayData(d);
-    if (dayData.fechado) return [];
     
     const dateStr = fmtKey(d);
     const agendamentosDay = agendamentos.filter(a => a.data === dateStr);
@@ -131,13 +130,16 @@ const Agendar = () => {
     // Adiciona horários bloqueados manualmente
     dayData.horariosBloqueados.forEach(h => todosBloqueados.add(h));
     
-    const base = [...generateSlots(d), ...dayData.horariosExtras];
+    // Se o dia está fechado, retornar apenas horários extras (se houver)
+    // Se o dia está aberto, retornar horários normais + horários extras
+    const base = dayData.fechado 
+      ? dayData.horariosExtras 
+      : [...generateSlots(d), ...dayData.horariosExtras];
+    
     return base.filter((t) => !todosBloqueados.has(t)).sort();
   };
 
   const isDayFull = (d: Date) => {
-    const dayData = getDayData(d);
-    if (dayData.fechado) return false;
     return getAvailableSlots(d).length === 0;
   };
 
