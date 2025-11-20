@@ -11,29 +11,13 @@ export type AgendaConfig = {
   observacoes: string | null;
 };
 
-const CACHE_KEY = 'agenda_config_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
-
 export const useAgendaConfig = () => {
   const [configs, setConfigs] = useState<Record<string, AgendaConfig>>({});
   const [loading, setLoading] = useState(true);
 
-  const fetchConfigs = async (forceRefresh = false) => {
+  const fetchConfigs = async () => {
     try {
-      // Tentar carregar do cache primeiro
-      if (!forceRefresh) {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          const age = Date.now() - timestamp;
-          
-          if (age < CACHE_DURATION) {
-            setConfigs(data);
-            setLoading(false);
-            return;
-          }
-        }
-      }
+      setLoading(true);
 
       const { data, error } = await supabase
         .from("agenda_config")
@@ -45,12 +29,6 @@ export const useAgendaConfig = () => {
       data?.forEach(config => {
         configMap[config.data] = config;
       });
-      
-      // Salvar no cache
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-        data: configMap,
-        timestamp: Date.now()
-      }));
       
       setConfigs(configMap);
     } catch (error) {
@@ -73,9 +51,6 @@ export const useAgendaConfig = () => {
     try {
       const existing = configs[data];
       
-      // Limpar cache ao atualizar
-      localStorage.removeItem(CACHE_KEY);
-      
       if (existing) {
         const { data: updated, error } = await supabase
           .from("agenda_config")
@@ -86,15 +61,7 @@ export const useAgendaConfig = () => {
 
         if (error) throw error;
         
-        const newConfigs = { ...configs, [data]: updated };
-        setConfigs(newConfigs);
-        
-        // Atualizar cache imediatamente
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          data: newConfigs,
-          timestamp: Date.now()
-        }));
-        
+        setConfigs({ ...configs, [data]: updated });
         return updated;
       } else {
         const { data: created, error } = await supabase
@@ -105,15 +72,7 @@ export const useAgendaConfig = () => {
 
         if (error) throw error;
         
-        const newConfigs = { ...configs, [data]: created };
-        setConfigs(newConfigs);
-        
-        // Atualizar cache imediatamente
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          data: newConfigs,
-          timestamp: Date.now()
-        }));
-        
+        setConfigs({ ...configs, [data]: created });
         return created;
       }
     } catch (error) {
