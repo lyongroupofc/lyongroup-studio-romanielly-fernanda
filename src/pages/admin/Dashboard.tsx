@@ -37,10 +37,18 @@ const Dashboard = () => {
     const hoje = format(new Date(), "yyyy-MM-dd");
     const mesAtual = format(new Date(), "yyyy-MM");
     
-    const agendamentosMes = agendamentos.filter(ag => ag.data?.startsWith(mesAtual)).length;
-    const agendamentosHoje = agendamentos.filter(ag => ag.data === hoje).length;
-    const clientesAtendidos = agendamentos.filter(ag => ag.status === "Concluído").length;
-    const clientesPendentes = agendamentos.filter(ag => ag.status === "Confirmado" && ag.data >= hoje).length;
+    // Filtros otimizados com early returns
+    let agendamentosMes = 0;
+    let agendamentosHoje = 0;
+    let clientesAtendidos = 0;
+    let clientesPendentes = 0;
+    
+    agendamentos.forEach(ag => {
+      if (ag.data?.startsWith(mesAtual)) agendamentosMes++;
+      if (ag.data === hoje) agendamentosHoje++;
+      if (ag.status === "Concluído") clientesAtendidos++;
+      if (ag.status === "Confirmado" && ag.data >= hoje) clientesPendentes++;
+    });
     
     const faturamentoHoje = pagamentos
       .filter(p => p.data === hoje)
