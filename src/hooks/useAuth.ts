@@ -13,50 +13,86 @@ export const useAuth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Configurar listener de auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    let isMounted = true;
+    
+    // Função para buscar role do usuário
+    const fetchUserRole = async (userId: string) => {
+      try {
+        const { data: roleData, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .single();
+        
+        if (error) {
+          console.error('Erro ao buscar role:', error);
+          return null;
+        }
+        
+        return roleData?.role as UserRole || null;
+      } catch (error) {
+        console.error('Erro ao buscar role:', error);
+        return null;
+      }
+    };
+
+    // Verificar sessão existente uma única vez
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Buscar role do usuário
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .single();
+          const userRole = await fetchUserRole(session.user.id);
+          if (isMounted) {
+            setRole(userRole);
+          }
+        } else {
+          setRole(null);
+        }
+      } catch (error) {
+        console.error('Erro na inicialização:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
 
-          setRole(roleData?.role as UserRole || null);
+    // Configurar listener de auth (apenas para mudanças futuras)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!isMounted) return;
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          const userRole = await fetchUserRole(session.user.id);
+          if (isMounted) {
+            setRole(userRole);
+          }
         } else {
           setRole(null);
         }
 
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     );
 
-    // Verificar sessão existente
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // Inicializar
+    initAuth();
 
-      if (session?.user) {
-        supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .single()
-          .then(({ data }) => {
-            setRole(data?.role as UserRole || null);
-            setLoading(false);
-          });
-      } else {
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
