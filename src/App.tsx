@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Agendar from "./pages/Agendar";
 import Obrigado from "./pages/Obrigado";
@@ -45,65 +46,67 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/setup-cliente" element={
-            <Suspense fallback={<PageLoader />}>
-              <CreateCliente />
-            </Suspense>
-          } />
-          <Route path="/agendar" element={<Agendar />} />
-          <Route path="/obrigado" element={<Obrigado />} />
-          
-          <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
-            <Route index element={
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/setup-cliente" element={
               <Suspense fallback={<PageLoader />}>
-                <Dashboard />
+                <CreateCliente />
               </Suspense>
             } />
-            <Route path="agenda" element={
-              <Suspense fallback={<PageLoader />}>
-                <Agenda />
-              </Suspense>
-            } />
-            <Route path="servicos" element={
-              <Suspense fallback={<PageLoader />}>
-                <Servicos />
-              </Suspense>
-            } />
-            <Route path="profissionais" element={
-              <Suspense fallback={<PageLoader />}>
-                <Profissionais />
-              </Suspense>
-            } />
-            <Route path="faturamento" element={
-              <Suspense fallback={<PageLoader />}>
-                <Faturamento />
-              </Suspense>
-            } />
-            <Route path="bot-whatsapp" element={
-              <Suspense fallback={<PageLoader />}>
-                <BotWhatsApp />
-              </Suspense>
-            } />
-            <Route path="lembretes" element={
-              <Suspense fallback={<PageLoader />}>
-                <Lembretes />
-              </Suspense>
-            } />
-          </Route>
+            <Route path="/agendar" element={<Agendar />} />
+            <Route path="/obrigado" element={<Obrigado />} />
+            
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
+              <Route index element={
+                <Suspense fallback={<PageLoader />}>
+                  <Dashboard />
+                </Suspense>
+              } />
+              <Route path="agenda" element={
+                <Suspense fallback={<PageLoader />}>
+                  <Agenda />
+                </Suspense>
+              } />
+              <Route path="servicos" element={
+                <Suspense fallback={<PageLoader />}>
+                  <Servicos />
+                </Suspense>
+              } />
+              <Route path="profissionais" element={
+                <Suspense fallback={<PageLoader />}>
+                  <Profissionais />
+                </Suspense>
+              } />
+              <Route path="faturamento" element={
+                <Suspense fallback={<PageLoader />}>
+                  <Faturamento />
+                </Suspense>
+              } />
+              <Route path="bot-whatsapp" element={
+                <Suspense fallback={<PageLoader />}>
+                  <BotWhatsApp />
+                </Suspense>
+              } />
+              <Route path="lembretes" element={
+                <Suspense fallback={<PageLoader />}>
+                  <Lembretes />
+                </Suspense>
+              } />
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
