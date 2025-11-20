@@ -22,9 +22,9 @@ export const useAgendamentos = () => {
 
   const fetchAgendamentos = async () => {
     try {
-      // Buscar apenas agendamentos dos últimos 90 dias para performance
+      // Buscar apenas agendamentos dos últimos 30 dias para melhor performance
       const dataLimite = new Date();
-      dataLimite.setDate(dataLimite.getDate() - 90);
+      dataLimite.setDate(dataLimite.getDate() - 30);
       const dataLimiteStr = dataLimite.toISOString().split('T')[0];
 
       const { data, error } = await supabase
@@ -33,7 +33,7 @@ export const useAgendamentos = () => {
         .gte("data", dataLimiteStr)
         .order("data", { ascending: false })
         .order("horario", { ascending: true })
-        .limit(500);
+        .limit(200);
 
       if (error) throw error;
       setAgendamentos(data || []);
