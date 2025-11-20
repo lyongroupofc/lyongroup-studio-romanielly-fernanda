@@ -2,36 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// Cache para otimizar performance (2 minutos - dados mudam frequentemente)
-const CACHE_KEY = 'agendamentos_cache';
-const CACHE_DURATION = 2 * 60 * 1000; // 2 minutos
-
-const getCachedData = () => {
-  try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp < CACHE_DURATION) {
-        return data;
-      }
-    }
-  } catch (e) {
-    console.error('Erro ao ler cache:', e);
-  }
-  return null;
-};
-
-const setCachedData = (data: any) => {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({
-      data,
-      timestamp: Date.now()
-    }));
-  } catch (e) {
-    console.error('Erro ao salvar cache:', e);
-  }
-};
-
 export type Agendamento = {
   id: string;
   data: string;
@@ -50,18 +20,17 @@ export const useAgendamentos = () => {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchAgendamentos = async (forceRefresh = false) => {
-    try {
-      // Tentar usar cache primeiro
-      if (!forceRefresh) {
-        const cached = getCachedData();
-        if (cached) {
-          setAgendamentos(cached);
-          setLoading(false);
-          return;
-        }
-      }
+  // Limpar caches antigos que podem estar causando problemas
+  useEffect(() => {
+    localStorage.removeItem('agendamentos_cache');
+    localStorage.removeItem('pagamentos_cache');
+    localStorage.removeItem('agenda_config_cache');
+  }, []);
 
+  const fetchAgendamentos = async () => {
+    try {
+      setLoading(true);
+      
       // Buscar apenas agendamentos dos últimos 30 dias para melhor performance
       const dataLimite = new Date();
       dataLimite.setDate(dataLimite.getDate() - 30);
@@ -77,9 +46,7 @@ export const useAgendamentos = () => {
 
       if (error) throw error;
       
-      const agendamentosData = data || [];
-      setAgendamentos(agendamentosData);
-      setCachedData(agendamentosData);
+      setAgendamentos(data || []);
     } catch (error) {
       console.error("Erro ao carregar agendamentos:", error);
       toast.error("Erro ao carregar agendamentos");
@@ -91,47 +58,25 @@ export const useAgendamentos = () => {
   useEffect(() => {
     fetchAgendamentos();
 
-    // Debounce para evitar múltiplas atualizações simultâneas
-    let updateTimeout: NodeJS.Timeout;
-    
     const channel = supabase
       .channel('agendamentos_changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'agendamentos' },
         (payload) => {
-          // Limpar timeout anterior
-          clearTimeout(updateTimeout);
-          
-          // Aguardar 100ms antes de processar atualização
-          updateTimeout = setTimeout(() => {
-            const rec: any = (payload as any).new ?? (payload as any).old;
-            if ((payload as any).eventType === 'INSERT' && (payload as any).new) {
-              setAgendamentos((prev) => {
-                const novosAgendamentos = [...prev, (payload as any).new as Agendamento];
-                setCachedData(novosAgendamentos);
-                return novosAgendamentos;
-              });
-            } else if ((payload as any).eventType === 'UPDATE' && (payload as any).new) {
-              setAgendamentos((prev) => {
-                const agendamentosAtualizados = prev.map((a) => a.id === rec.id ? (payload as any).new as Agendamento : a);
-                setCachedData(agendamentosAtualizados);
-                return agendamentosAtualizados;
-              });
-            } else if ((payload as any).eventType === 'DELETE' && (payload as any).old) {
-              setAgendamentos((prev) => {
-                const agendamentosFiltrados = prev.filter((a) => a.id !== rec.id);
-                setCachedData(agendamentosFiltrados);
-                return agendamentosFiltrados;
-              });
-            }
-          }, 100);
+          const rec: any = (payload as any).new ?? (payload as any).old;
+          if ((payload as any).eventType === 'INSERT' && (payload as any).new) {
+            setAgendamentos((prev) => [...prev, (payload as any).new as Agendamento]);
+          } else if ((payload as any).eventType === 'UPDATE' && (payload as any).new) {
+            setAgendamentos((prev) => prev.map((a) => a.id === rec.id ? (payload as any).new as Agendamento : a));
+          } else if ((payload as any).eventType === 'DELETE' && (payload as any).old) {
+            setAgendamentos((prev) => prev.filter((a) => a.id !== rec.id));
+          }
         }
       )
       .subscribe();
 
     return () => {
-      clearTimeout(updateTimeout);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -146,9 +91,7 @@ export const useAgendamentos = () => {
 
       if (error) throw error;
       
-      const novosAgendamentos = [...agendamentos, data];
-      setAgendamentos(novosAgendamentos);
-      setCachedData(novosAgendamentos); // Atualizar cache
+      setAgendamentos([...agendamentos, data]);
       
       toast.success("Agendamento criado com sucesso!", {
         position: "top-center",
@@ -177,9 +120,7 @@ export const useAgendamentos = () => {
 
       if (error) throw error;
       
-      const agendamentosAtualizados = agendamentos.map(a => a.id === id ? data : a);
-      setAgendamentos(agendamentosAtualizados);
-      setCachedData(agendamentosAtualizados); // Atualizar cache
+      setAgendamentos(agendamentos.map(a => a.id === id ? data : a));
       
       toast.success("Agendamento atualizado!");
       return data;
@@ -201,9 +142,7 @@ export const useAgendamentos = () => {
 
       if (error) throw error;
       
-      const agendamentosAtualizados = agendamentos.map(a => a.id === id ? data : a);
-      setAgendamentos(agendamentosAtualizados);
-      setCachedData(agendamentosAtualizados); // Atualizar cache
+      setAgendamentos(agendamentos.map(a => a.id === id ? data : a));
       
       toast.success("Agendamento cancelado!");
       return data;
@@ -223,9 +162,7 @@ export const useAgendamentos = () => {
 
       if (error) throw error;
       
-      const agendamentosFiltrados = agendamentos.filter(a => a.id !== id);
-      setAgendamentos(agendamentosFiltrados);
-      setCachedData(agendamentosFiltrados); // Atualizar cache
+      setAgendamentos(agendamentos.filter(a => a.id !== id));
       
       toast.success("Agendamento removido!");
     } catch (error) {
