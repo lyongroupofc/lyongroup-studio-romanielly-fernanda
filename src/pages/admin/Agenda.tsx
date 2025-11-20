@@ -822,7 +822,7 @@ const Agenda = () => {
                     Cancelar Agendamento
                   </Button>
                 )}
-                {selectedAgendamento.status === "Cancelado" && (
+                {(selectedAgendamento.status === "Cancelado" || isBefore(new Date(selectedAgendamento.data), startOfToday())) && (
                   <Button variant="destructive" onClick={async () => {
                     await deleteAgendamento(selectedAgendamento.id);
                     setOpenDetalhesDialog(false);
