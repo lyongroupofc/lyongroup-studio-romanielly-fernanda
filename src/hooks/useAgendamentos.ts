@@ -99,11 +99,23 @@ export const useAgendamentos = () => {
         (payload) => {
           const rec: any = (payload as any).new ?? (payload as any).old;
           if ((payload as any).eventType === 'INSERT' && (payload as any).new) {
-            setAgendamentos((prev) => [...prev, (payload as any).new as Agendamento]);
+            setAgendamentos((prev) => {
+              const novosAgendamentos = [...prev, (payload as any).new as Agendamento];
+              setCachedData(novosAgendamentos);
+              return novosAgendamentos;
+            });
           } else if ((payload as any).eventType === 'UPDATE' && (payload as any).new) {
-            setAgendamentos((prev) => prev.map((a) => a.id === rec.id ? (payload as any).new as Agendamento : a));
+            setAgendamentos((prev) => {
+              const agendamentosAtualizados = prev.map((a) => a.id === rec.id ? (payload as any).new as Agendamento : a);
+              setCachedData(agendamentosAtualizados);
+              return agendamentosAtualizados;
+            });
           } else if ((payload as any).eventType === 'DELETE' && (payload as any).old) {
-            setAgendamentos((prev) => prev.filter((a) => a.id !== rec.id));
+            setAgendamentos((prev) => {
+              const agendamentosFiltrados = prev.filter((a) => a.id !== rec.id);
+              setCachedData(agendamentosFiltrados);
+              return agendamentosFiltrados;
+            });
           }
         }
       )
