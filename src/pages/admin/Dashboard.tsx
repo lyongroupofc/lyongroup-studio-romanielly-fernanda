@@ -40,8 +40,10 @@ const Dashboard = () => {
   // Polling a cada 30 segundos para atualizar dados
   useEffect(() => {
     const interval = setInterval(() => {
-      refetchAgendamentos();
-      refetchPagamentos();
+      if (!document.hidden) {
+        refetchAgendamentos();
+        refetchPagamentos();
+      }
     }, 30000); // 30 segundos
 
     return () => clearInterval(interval);

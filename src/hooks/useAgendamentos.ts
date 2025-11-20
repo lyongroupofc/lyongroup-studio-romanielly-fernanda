@@ -38,18 +38,22 @@ export const useAgendamentos = () => {
 
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("*")
+        .select("id, data, horario, cliente_nome, cliente_telefone, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes")
         .gte("data", dataLimiteStr)
         .order("data", { ascending: false })
         .order("horario", { ascending: true })
         .limit(200);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao carregar agendamentos:", error);
+        setAgendamentos([]);
+        return;
+      }
       
       setAgendamentos(data || []);
     } catch (error) {
       console.error("Erro ao carregar agendamentos:", error);
-      toast.error("Erro ao carregar agendamentos");
+      setAgendamentos([]);
     } finally {
       setLoading(false);
     }

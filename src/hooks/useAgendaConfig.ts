@@ -21,19 +21,27 @@ export const useAgendaConfig = () => {
 
       const { data, error } = await supabase
         .from("agenda_config")
-        .select("*");
+        .select("id, data, fechado, horarios_bloqueados, horarios_extras, observacoes");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao carregar configurações:", error);
+        setConfigs({});
+        return;
+      }
       
       const configMap: Record<string, AgendaConfig> = {};
       data?.forEach(config => {
-        configMap[config.data] = config;
+        configMap[config.data] = {
+          ...config,
+          horarios_bloqueados: config.horarios_bloqueados || [],
+          horarios_extras: config.horarios_extras || []
+        };
       });
       
       setConfigs(configMap);
     } catch (error) {
       console.error("Erro ao carregar configurações:", error);
-      toast.error("Erro ao carregar configurações da agenda");
+      setConfigs({});
     } finally {
       setLoading(false);
     }

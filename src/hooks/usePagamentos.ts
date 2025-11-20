@@ -29,18 +29,21 @@ export const usePagamentos = () => {
 
       const { data, error } = await supabase
         .from("pagamentos")
-        .select("*")
+        .select("id, agendamento_id, cliente_nome, servico, valor, metodo_pagamento, status, data, created_at")
         .gte("data", dataLimiteStr)
         .order("data", { ascending: false })
-        .order("created_at", { ascending: false })
         .limit(200);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao buscar pagamentos:", error);
+        setPagamentos([]);
+        return;
+      }
       
       setPagamentos(data || []);
     } catch (error) {
       console.error("Erro ao buscar pagamentos:", error);
-      toast.error("Erro ao carregar pagamentos");
+      setPagamentos([]);
     } finally {
       setLoading(false);
     }
