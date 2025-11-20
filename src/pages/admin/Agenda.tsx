@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import { useServicos } from "@/hooks/useServicos";
 import { useProfissionais } from "@/hooks/useProfissionais";
 import { useSearchParams } from "react-router-dom";
 import { isFeriado } from "@/lib/feriados";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Agenda = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -222,23 +223,23 @@ const Agenda = () => {
     return getAvailableSlots(d).length === 0;
   };
 
-  const modifiers = {
+  const modifiers = useMemo(() => ({
     disponivel: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && !isDayFull(d) && !isFeriado(d),
     fechado: (d: Date) => !isBefore(d, startOfToday()) && getDayData(d).fechado && !isFeriado(d),
     cheio: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && isDayFull(d) && !isFeriado(d),
     past: (d: Date) => isBefore(d, startOfToday()) && !isFeriado(d),
     feriado: (d: Date) => isFeriado(d),
-  };
+  }), [configs, agendamentos]);
 
-  const modifiersStyles = {
+  const modifiersStyles = useMemo(() => ({
     disponivel: { backgroundColor: "hsl(var(--success) / 0.2)", color: "hsl(var(--success))", fontWeight: "600" },
     fechado: { backgroundColor: "hsl(var(--destructive) / 0.2)", color: "hsl(var(--destructive))", fontWeight: "600" },
     cheio: { backgroundColor: "hsl(280 65% 60% / 0.2)", color: "hsl(280 65% 60%)", fontWeight: "600" },
     past: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", opacity: 0.6 },
     feriado: { backgroundColor: "hsl(var(--holiday) / 0.25)", color: "hsl(var(--holiday))", fontWeight: "700", border: "2px solid hsl(var(--holiday))" },
-  };
+  }), []);
 
-  const handleDayClick = (day: Date | undefined) => {
+  const handleDayClick = useCallback((day: Date | undefined) => {
     if (!day) return;
     setSelectedDate(day);
 
@@ -251,14 +252,14 @@ const Agenda = () => {
     }
 
     setOpenSideSheet(true);
-  };
+  }, [agendamentos]);
 
-  const handleReservar = () => {
+  const handleReservar = useCallback(() => {
     setOpenSideSheet(false);
     setOpenReservarDialog(true);
-  };
+  }, []);
 
-  const handleGerenciar = () => {
+  const handleGerenciar = useCallback(() => {
     if (!selectedDate) return;
     const dayData = getDayData(selectedDate);
     setGerenciarData({
@@ -270,7 +271,7 @@ const Agenda = () => {
     });
     setOpenSideSheet(false);
     setOpenGerenciarDialog(true);
-  };
+  }, [selectedDate, configs]);
 
   const handleSubmitReservar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -344,8 +345,34 @@ const Agenda = () => {
 
   if (loadingAgendamentos || loadingServicos || loadingProfissionais) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-40" />
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Skeleton do Calendário */}
+          <Card className="p-6">
+            <Skeleton className="h-6 w-32 mb-4" />
+            <Skeleton className="h-[350px] w-full" />
+            <div className="mt-6 space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          </Card>
+
+          {/* Skeleton dos Agendamentos de Hoje */}
+          <Card className="p-6">
+            <Skeleton className="h-6 w-48 mb-4" />
+            <div className="space-y-3">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          </Card>
+        </div>
       </div>
     );
   }
