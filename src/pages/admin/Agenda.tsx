@@ -36,7 +36,7 @@ const Agenda = () => {
   const { servicos, loading: loadingServicos, refetch: refetchServicos } = useServicos();
   const { profissionais, loading: loadingProfissionais, refetch: refetchProfissionais } = useProfissionais();
 
-  // Refetch quando a página ganha foco
+  // Refetch quando a página ganha foco (sem dependências para evitar loops)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -49,7 +49,7 @@ const Agenda = () => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [refetchAgendamentos, refetchConfig, refetchServicos, refetchProfissionais]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Processar parâmetros de query para notificações
   useEffect(() => {

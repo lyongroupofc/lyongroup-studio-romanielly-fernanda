@@ -72,7 +72,7 @@ export const useAgendamentoNotifications = () => {
     const interval = setInterval(checkNewAppointments, 60000); // 60 segundos
 
     return () => clearInterval(interval);
-  }, [playNotificationSound]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const markAsRead = useCallback((notificationId: string) => {
     setNotifications(prev =>

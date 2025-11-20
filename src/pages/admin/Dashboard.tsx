@@ -37,7 +37,7 @@ const Dashboard = () => {
     return () => cancelAnimationFrame(animationFrameId);
   }, []);
 
-  // Polling a cada 30 segundos para atualizar dados
+  // Polling a cada 30 segundos para atualizar dados (sem dependências para evitar loops)
   useEffect(() => {
     const interval = setInterval(() => {
       if (!document.hidden) {
@@ -47,7 +47,7 @@ const Dashboard = () => {
     }, 30000); // 30 segundos
 
     return () => clearInterval(interval);
-  }, [refetchAgendamentos, refetchPagamentos]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
