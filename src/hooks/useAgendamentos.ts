@@ -91,37 +91,47 @@ export const useAgendamentos = () => {
   useEffect(() => {
     fetchAgendamentos();
 
+    // Debounce para evitar múltiplas atualizações simultâneas
+    let updateTimeout: NodeJS.Timeout;
+    
     const channel = supabase
       .channel('agendamentos_changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'agendamentos' },
         (payload) => {
-          const rec: any = (payload as any).new ?? (payload as any).old;
-          if ((payload as any).eventType === 'INSERT' && (payload as any).new) {
-            setAgendamentos((prev) => {
-              const novosAgendamentos = [...prev, (payload as any).new as Agendamento];
-              setCachedData(novosAgendamentos);
-              return novosAgendamentos;
-            });
-          } else if ((payload as any).eventType === 'UPDATE' && (payload as any).new) {
-            setAgendamentos((prev) => {
-              const agendamentosAtualizados = prev.map((a) => a.id === rec.id ? (payload as any).new as Agendamento : a);
-              setCachedData(agendamentosAtualizados);
-              return agendamentosAtualizados;
-            });
-          } else if ((payload as any).eventType === 'DELETE' && (payload as any).old) {
-            setAgendamentos((prev) => {
-              const agendamentosFiltrados = prev.filter((a) => a.id !== rec.id);
-              setCachedData(agendamentosFiltrados);
-              return agendamentosFiltrados;
-            });
-          }
+          // Limpar timeout anterior
+          clearTimeout(updateTimeout);
+          
+          // Aguardar 100ms antes de processar atualização
+          updateTimeout = setTimeout(() => {
+            const rec: any = (payload as any).new ?? (payload as any).old;
+            if ((payload as any).eventType === 'INSERT' && (payload as any).new) {
+              setAgendamentos((prev) => {
+                const novosAgendamentos = [...prev, (payload as any).new as Agendamento];
+                setCachedData(novosAgendamentos);
+                return novosAgendamentos;
+              });
+            } else if ((payload as any).eventType === 'UPDATE' && (payload as any).new) {
+              setAgendamentos((prev) => {
+                const agendamentosAtualizados = prev.map((a) => a.id === rec.id ? (payload as any).new as Agendamento : a);
+                setCachedData(agendamentosAtualizados);
+                return agendamentosAtualizados;
+              });
+            } else if ((payload as any).eventType === 'DELETE' && (payload as any).old) {
+              setAgendamentos((prev) => {
+                const agendamentosFiltrados = prev.filter((a) => a.id !== rec.id);
+                setCachedData(agendamentosFiltrados);
+                return agendamentosFiltrados;
+              });
+            }
+          }, 100);
         }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(updateTimeout);
       supabase.removeChannel(channel);
     };
   }, []);

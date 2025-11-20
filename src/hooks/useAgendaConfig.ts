@@ -85,7 +85,16 @@ export const useAgendaConfig = () => {
           .single();
 
         if (error) throw error;
-        setConfigs({ ...configs, [data]: updated });
+        
+        const newConfigs = { ...configs, [data]: updated };
+        setConfigs(newConfigs);
+        
+        // Atualizar cache imediatamente
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          data: newConfigs,
+          timestamp: Date.now()
+        }));
+        
         return updated;
       } else {
         const { data: created, error } = await supabase
@@ -95,7 +104,16 @@ export const useAgendaConfig = () => {
           .single();
 
         if (error) throw error;
-        setConfigs({ ...configs, [data]: created });
+        
+        const newConfigs = { ...configs, [data]: created };
+        setConfigs(newConfigs);
+        
+        // Atualizar cache imediatamente
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          data: newConfigs,
+          timestamp: Date.now()
+        }));
+        
         return created;
       }
     } catch (error) {
