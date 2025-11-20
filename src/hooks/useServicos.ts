@@ -14,14 +14,9 @@ export type Servico = {
 export const useServicos = () => {
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(false);
-  const isFetchingRef = useRef(false);
-  const mountedRef = useRef(true);
 
   useEffect(() => {
     const fetchServicos = async () => {
-      if (isFetchingRef.current || !mountedRef.current) return;
-      isFetchingRef.current = true;
-      
       try {
         setLoading(true);
         
@@ -33,27 +28,19 @@ export const useServicos = () => {
 
         if (error) throw error;
         
-        if (mountedRef.current) setServicos(data || []);
+        setServicos(data || []);
       } catch (error) {
         console.error("Erro ao carregar serviços:", error);
         toast.error("Erro ao carregar serviços");
       } finally {
-        if (mountedRef.current) setLoading(false);
-        isFetchingRef.current = false;
+        setLoading(false);
       }
     };
 
     fetchServicos();
-
-    return () => {
-      mountedRef.current = false;
-    };
   }, []);
 
   const refetch = async () => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
-    
     try {
       setLoading(true);
       
@@ -71,7 +58,6 @@ export const useServicos = () => {
       toast.error("Erro ao carregar serviços");
     } finally {
       setLoading(false);
-      isFetchingRef.current = false;
     }
   };
 

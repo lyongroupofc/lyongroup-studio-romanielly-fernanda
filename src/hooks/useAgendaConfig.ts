@@ -14,14 +14,9 @@ export type AgendaConfig = {
 export const useAgendaConfig = () => {
   const [configs, setConfigs] = useState<Record<string, AgendaConfig>>({});
   const [loading, setLoading] = useState(false);
-  const isFetchingRef = useRef(false);
-  const mountedRef = useRef(true);
 
   useEffect(() => {
     const fetchConfigs = async () => {
-      if (isFetchingRef.current || !mountedRef.current) return;
-      isFetchingRef.current = true;
-      
       try {
         setLoading(true);
 
@@ -31,7 +26,7 @@ export const useAgendaConfig = () => {
 
         if (error) {
           console.error("Erro ao carregar configurações:", error);
-          if (mountedRef.current) setConfigs({});
+          setConfigs({});
           return;
         }
         
@@ -44,27 +39,19 @@ export const useAgendaConfig = () => {
           };
         });
         
-        if (mountedRef.current) setConfigs(configMap);
+        setConfigs(configMap);
       } catch (error) {
         console.error("Erro ao carregar configurações:", error);
-        if (mountedRef.current) setConfigs({});
+        setConfigs({});
       } finally {
-        if (mountedRef.current) setLoading(false);
-        isFetchingRef.current = false;
+        setLoading(false);
       }
     };
 
     fetchConfigs();
-
-    return () => {
-      mountedRef.current = false;
-    };
   }, []);
 
   const refetch = async () => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
-    
     try {
       setLoading(true);
 
@@ -93,7 +80,6 @@ export const useAgendaConfig = () => {
       setConfigs({});
     } finally {
       setLoading(false);
-      isFetchingRef.current = false;
     }
   };
 

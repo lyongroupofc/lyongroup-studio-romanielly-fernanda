@@ -14,14 +14,9 @@ export type Profissional = {
 export const useProfissionais = () => {
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [loading, setLoading] = useState(false);
-  const isFetchingRef = useRef(false);
-  const mountedRef = useRef(true);
 
   useEffect(() => {
     const fetchProfissionais = async () => {
-      if (isFetchingRef.current || !mountedRef.current) return;
-      isFetchingRef.current = true;
-      
       try {
         setLoading(true);
         
@@ -33,27 +28,19 @@ export const useProfissionais = () => {
 
         if (error) throw error;
         
-        if (mountedRef.current) setProfissionais(data || []);
+        setProfissionais(data || []);
       } catch (error) {
         console.error("Erro ao carregar profissionais:", error);
         toast.error("Erro ao carregar profissionais");
       } finally {
-        if (mountedRef.current) setLoading(false);
-        isFetchingRef.current = false;
+        setLoading(false);
       }
     };
 
     fetchProfissionais();
-
-    return () => {
-      mountedRef.current = false;
-    };
   }, []);
 
   const refetch = async () => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
-    
     try {
       setLoading(true);
       
@@ -71,7 +58,6 @@ export const useProfissionais = () => {
       toast.error("Erro ao carregar profissionais");
     } finally {
       setLoading(false);
-      isFetchingRef.current = false;
     }
   };
 
