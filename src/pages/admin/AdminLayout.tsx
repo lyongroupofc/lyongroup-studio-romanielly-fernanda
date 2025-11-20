@@ -49,10 +49,18 @@ function AppSidebar() {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    let frameId: number;
+    
+    const updateTime = () => {
       setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
+      frameId = requestAnimationFrame(updateTime);
+    };
+    
+    frameId = requestAnimationFrame(updateTime);
+    
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
   }, []);
 
   const isActive = (path: string) => {
