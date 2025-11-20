@@ -6,8 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Feriados nacionais brasileiros (formato MM-DD)
-const feriadosNacionais = [
+// Feriados FIXOS nacionais brasileiros e municipais
+const feriadosFixos = [
   "01-01", // Ano Novo
   "04-21", // Tiradentes
   "05-01", // Dia do Trabalho
@@ -15,14 +15,31 @@ const feriadosNacionais = [
   "10-12", // Nossa Senhora Aparecida
   "11-02", // Finados
   "11-15", // Proclamação da República
+  "11-20", // Consciência Negra
+  "12-04", // Santa Bárbara (Padroeira e Aniversário da Cidade)
   "12-25", // Natal
+];
+
+// Feriados móveis 2025 (atualizar anualmente)
+const feriadosMoveis2025 = [
+  "2025-03-03", // Carnaval - Segunda
+  "2025-03-04", // Carnaval - Terça
+  "2025-04-18", // Sexta-feira Santa
+  "2025-06-19", // Corpus Christi
 ];
 
 // Verificar se data é feriado
 const isFeriado = (dateStr: string): boolean => {
   const [year, month, day] = dateStr.split('-');
   const mmdd = `${month}-${day}`;
-  return feriadosNacionais.includes(mmdd);
+  
+  // Verifica feriados fixos
+  if (feriadosFixos.includes(mmdd)) return true;
+  
+  // Verifica feriados móveis de 2025
+  if (feriadosMoveis2025.includes(dateStr)) return true;
+  
+  return false;
 };
 
 serve(async (req) => {
@@ -62,7 +79,20 @@ ${profissionais || 'Nenhum profissional cadastrado no momento'}
 - Os preços e durações devem ser EXATAMENTE como estão na lista
 - Quando coletar as informações, SEMPRE use os IDs que estão entre parênteses (ID: xxx)
 - **PROMOÇÕES E DESCONTOS:** Se perguntarem sobre promoções ou descontos, responda: "No momento não temos nenhuma promoção ou desconto ativo, bunita 💜"
-- **FERIADOS NACIONAIS:** NÃO agende em feriados (01/01, 21/04, 01/05, 07/09, 12/10, 02/11, 15/11, 25/12)
+- **FERIADOS - STUDIO FECHADO EM 2025:** NÃO agende nos seguintes feriados:
+  - 01/01 (Ano Novo)
+  - 03/03 e 04/03 (Carnaval)
+  - 18/04 (Sexta-feira Santa)
+  - 21/04 (Tiradentes)
+  - 01/05 (Dia do Trabalho)
+  - 19/06 (Corpus Christi)
+  - 07/09 (Independência)
+  - 12/10 (Nossa Senhora Aparecida)
+  - 02/11 (Finados)
+  - 15/11 (Proclamação da República)
+  - 20/11 (Consciência Negra)
+  - 04/12 (Santa Bárbara - Padroeira da Cidade)
+  - 25/12 (Natal)
 - Se cliente pedir agendamento em feriado, responda: "Esse dia é feriado e o studio estará fechado, amor 💜 Que tal escolher outra data?"
 
 **Horário:** Segunda a sábado, 08:00 às 21:00
