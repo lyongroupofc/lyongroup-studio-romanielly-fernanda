@@ -21,39 +21,46 @@ export const useAgendamentoNotifications = () => {
     audio.play().catch(err => console.log('Não foi possível tocar o som:', err));
   }, []);
 
+  // Polling para verificar novos agendamentos a cada 60 segundos
   useEffect(() => {
-    const channel = supabase
-      .channel('new_agendamentos')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'agendamentos'
-        },
-        (payload) => {
-          const newAgendamento = payload.new as Agendamento;
-          
-          // Criar notificação
-          const notification: AgendamentoNotification = {
-            id: newAgendamento.id,
-            agendamento: newAgendamento,
+    let lastCheckTime = new Date();
+
+    const checkNewAppointments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("agendamentos")
+          .select("*")
+          .gte("created_at", lastCheckTime.toISOString())
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          // Adicionar novas notificações
+          const newNotifications = data.map(agendamento => ({
+            id: agendamento.id,
+            agendamento: agendamento as Agendamento,
             timestamp: new Date(),
             read: false
-          };
+          }));
 
-          setNotifications(prev => [notification, ...prev]);
-          setUnreadCount(prev => prev + 1);
+          setNotifications(prev => [...newNotifications, ...prev]);
+          setUnreadCount(prev => prev + newNotifications.length);
           
-          // Tocar som de notificação
+          // Tocar som apenas uma vez
           playNotificationSound();
+          
+          // Atualizar timestamp
+          lastCheckTime = new Date();
         }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+      } catch (error) {
+        console.error("Erro ao verificar novos agendamentos:", error);
+      }
     };
+
+    const interval = setInterval(checkNewAppointments, 60000); // 60 segundos
+
+    return () => clearInterval(interval);
   }, [playNotificationSound]);
 
   const markAsRead = useCallback((notificationId: string) => {
