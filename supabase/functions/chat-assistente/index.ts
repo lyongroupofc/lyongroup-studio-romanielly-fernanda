@@ -6,6 +6,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Feriados nacionais brasileiros (formato MM-DD)
+const feriadosNacionais = [
+  "01-01", // Ano Novo
+  "04-21", // Tiradentes
+  "05-01", // Dia do Trabalho
+  "09-07", // Independência
+  "10-12", // Nossa Senhora Aparecida
+  "11-02", // Finados
+  "11-15", // Proclamação da República
+  "12-25", // Natal
+];
+
+// Verificar se data é feriado
+const isFeriado = (dateStr: string): boolean => {
+  const [year, month, day] = dateStr.split('-');
+  const mmdd = `${month}-${day}`;
+  return feriadosNacionais.includes(mmdd);
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -42,8 +61,9 @@ ${profissionais || 'Nenhum profissional cadastrado no momento'}
 - Se perguntarem sobre algo que não está na lista, diga: "Não temos esse serviço disponível no momento, bunita 💜"
 - Os preços e durações devem ser EXATAMENTE como estão na lista
 - Quando coletar as informações, SEMPRE use os IDs que estão entre parênteses (ID: xxx)
-- **NUNCA** mencione descontos, promoções ou ofertas especiais - você NÃO tem acesso a essas informações
-- Se perguntarem sobre descontos/promoções, responda: "Para informações sobre valores especiais, é melhor confirmar direto com o studio 💜"
+- **PROMOÇÕES E DESCONTOS:** Se perguntarem sobre promoções ou descontos, responda: "No momento não temos nenhuma promoção ou desconto ativo, bunita 💜"
+- **FERIADOS NACIONAIS:** NÃO agende em feriados (01/01, 21/04, 01/05, 07/09, 12/10, 02/11, 15/11, 25/12)
+- Se cliente pedir agendamento em feriado, responda: "Esse dia é feriado e o studio estará fechado, amor 💜 Que tal escolher outra data?"
 
 **Horário:** Segunda a sábado, 08:00 às 21:00
 **Endereço:** Praça Leste de Minas, 85 – Centro - Santa Barbara-Mg
@@ -247,6 +267,19 @@ Seja sempre curta, natural e acolhedora! 💜`;
                 try {
                   const args = JSON.parse(toolCall.function.arguments);
                   console.log("Criando agendamento:", args);
+                  
+                  // Validar se não é feriado
+                  if (isFeriado(args.data)) {
+                    console.error("Tentativa de agendamento em feriado:", args.data);
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                      choices: [{
+                        delta: {
+                          content: "\n\n❌ Desculpa bunita, mas esse dia é feriado e o studio estará fechado 💜 Vamos escolher outra data?"
+                        }
+                      }]
+                    })}\n\n`));
+                    continue;
+                  }
                   
                   const { error } = await supabase
                     .from("agendamentos")

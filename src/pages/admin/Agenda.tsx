@@ -17,24 +17,7 @@ import { useAgendaConfig } from "@/hooks/useAgendaConfig";
 import { useServicos } from "@/hooks/useServicos";
 import { useProfissionais } from "@/hooks/useProfissionais";
 import { useSearchParams } from "react-router-dom";
-
-// Feriados nacionais brasileiros (formato MM-DD)
-const feriadosNacionais = [
-  "01-01", // Ano Novo
-  "04-21", // Tiradentes
-  "05-01", // Dia do Trabalho
-  "09-07", // Independência
-  "10-12", // Nossa Senhora Aparecida
-  "11-02", // Finados
-  "11-15", // Proclamação da República
-  "12-25", // Natal
-];
-
-// Função para verificar se uma data é feriado
-const isFeriado = (date: Date): boolean => {
-  const mmdd = format(date, "MM-dd");
-  return feriadosNacionais.includes(mmdd);
-};
+import { isFeriado } from "@/lib/feriados";
 
 const Agenda = () => {
   const [searchParams, setSearchParams] = useSearchParams();
