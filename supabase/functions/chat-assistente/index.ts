@@ -20,24 +20,68 @@ const feriadosFixos = [
   "12-25", // Natal
 ];
 
-// Feriados móveis 2025 (atualizar anualmente)
-const feriadosMoveis2025 = [
-  "2025-03-03", // Carnaval - Segunda
-  "2025-03-04", // Carnaval - Terça
-  "2025-04-18", // Sexta-feira Santa
-  "2025-06-19", // Corpus Christi
-];
+// Função para calcular a Páscoa (algoritmo de Meeus/Jones/Butcher)
+const calcularPascoa = (ano: number): Date => {
+  const a = ano % 19;
+  const b = Math.floor(ano / 100);
+  const c = ano % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31);
+  const dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(ano, mes - 1, dia);
+};
 
-// Verificar se data é feriado
+// Função para calcular feriados móveis de qualquer ano
+const calcularFeriadosMoveis = (ano: number): string[] => {
+  const pascoa = calcularPascoa(ano);
+  const feriadosMoveis: string[] = [];
+  
+  // Carnaval: 47 e 46 dias antes da Páscoa (segunda e terça)
+  const carnavalSeg = new Date(pascoa);
+  carnavalSeg.setDate(pascoa.getDate() - 47);
+  const carnavalSegStr = carnavalSeg.toISOString().split('T')[0];
+  feriadosMoveis.push(carnavalSegStr);
+  
+  const carnavalTer = new Date(pascoa);
+  carnavalTer.setDate(pascoa.getDate() - 46);
+  const carnavalTerStr = carnavalTer.toISOString().split('T')[0];
+  feriadosMoveis.push(carnavalTerStr);
+  
+  // Sexta-feira Santa: 2 dias antes da Páscoa
+  const sextaSanta = new Date(pascoa);
+  sextaSanta.setDate(pascoa.getDate() - 2);
+  const sextaSantaStr = sextaSanta.toISOString().split('T')[0];
+  feriadosMoveis.push(sextaSantaStr);
+  
+  // Corpus Christi: 60 dias após a Páscoa
+  const corpusChristi = new Date(pascoa);
+  corpusChristi.setDate(pascoa.getDate() + 60);
+  const corpusChristiStr = corpusChristi.toISOString().split('T')[0];
+  feriadosMoveis.push(corpusChristiStr);
+  
+  return feriadosMoveis;
+};
+
+// Verificar se data é feriado (fixo ou móvel calculado automaticamente)
 const isFeriado = (dateStr: string): boolean => {
   const [year, month, day] = dateStr.split('-');
   const mmdd = `${month}-${day}`;
+  const ano = parseInt(year);
   
   // Verifica feriados fixos
   if (feriadosFixos.includes(mmdd)) return true;
   
-  // Verifica feriados móveis de 2025
-  if (feriadosMoveis2025.includes(dateStr)) return true;
+  // Calcula e verifica feriados móveis do ano
+  const feriadosMoveis = calcularFeriadosMoveis(ano);
+  if (feriadosMoveis.includes(dateStr)) return true;
   
   return false;
 };
@@ -79,13 +123,13 @@ ${profissionais || 'Nenhum profissional cadastrado no momento'}
 - Os preços e durações devem ser EXATAMENTE como estão na lista
 - Quando coletar as informações, SEMPRE use os IDs que estão entre parênteses (ID: xxx)
 - **PROMOÇÕES E DESCONTOS:** Se perguntarem sobre promoções ou descontos, responda: "No momento não temos nenhuma promoção ou desconto ativo, bunita 💜"
-- **FERIADOS - STUDIO FECHADO EM 2025:** NÃO agende nos seguintes feriados:
+- **FERIADOS - STUDIO FECHADO:** NÃO agende nos seguintes feriados (as datas mudam a cada ano para feriados móveis):
   - 01/01 (Ano Novo)
-  - 03/03 e 04/03 (Carnaval)
-  - 18/04 (Sexta-feira Santa)
+  - Carnaval (segunda e terça-feira - móvel)
+  - Sexta-feira Santa (móvel)
   - 21/04 (Tiradentes)
   - 01/05 (Dia do Trabalho)
-  - 19/06 (Corpus Christi)
+  - Corpus Christi (móvel)
   - 07/09 (Independência)
   - 12/10 (Nossa Senhora Aparecida)
   - 02/11 (Finados)
