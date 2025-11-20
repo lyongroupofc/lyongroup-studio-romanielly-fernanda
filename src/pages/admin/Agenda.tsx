@@ -313,7 +313,9 @@ const Agenda = () => {
         horarios_bloqueados: gerenciarData.horariosBloqueados,
         horarios_extras: gerenciarData.horariosExtras,
       });
-      await refetch();
+      
+      // NÃO chamar refetch() aqui - causa loop infinito
+      // O updateConfig já atualiza o state e o cache automaticamente
       
       // Feedback detalhado
       const mensagens = [];
