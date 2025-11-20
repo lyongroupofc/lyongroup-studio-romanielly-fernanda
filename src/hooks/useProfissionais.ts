@@ -11,30 +11,12 @@ export type Profissional = {
   ativo: boolean;
 };
 
-const CACHE_KEY = 'profissionais_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
-
 export const useProfissionais = () => {
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfissionais = async (forceRefresh = false) => {
+  const fetchProfissionais = async () => {
     try {
-      // Tentar carregar do cache primeiro
-      if (!forceRefresh) {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          const age = Date.now() - timestamp;
-          
-          if (age < CACHE_DURATION) {
-            setProfissionais(data);
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
       const { data, error } = await supabase
         .from("profissionais")
         .select("*")
@@ -42,12 +24,6 @@ export const useProfissionais = () => {
         .order("nome");
 
       if (error) throw error;
-      
-      // Salvar no cache
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-        data: data || [],
-        timestamp: Date.now()
-      }));
       
       setProfissionais(data || []);
     } catch (error) {
@@ -72,9 +48,6 @@ export const useProfissionais = () => {
 
       if (error) throw error;
       
-      // Limpar cache ao adicionar
-      localStorage.removeItem(CACHE_KEY);
-      
       setProfissionais([...profissionais, data]);
       toast.success("Profissional adicionado com sucesso!");
       return data;
@@ -96,9 +69,6 @@ export const useProfissionais = () => {
 
       if (error) throw error;
       
-      // Limpar cache ao atualizar
-      localStorage.removeItem(CACHE_KEY);
-      
       setProfissionais(profissionais.map(p => p.id === id ? data : p));
       toast.success("Profissional atualizado com sucesso!");
       return data;
@@ -117,9 +87,6 @@ export const useProfissionais = () => {
         .eq("id", id);
 
       if (error) throw error;
-      
-      // Limpar cache ao deletar
-      localStorage.removeItem(CACHE_KEY);
       
       setProfissionais(profissionais.filter(p => p.id !== id));
       toast.success("Profissional removido com sucesso!");

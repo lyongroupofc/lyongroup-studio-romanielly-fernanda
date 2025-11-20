@@ -11,30 +11,12 @@ export type Servico = {
   ativo: boolean;
 };
 
-const CACHE_KEY = 'servicos_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
-
 export const useServicos = () => {
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchServicos = async (forceRefresh = false) => {
+  const fetchServicos = async () => {
     try {
-      // Tentar carregar do cache primeiro
-      if (!forceRefresh) {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          const age = Date.now() - timestamp;
-          
-          if (age < CACHE_DURATION) {
-            setServicos(data);
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
       const { data, error } = await supabase
         .from("servicos")
         .select("*")
@@ -42,12 +24,6 @@ export const useServicos = () => {
         .order("nome");
 
       if (error) throw error;
-      
-      // Salvar no cache
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-        data: data || [],
-        timestamp: Date.now()
-      }));
       
       setServicos(data || []);
     } catch (error) {
@@ -72,9 +48,6 @@ export const useServicos = () => {
 
       if (error) throw error;
       
-      // Limpar cache ao adicionar
-      localStorage.removeItem(CACHE_KEY);
-      
       setServicos([...servicos, data]);
       toast.success("Serviço adicionado com sucesso!");
       return data;
@@ -96,9 +69,6 @@ export const useServicos = () => {
 
       if (error) throw error;
       
-      // Limpar cache ao atualizar
-      localStorage.removeItem(CACHE_KEY);
-      
       setServicos(servicos.map(s => s.id === id ? data : s));
       toast.success("Serviço atualizado com sucesso!");
       return data;
@@ -117,9 +87,6 @@ export const useServicos = () => {
         .eq("id", id);
 
       if (error) throw error;
-      
-      // Limpar cache ao deletar
-      localStorage.removeItem(CACHE_KEY);
       
       setServicos(servicos.filter(s => s.id !== id));
       toast.success("Serviço removido com sucesso!");

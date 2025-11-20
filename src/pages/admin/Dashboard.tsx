@@ -15,15 +15,37 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [showTotal, setShowTotal] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const { agendamentos, loading: loadingAgendamentos } = useAgendamentos();
-  const { pagamentos, loading: loadingPagamentos } = usePagamentos();
+  const { agendamentos, loading: loadingAgendamentos, refetch: refetchAgendamentos } = useAgendamentos();
+  const { pagamentos, loading: loadingPagamentos, refetch: refetchPagamentos } = usePagamentos();
 
+  // Timer usando requestAnimationFrame para melhor performance
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
+    let animationFrameId: number;
+    let lastUpdate = Date.now();
+
+    const updateTime = () => {
+      const now = Date.now();
+      // Atualizar apenas a cada segundo
+      if (now - lastUpdate >= 1000) {
+        setCurrentTime(new Date());
+        lastUpdate = now;
+      }
+      animationFrameId = requestAnimationFrame(updateTime);
+    };
+
+    animationFrameId = requestAnimationFrame(updateTime);
+    return () => cancelAnimationFrame(animationFrameId);
   }, []);
+
+  // Polling a cada 30 segundos para atualizar dados
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchAgendamentos();
+      refetchPagamentos();
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, [refetchAgendamentos, refetchPagamentos]);
 
   const getGreeting = () => {
     const hour = currentTime.getHours();

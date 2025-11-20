@@ -31,10 +31,25 @@ const Agenda = () => {
   const [selectedAgendamento, setSelectedAgendamento] = useState<Agendamento | null>(null);
   const [highlightedAgendamento, setHighlightedAgendamento] = useState<string | null>(null);
 
-  const { agendamentos, loading: loadingAgendamentos, addAgendamento, updateAgendamento, deleteAgendamento, cancelAgendamento } = useAgendamentos();
-  const { configs, getConfig, updateConfig, refetch } = useAgendaConfig();
-  const { servicos, loading: loadingServicos } = useServicos();
-  const { profissionais, loading: loadingProfissionais } = useProfissionais();
+  const { agendamentos, loading: loadingAgendamentos, addAgendamento, updateAgendamento, deleteAgendamento, cancelAgendamento, refetch: refetchAgendamentos } = useAgendamentos();
+  const { configs, getConfig, updateConfig, refetch: refetchConfig } = useAgendaConfig();
+  const { servicos, loading: loadingServicos, refetch: refetchServicos } = useServicos();
+  const { profissionais, loading: loadingProfissionais, refetch: refetchProfissionais } = useProfissionais();
+
+  // Refetch quando a página ganha foco
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        refetchAgendamentos();
+        refetchConfig();
+        refetchServicos();
+        refetchProfissionais();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [refetchAgendamentos, refetchConfig, refetchServicos, refetchProfissionais]);
 
   // Processar parâmetros de query para notificações
   useEffect(() => {
