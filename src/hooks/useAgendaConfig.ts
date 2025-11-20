@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -15,8 +15,53 @@ export const useAgendaConfig = () => {
   const [configs, setConfigs] = useState<Record<string, AgendaConfig>>({});
   const [loading, setLoading] = useState(false);
   const isFetchingRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  const fetchConfigs = useCallback(async () => {
+  useEffect(() => {
+    const fetchConfigs = async () => {
+      if (isFetchingRef.current || !mountedRef.current) return;
+      isFetchingRef.current = true;
+      
+      try {
+        setLoading(true);
+
+        const { data, error } = await supabase
+          .from("agenda_config")
+          .select("id, data, fechado, horarios_bloqueados, horarios_extras, observacoes");
+
+        if (error) {
+          console.error("Erro ao carregar configurações:", error);
+          if (mountedRef.current) setConfigs({});
+          return;
+        }
+        
+        const configMap: Record<string, AgendaConfig> = {};
+        data?.forEach(config => {
+          configMap[config.data] = {
+            ...config,
+            horarios_bloqueados: config.horarios_bloqueados || [],
+            horarios_extras: config.horarios_extras || []
+          };
+        });
+        
+        if (mountedRef.current) setConfigs(configMap);
+      } catch (error) {
+        console.error("Erro ao carregar configurações:", error);
+        if (mountedRef.current) setConfigs({});
+      } finally {
+        if (mountedRef.current) setLoading(false);
+        isFetchingRef.current = false;
+      }
+    };
+
+    fetchConfigs();
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const refetch = async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     
@@ -50,11 +95,7 @@ export const useAgendaConfig = () => {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, []);
-
-  useEffect(() => {
-    fetchConfigs();
-  }, [fetchConfigs]);
+  };
 
   const getConfig = (data: string): AgendaConfig | null => {
     return configs[data] || null;
@@ -95,5 +136,5 @@ export const useAgendaConfig = () => {
     }
   };
 
-  return { configs, loading, getConfig, updateConfig, refetch: fetchConfigs };
+  return { configs, loading, getConfig, updateConfig, refetch };
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -18,8 +18,51 @@ export const usePagamentos = () => {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [loading, setLoading] = useState(false);
   const isFetchingRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  const fetchPagamentos = useCallback(async () => {
+  useEffect(() => {
+    const fetchPagamentos = async () => {
+      if (isFetchingRef.current || !mountedRef.current) return;
+      isFetchingRef.current = true;
+      
+      try {
+        setLoading(true);
+        
+        const dataLimite = new Date();
+        dataLimite.setDate(dataLimite.getDate() - 30);
+        const dataLimiteStr = dataLimite.toISOString().split('T')[0];
+
+        const { data, error } = await supabase
+          .from("pagamentos")
+          .select("id, agendamento_id, cliente_nome, servico, valor, metodo_pagamento, status, data, created_at")
+          .gte("data", dataLimiteStr)
+          .order("data", { ascending: false })
+          .limit(200);
+
+        if (error) {
+          console.error("Erro ao buscar pagamentos:", error);
+          if (mountedRef.current) setPagamentos([]);
+          return;
+        }
+        
+        if (mountedRef.current) setPagamentos(data || []);
+      } catch (error) {
+        console.error("Erro ao buscar pagamentos:", error);
+        if (mountedRef.current) setPagamentos([]);
+      } finally {
+        if (mountedRef.current) setLoading(false);
+        isFetchingRef.current = false;
+      }
+    };
+
+    fetchPagamentos();
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const refetch = async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     
@@ -51,11 +94,7 @@ export const usePagamentos = () => {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, []);
-
-  useEffect(() => {
-    fetchPagamentos();
-  }, [fetchPagamentos]);
+  };
 
   const addPagamento = async (pagamento: Omit<Pagamento, "id" | "created_at">) => {
     try {
@@ -121,6 +160,6 @@ export const usePagamentos = () => {
     addPagamento,
     updatePagamento,
     deletePagamento,
-    refetch: fetchPagamentos,
+    refetch,
   };
 };
