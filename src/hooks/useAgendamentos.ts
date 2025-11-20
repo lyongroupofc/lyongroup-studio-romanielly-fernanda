@@ -2,6 +2,36 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Cache para otimizar performance (2 minutos - dados mudam frequentemente)
+const CACHE_KEY = 'agendamentos_cache';
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutos
+
+const getCachedData = () => {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        return data;
+      }
+    }
+  } catch (e) {
+    console.error('Erro ao ler cache:', e);
+  }
+  return null;
+};
+
+const setCachedData = (data: any) => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (e) {
+    console.error('Erro ao salvar cache:', e);
+  }
+};
+
 export type Agendamento = {
   id: string;
   data: string;
@@ -20,8 +50,18 @@ export const useAgendamentos = () => {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchAgendamentos = async () => {
+  const fetchAgendamentos = async (forceRefresh = false) => {
     try {
+      // Tentar usar cache primeiro
+      if (!forceRefresh) {
+        const cached = getCachedData();
+        if (cached) {
+          setAgendamentos(cached);
+          setLoading(false);
+          return;
+        }
+      }
+
       // Buscar apenas agendamentos dos últimos 30 dias para melhor performance
       const dataLimite = new Date();
       dataLimite.setDate(dataLimite.getDate() - 30);
@@ -36,7 +76,10 @@ export const useAgendamentos = () => {
         .limit(200);
 
       if (error) throw error;
-      setAgendamentos(data || []);
+      
+      const agendamentosData = data || [];
+      setAgendamentos(agendamentosData);
+      setCachedData(agendamentosData);
     } catch (error) {
       console.error("Erro ao carregar agendamentos:", error);
       toast.error("Erro ao carregar agendamentos");
@@ -80,7 +123,11 @@ export const useAgendamentos = () => {
         .single();
 
       if (error) throw error;
-      setAgendamentos([...agendamentos, data]);
+      
+      const novosAgendamentos = [...agendamentos, data];
+      setAgendamentos(novosAgendamentos);
+      setCachedData(novosAgendamentos); // Atualizar cache
+      
       toast.success("Agendamento criado com sucesso!", {
         position: "top-center",
         duration: 3000,
@@ -107,7 +154,11 @@ export const useAgendamentos = () => {
         .single();
 
       if (error) throw error;
-      setAgendamentos(agendamentos.map(a => a.id === id ? data : a));
+      
+      const agendamentosAtualizados = agendamentos.map(a => a.id === id ? data : a);
+      setAgendamentos(agendamentosAtualizados);
+      setCachedData(agendamentosAtualizados); // Atualizar cache
+      
       toast.success("Agendamento atualizado!");
       return data;
     } catch (error) {
@@ -127,7 +178,11 @@ export const useAgendamentos = () => {
         .single();
 
       if (error) throw error;
-      setAgendamentos(agendamentos.map(a => a.id === id ? data : a));
+      
+      const agendamentosAtualizados = agendamentos.map(a => a.id === id ? data : a);
+      setAgendamentos(agendamentosAtualizados);
+      setCachedData(agendamentosAtualizados); // Atualizar cache
+      
       toast.success("Agendamento cancelado!");
       return data;
     } catch (error) {
@@ -145,7 +200,11 @@ export const useAgendamentos = () => {
         .eq("id", id);
 
       if (error) throw error;
-      setAgendamentos(agendamentos.filter(a => a.id !== id));
+      
+      const agendamentosFiltrados = agendamentos.filter(a => a.id !== id);
+      setAgendamentos(agendamentosFiltrados);
+      setCachedData(agendamentosFiltrados); // Atualizar cache
+      
       toast.success("Agendamento removido!");
     } catch (error) {
       console.error("Erro ao remover agendamento:", error);
