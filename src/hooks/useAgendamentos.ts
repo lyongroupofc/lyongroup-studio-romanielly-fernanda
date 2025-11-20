@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -20,8 +20,52 @@ export const useAgendamentos = () => {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(false);
   const isFetchingRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  const fetchAgendamentos = useCallback(async () => {
+  useEffect(() => {
+    const fetchAgendamentos = async () => {
+      if (isFetchingRef.current || !mountedRef.current) return;
+      isFetchingRef.current = true;
+      
+      try {
+        setLoading(true);
+        
+        const dataLimite = new Date();
+        dataLimite.setDate(dataLimite.getDate() - 30);
+        const dataLimiteStr = dataLimite.toISOString().split('T')[0];
+
+        const { data, error } = await supabase
+          .from("agendamentos")
+          .select("id, data, horario, cliente_nome, cliente_telefone, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes")
+          .gte("data", dataLimiteStr)
+          .order("data", { ascending: false })
+          .order("horario", { ascending: true })
+          .limit(200);
+
+        if (error) {
+          console.error("Erro ao carregar agendamentos:", error);
+          if (mountedRef.current) setAgendamentos([]);
+          return;
+        }
+        
+        if (mountedRef.current) setAgendamentos(data || []);
+      } catch (error) {
+        console.error("Erro ao carregar agendamentos:", error);
+        if (mountedRef.current) setAgendamentos([]);
+      } finally {
+        if (mountedRef.current) setLoading(false);
+        isFetchingRef.current = false;
+      }
+    };
+
+    fetchAgendamentos();
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const refetch = async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     
@@ -54,11 +98,7 @@ export const useAgendamentos = () => {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, []);
-
-  useEffect(() => {
-    fetchAgendamentos();
-  }, [fetchAgendamentos]);
+  };
 
   const addAgendamento = async (agendamento: Omit<Agendamento, "id">) => {
     try {
@@ -162,6 +202,6 @@ export const useAgendamentos = () => {
     cancelAgendamento,
     deleteAgendamento,
     getAgendamentosByData,
-    refetch: fetchAgendamentos,
+    refetch,
   };
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -15,8 +15,42 @@ export const useServicos = () => {
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(false);
   const isFetchingRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  const fetchServicos = useCallback(async () => {
+  useEffect(() => {
+    const fetchServicos = async () => {
+      if (isFetchingRef.current || !mountedRef.current) return;
+      isFetchingRef.current = true;
+      
+      try {
+        setLoading(true);
+        
+        const { data, error } = await supabase
+          .from("servicos")
+          .select("*")
+          .eq("ativo", true)
+          .order("nome");
+
+        if (error) throw error;
+        
+        if (mountedRef.current) setServicos(data || []);
+      } catch (error) {
+        console.error("Erro ao carregar serviços:", error);
+        toast.error("Erro ao carregar serviços");
+      } finally {
+        if (mountedRef.current) setLoading(false);
+        isFetchingRef.current = false;
+      }
+    };
+
+    fetchServicos();
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const refetch = async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     
@@ -39,11 +73,7 @@ export const useServicos = () => {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, []);
-
-  useEffect(() => {
-    fetchServicos();
-  }, [fetchServicos]);
+  };
 
   const addServico = async (servico: Omit<Servico, "id" | "ativo">) => {
     try {
@@ -104,5 +134,5 @@ export const useServicos = () => {
     }
   };
 
-  return { servicos, loading, addServico, updateServico, deleteServico, refetch: fetchServicos };
+  return { servicos, loading, addServico, updateServico, deleteServico, refetch };
 };

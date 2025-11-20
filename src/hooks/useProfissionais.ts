@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -15,8 +15,42 @@ export const useProfissionais = () => {
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [loading, setLoading] = useState(false);
   const isFetchingRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  const fetchProfissionais = useCallback(async () => {
+  useEffect(() => {
+    const fetchProfissionais = async () => {
+      if (isFetchingRef.current || !mountedRef.current) return;
+      isFetchingRef.current = true;
+      
+      try {
+        setLoading(true);
+        
+        const { data, error } = await supabase
+          .from("profissionais")
+          .select("*")
+          .eq("ativo", true)
+          .order("nome");
+
+        if (error) throw error;
+        
+        if (mountedRef.current) setProfissionais(data || []);
+      } catch (error) {
+        console.error("Erro ao carregar profissionais:", error);
+        toast.error("Erro ao carregar profissionais");
+      } finally {
+        if (mountedRef.current) setLoading(false);
+        isFetchingRef.current = false;
+      }
+    };
+
+    fetchProfissionais();
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const refetch = async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     
@@ -39,11 +73,7 @@ export const useProfissionais = () => {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, []);
-
-  useEffect(() => {
-    fetchProfissionais();
-  }, [fetchProfissionais]);
+  };
 
   const addProfissional = async (profissional: Omit<Profissional, "id" | "ativo">) => {
     try {
@@ -104,5 +134,5 @@ export const useProfissionais = () => {
     }
   };
 
-  return { profissionais, loading, addProfissional, updateProfissional, deleteProfissional, refetch: fetchProfissionais };
+  return { profissionais, loading, addProfissional, updateProfissional, deleteProfissional, refetch };
 };
