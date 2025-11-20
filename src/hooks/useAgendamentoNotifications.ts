@@ -24,16 +24,25 @@ export const useAgendamentoNotifications = () => {
   // Polling para verificar novos agendamentos a cada 60 segundos
   useEffect(() => {
     let lastCheckTime = new Date();
+    let isChecking = false;
 
     const checkNewAppointments = async () => {
+      // Evitar múltiplas chamadas simultâneas
+      if (isChecking || document.hidden) return;
+      
+      isChecking = true;
       try {
         const { data, error } = await supabase
           .from("agendamentos")
           .select("*")
           .gte("created_at", lastCheckTime.toISOString())
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(10);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Erro ao verificar novos agendamentos:", error);
+          return;
+        }
 
         if (data && data.length > 0) {
           // Adicionar novas notificações
@@ -55,6 +64,8 @@ export const useAgendamentoNotifications = () => {
         }
       } catch (error) {
         console.error("Erro ao verificar novos agendamentos:", error);
+      } finally {
+        isChecking = false;
       }
     };
 
