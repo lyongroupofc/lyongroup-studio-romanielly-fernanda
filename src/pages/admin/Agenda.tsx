@@ -224,9 +224,9 @@ const Agenda = () => {
   };
 
   const modifiers = useMemo(() => ({
-    disponivel: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && !isDayFull(d) && !isFeriado(d),
-    fechado: (d: Date) => !isBefore(d, startOfToday()) && getDayData(d).fechado && !isFeriado(d),
-    cheio: (d: Date) => !isBefore(d, startOfToday()) && !getDayData(d).fechado && isDayFull(d) && !isFeriado(d),
+    disponivel: (d: Date) => !getDayData(d).fechado && !isDayFull(d) && !isFeriado(d),
+    fechado: (d: Date) => getDayData(d).fechado && !isFeriado(d),
+    cheio: (d: Date) => !getDayData(d).fechado && isDayFull(d) && !isFeriado(d),
     past: (d: Date) => isBefore(d, startOfToday()) && !isFeriado(d),
     feriado: (d: Date) => isFeriado(d),
   }), [configs, agendamentos]);
@@ -242,17 +242,8 @@ const Agenda = () => {
   const handleDayClick = useCallback((day: Date | undefined) => {
     if (!day) return;
     setSelectedDate(day);
-
-    if (isBefore(day, startOfToday())) {
-      const agendamentosPassados = agendamentos.filter((a) => a.data === fmtKey(day));
-      if (agendamentosPassados.length > 0) {
-        setOpenDetalhesDialog(true);
-      }
-      return;
-    }
-
     setOpenSideSheet(true);
-  }, [agendamentos]);
+  }, []);
 
   const handleReservar = useCallback(() => {
     setOpenSideSheet(false);
