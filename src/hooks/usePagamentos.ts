@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -16,13 +16,16 @@ export type Pagamento = {
 
 export const usePagamentos = () => {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const isFetchingRef = useRef(false);
 
-  const fetchPagamentos = async () => {
+  const fetchPagamentos = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    
     try {
       setLoading(true);
       
-      // Buscar apenas pagamentos dos últimos 30 dias para melhor performance
       const dataLimite = new Date();
       dataLimite.setDate(dataLimite.getDate() - 30);
       const dataLimiteStr = dataLimite.toISOString().split('T')[0];
@@ -46,12 +49,13 @@ export const usePagamentos = () => {
       setPagamentos([]);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchPagamentos();
-  }, []);
+  }, [fetchPagamentos]);
 
   const addPagamento = async (pagamento: Omit<Pagamento, "id" | "created_at">) => {
     try {

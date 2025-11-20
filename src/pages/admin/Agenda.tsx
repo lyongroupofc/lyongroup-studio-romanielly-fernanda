@@ -36,20 +36,19 @@ const Agenda = () => {
   const { servicos, loading: loadingServicos, refetch: refetchServicos } = useServicos();
   const { profissionais, loading: loadingProfissionais, refetch: refetchProfissionais } = useProfissionais();
 
-  // Refetch quando a página ganha foco (sem dependências para evitar loops)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        refetchAgendamentos();
-        refetchConfig();
-        refetchServicos();
-        refetchProfissionais();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Desabilitado refetch automático para evitar loops
+  // useEffect(() => {
+  //   const handleVisibilityChange = () => {
+  //     if (!document.hidden) {
+  //       refetchAgendamentos();
+  //       refetchConfig();
+  //       refetchServicos();
+  //       refetchProfissionais();
+  //     }
+  //   };
+  //   document.addEventListener('visibilitychange', handleVisibilityChange);
+  //   return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  // }, []);
 
   // Processar parâmetros de query para notificações
   useEffect(() => {

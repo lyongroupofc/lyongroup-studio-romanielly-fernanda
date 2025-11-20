@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -18,20 +18,16 @@ export type Agendamento = {
 
 export const useAgendamentos = () => {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const isFetchingRef = useRef(false);
 
-  // Limpar caches antigos que podem estar causando problemas
-  useEffect(() => {
-    localStorage.removeItem('agendamentos_cache');
-    localStorage.removeItem('pagamentos_cache');
-    localStorage.removeItem('agenda_config_cache');
-  }, []);
-
-  const fetchAgendamentos = async () => {
+  const fetchAgendamentos = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    
     try {
       setLoading(true);
       
-      // Buscar apenas agendamentos dos últimos 30 dias para melhor performance
       const dataLimite = new Date();
       dataLimite.setDate(dataLimite.getDate() - 30);
       const dataLimiteStr = dataLimite.toISOString().split('T')[0];
@@ -56,12 +52,13 @@ export const useAgendamentos = () => {
       setAgendamentos([]);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAgendamentos();
-  }, []);
+  }, [fetchAgendamentos]);
 
   const addAgendamento = async (agendamento: Omit<Agendamento, "id">) => {
     try {
@@ -145,17 +142,16 @@ export const useAgendamentos = () => {
       if (error) throw error;
       
       setAgendamentos(agendamentos.filter(a => a.id !== id));
-      
       toast.success("Agendamento removido!");
     } catch (error) {
-      console.error("Erro ao remover agendamento:", error);
-      toast.error("Erro ao remover agendamento");
+      console.error("Erro ao deletar agendamento:", error);
+      toast.error("Erro ao deletar agendamento");
       throw error;
     }
   };
 
   const getAgendamentosByData = (data: string) => {
-    return agendamentos.filter(a => a.data === data);
+    return agendamentos.filter((ag) => ag.data === data);
   };
 
   return {
@@ -163,9 +159,9 @@ export const useAgendamentos = () => {
     loading,
     addAgendamento,
     updateAgendamento,
-    deleteAgendamento,
     cancelAgendamento,
+    deleteAgendamento,
     getAgendamentosByData,
-    refetch: fetchAgendamentos
+    refetch: fetchAgendamentos,
   };
 };
