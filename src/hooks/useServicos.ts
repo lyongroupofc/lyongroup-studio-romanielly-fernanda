@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -13,10 +13,16 @@ export type Servico = {
 
 export const useServicos = () => {
   const [servicos, setServicos] = useState<Servico[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const isFetchingRef = useRef(false);
 
-  const fetchServicos = async () => {
+  const fetchServicos = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    
     try {
+      setLoading(true);
+      
       const { data, error } = await supabase
         .from("servicos")
         .select("*")
@@ -31,12 +37,13 @@ export const useServicos = () => {
       toast.error("Erro ao carregar serviços");
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchServicos();
-  }, []);
+  }, [fetchServicos]);
 
   const addServico = async (servico: Omit<Servico, "id" | "ativo">) => {
     try {

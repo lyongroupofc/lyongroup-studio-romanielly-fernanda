@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -13,10 +13,16 @@ export type Profissional = {
 
 export const useProfissionais = () => {
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const isFetchingRef = useRef(false);
 
-  const fetchProfissionais = async () => {
+  const fetchProfissionais = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    
     try {
+      setLoading(true);
+      
       const { data, error } = await supabase
         .from("profissionais")
         .select("*")
@@ -31,12 +37,13 @@ export const useProfissionais = () => {
       toast.error("Erro ao carregar profissionais");
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchProfissionais();
-  }, []);
+  }, [fetchProfissionais]);
 
   const addProfissional = async (profissional: Omit<Profissional, "id" | "ativo">) => {
     try {

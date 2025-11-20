@@ -21,58 +21,45 @@ export const useAgendamentoNotifications = () => {
     audio.play().catch(err => console.log('Não foi possível tocar o som:', err));
   }, []);
 
-  // Polling para verificar novos agendamentos a cada 60 segundos
-  useEffect(() => {
-    let lastCheckTime = new Date();
-    let isChecking = false;
-
-    const checkNewAppointments = async () => {
-      // Evitar múltiplas chamadas simultâneas
-      if (isChecking || document.hidden) return;
-      
-      isChecking = true;
-      try {
-        const { data, error } = await supabase
-          .from("agendamentos")
-          .select("*")
-          .gte("created_at", lastCheckTime.toISOString())
-          .order("created_at", { ascending: false })
-          .limit(10);
-
-        if (error) {
-          console.error("Erro ao verificar novos agendamentos:", error);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          // Adicionar novas notificações
-          const newNotifications = data.map(agendamento => ({
-            id: agendamento.id,
-            agendamento: agendamento as Agendamento,
-            timestamp: new Date(),
-            read: false
-          }));
-
-          setNotifications(prev => [...newNotifications, ...prev]);
-          setUnreadCount(prev => prev + newNotifications.length);
-          
-          // Tocar som apenas uma vez
-          playNotificationSound();
-          
-          // Atualizar timestamp
-          lastCheckTime = new Date();
-        }
-      } catch (error) {
-        console.error("Erro ao verificar novos agendamentos:", error);
-      } finally {
-        isChecking = false;
-      }
-    };
-
-    const interval = setInterval(checkNewAppointments, 60000); // 60 segundos
-
-    return () => clearInterval(interval);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Desabilitado polling de notificações para evitar sobrecarga
+  // useEffect(() => {
+  //   let lastCheckTime = new Date();
+  //   let isChecking = false;
+  //   const checkNewAppointments = async () => {
+  //     if (isChecking || document.hidden) return;
+  //     isChecking = true;
+  //     try {
+  //       const { data, error } = await supabase
+  //         .from("agendamentos")
+  //         .select("*")
+  //         .gte("created_at", lastCheckTime.toISOString())
+  //         .order("created_at", { ascending: false })
+  //         .limit(10);
+  //       if (error) {
+  //         console.error("Erro ao verificar novos agendamentos:", error);
+  //         return;
+  //       }
+  //       if (data && data.length > 0) {
+  //         const newNotifications = data.map(agendamento => ({
+  //           id: agendamento.id,
+  //           agendamento: agendamento as Agendamento,
+  //           timestamp: new Date(),
+  //           read: false
+  //         }));
+  //         setNotifications(prev => [...newNotifications, ...prev]);
+  //         setUnreadCount(prev => prev + newNotifications.length);
+  //         playNotificationSound();
+  //         lastCheckTime = new Date();
+  //       }
+  //     } catch (error) {
+  //       console.error("Erro ao verificar novos agendamentos:", error);
+  //     } finally {
+  //       isChecking = false;
+  //     }
+  //   };
+  //   const interval = setInterval(checkNewAppointments, 60000);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   const markAsRead = useCallback((notificationId: string) => {
     setNotifications(prev =>

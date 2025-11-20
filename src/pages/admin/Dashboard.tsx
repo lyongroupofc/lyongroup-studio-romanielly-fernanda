@@ -37,17 +37,16 @@ const Dashboard = () => {
     return () => cancelAnimationFrame(animationFrameId);
   }, []);
 
-  // Polling a cada 30 segundos para atualizar dados (sem dependências para evitar loops)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!document.hidden) {
-        refetchAgendamentos();
-        refetchPagamentos();
-      }
-    }, 30000); // 30 segundos
-
-    return () => clearInterval(interval);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Desabilitado polling automático para evitar sobrecarga
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     if (!document.hidden) {
+  //       refetchAgendamentos();
+  //       refetchPagamentos();
+  //     }
+  //   }, 30000);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
