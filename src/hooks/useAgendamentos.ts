@@ -19,14 +19,9 @@ export type Agendamento = {
 export const useAgendamentos = () => {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(false);
-  const isFetchingRef = useRef(false);
-  const mountedRef = useRef(true);
 
   useEffect(() => {
     const fetchAgendamentos = async () => {
-      if (isFetchingRef.current || !mountedRef.current) return;
-      isFetchingRef.current = true;
-      
       try {
         setLoading(true);
         
@@ -44,31 +39,23 @@ export const useAgendamentos = () => {
 
         if (error) {
           console.error("Erro ao carregar agendamentos:", error);
-          if (mountedRef.current) setAgendamentos([]);
+          setAgendamentos([]);
           return;
         }
         
-        if (mountedRef.current) setAgendamentos(data || []);
+        setAgendamentos(data || []);
       } catch (error) {
         console.error("Erro ao carregar agendamentos:", error);
-        if (mountedRef.current) setAgendamentos([]);
+        setAgendamentos([]);
       } finally {
-        if (mountedRef.current) setLoading(false);
-        isFetchingRef.current = false;
+        setLoading(false);
       }
     };
 
     fetchAgendamentos();
-
-    return () => {
-      mountedRef.current = false;
-    };
   }, []);
 
   const refetch = async () => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
-    
     try {
       setLoading(true);
       
@@ -96,7 +83,6 @@ export const useAgendamentos = () => {
       setAgendamentos([]);
     } finally {
       setLoading(false);
-      isFetchingRef.current = false;
     }
   };
 

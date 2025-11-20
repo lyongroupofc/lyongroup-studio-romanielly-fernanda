@@ -17,14 +17,9 @@ export type Pagamento = {
 export const usePagamentos = () => {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [loading, setLoading] = useState(false);
-  const isFetchingRef = useRef(false);
-  const mountedRef = useRef(true);
 
   useEffect(() => {
     const fetchPagamentos = async () => {
-      if (isFetchingRef.current || !mountedRef.current) return;
-      isFetchingRef.current = true;
-      
       try {
         setLoading(true);
         
@@ -41,31 +36,23 @@ export const usePagamentos = () => {
 
         if (error) {
           console.error("Erro ao buscar pagamentos:", error);
-          if (mountedRef.current) setPagamentos([]);
+          setPagamentos([]);
           return;
         }
         
-        if (mountedRef.current) setPagamentos(data || []);
+        setPagamentos(data || []);
       } catch (error) {
         console.error("Erro ao buscar pagamentos:", error);
-        if (mountedRef.current) setPagamentos([]);
+        setPagamentos([]);
       } finally {
-        if (mountedRef.current) setLoading(false);
-        isFetchingRef.current = false;
+        setLoading(false);
       }
     };
 
     fetchPagamentos();
-
-    return () => {
-      mountedRef.current = false;
-    };
   }, []);
 
   const refetch = async () => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
-    
     try {
       setLoading(true);
       
@@ -92,7 +79,6 @@ export const usePagamentos = () => {
       setPagamentos([]);
     } finally {
       setLoading(false);
-      isFetchingRef.current = false;
     }
   };
 
