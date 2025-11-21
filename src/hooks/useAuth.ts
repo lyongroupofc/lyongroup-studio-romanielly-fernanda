@@ -13,6 +13,7 @@ export const useAuth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('[useAuth] useEffect executado');
     let isMounted = true;
     let isInitialized = false;
     
@@ -39,7 +40,11 @@ export const useAuth = () => {
 
     // Verificar sessão existente uma única vez
     const initAuth = async () => {
-      if (isInitialized) return;
+      if (isInitialized) {
+        console.log('[useAuth] Bloqueado - já inicializado');
+        return;
+      }
+      console.log('[useAuth] Inicializando autenticação...');
       isInitialized = true;
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -93,6 +98,7 @@ export const useAuth = () => {
     initAuth();
 
     return () => {
+      console.log('[useAuth] Cleanup executado');
       isMounted = false;
       subscription.unsubscribe();
     };

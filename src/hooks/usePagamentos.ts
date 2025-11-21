@@ -23,9 +23,15 @@ export const usePagamentos = () => {
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    if (isFetchingRef.current) return;
+    console.log('[usePagamentos] useEffect executado. isFetchingRef:', isFetchingRef.current);
+    
+    if (isFetchingRef.current) {
+      console.log('[usePagamentos] Bloqueado - já está buscando dados');
+      return;
+    }
     
     const fetchPagamentos = async () => {
+      console.log('[usePagamentos] Iniciando fetch de dados...');
       isFetchingRef.current = true;
       try {
         setLoading(true);
@@ -75,6 +81,7 @@ export const usePagamentos = () => {
     fetchPagamentos();
 
     return () => {
+      console.log('[usePagamentos] Cleanup executado - resetando isFetchingRef');
       isFetchingRef.current = false;
     };
   }, []);

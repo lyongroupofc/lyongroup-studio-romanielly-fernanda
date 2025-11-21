@@ -22,9 +22,15 @@ export const useAgendamentos = () => {
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    if (isFetchingRef.current) return;
+    console.log('[useAgendamentos] useEffect executado. isFetchingRef:', isFetchingRef.current);
+    
+    if (isFetchingRef.current) {
+      console.log('[useAgendamentos] Bloqueado - já está buscando dados');
+      return;
+    }
     
     const fetchAgendamentos = async () => {
+      console.log('[useAgendamentos] Iniciando fetch de dados...');
       isFetchingRef.current = true;
       try {
         setLoading(true);
@@ -58,6 +64,7 @@ export const useAgendamentos = () => {
     fetchAgendamentos();
 
     return () => {
+      console.log('[useAgendamentos] Cleanup executado - resetando isFetchingRef');
       isFetchingRef.current = false;
     };
   }, []);
