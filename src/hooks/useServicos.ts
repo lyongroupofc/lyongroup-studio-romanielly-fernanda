@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -17,13 +17,8 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
 export const useServicos = () => {
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(false);
-  const isMountedRef = useRef(false);
 
   useEffect(() => {
-    // Prevenir execução duplicada
-    if (isMountedRef.current) return;
-    isMountedRef.current = true;
-
     const fetchServicos = async () => {
       try {
         setLoading(true);
@@ -63,10 +58,6 @@ export const useServicos = () => {
     };
 
     fetchServicos();
-
-    return () => {
-      isMountedRef.current = false;
-    };
   }, []);
 
   const refetch = async () => {

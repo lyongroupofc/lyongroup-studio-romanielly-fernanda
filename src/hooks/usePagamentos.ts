@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -20,13 +20,8 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
 export const usePagamentos = () => {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [loading, setLoading] = useState(false);
-  const isMountedRef = useRef(false);
 
   useEffect(() => {
-    // Prevenir execução duplicada
-    if (isMountedRef.current) return;
-    isMountedRef.current = true;
-
     const fetchPagamentos = async () => {
       try {
         setLoading(true);
@@ -74,10 +69,6 @@ export const usePagamentos = () => {
     };
 
     fetchPagamentos();
-
-    return () => {
-      isMountedRef.current = false;
-    };
   }, []);
 
   const refetch = async () => {
