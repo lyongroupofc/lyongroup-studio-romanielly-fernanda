@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -25,6 +25,7 @@ export const useBotConversas = () => {
   const [mensagens, setMensagens] = useState<Record<string, BotMensagem[]>>({});
   const [loading, setLoading] = useState(true);
   const [conversaSelecionada, setConversaSelecionada] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false);
 
   const fetchConversas = async () => {
     try {
@@ -63,6 +64,10 @@ export const useBotConversas = () => {
   };
 
   useEffect(() => {
+    // Prevent multiple executions on reload
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     fetchConversas();
 
     // Realtime para novas conversas

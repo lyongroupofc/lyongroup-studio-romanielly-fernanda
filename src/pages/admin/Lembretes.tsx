@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -24,10 +24,19 @@ const Lembretes = () => {
   const [lembretes, setLembretes] = useState<LembreteEnviado[]>([]);
   const [lembretesAtivos, setLembretesAtivos] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
-    fetchConfig();
-    fetchLembretes();
+    // Prevent multiple executions on reload
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
+    const initPage = async () => {
+      await fetchConfig();
+      await fetchLembretes();
+    };
+
+    initPage();
   }, []);
 
   const fetchConfig = async () => {

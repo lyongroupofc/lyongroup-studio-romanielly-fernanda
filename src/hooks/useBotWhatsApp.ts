@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -18,6 +18,7 @@ export const useBotWhatsApp = () => {
     agendamentos_bot: 0,
     mensagens_hoje: 0,
   });
+  const hasFetchedRef = useRef(false);
 
   const fetchStatus = async () => {
     try {
@@ -84,6 +85,10 @@ export const useBotWhatsApp = () => {
   };
 
   useEffect(() => {
+    // Prevent multiple executions on reload
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     const init = async () => {
       await Promise.all([fetchStatus(), fetchConfig(), fetchEstatisticas()]);
       setLoading(false);
