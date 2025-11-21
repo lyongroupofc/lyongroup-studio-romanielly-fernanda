@@ -20,9 +20,16 @@ export const useProfissionais = () => {
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    if (isFetchingRef.current) return;
+    const lockKey = 'profissionais_fetching';
+    
+    // Verificar se já está buscando (persiste entre reloads)
+    if (sessionStorage.getItem(lockKey) === 'true') {
+      return;
+    }
     
     const fetchProfissionais = async () => {
+      // Marcar como "em andamento" no sessionStorage
+      sessionStorage.setItem(lockKey, 'true');
       isFetchingRef.current = true;
       try {
         setLoading(true);
@@ -58,6 +65,8 @@ export const useProfissionais = () => {
         toast.error("Erro ao carregar profissionais");
       } finally {
         setLoading(false);
+        // Liberar o lock após 2 segundos (segurança)
+        setTimeout(() => sessionStorage.removeItem(lockKey), 2000);
       }
     };
 
@@ -65,6 +74,7 @@ export const useProfissionais = () => {
 
     return () => {
       isFetchingRef.current = false;
+      sessionStorage.removeItem(lockKey);
     };
   }, []);
 
