@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -17,20 +17,9 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
 export const useServicos = () => {
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(false);
-  const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    const lockKey = 'servicos_fetching';
-    
-    // Verificar se já está buscando (persiste entre reloads)
-    if (sessionStorage.getItem(lockKey) === 'true') {
-      return;
-    }
-    
     const fetchServicos = async () => {
-      // Marcar como "em andamento" no sessionStorage
-      sessionStorage.setItem(lockKey, 'true');
-      isFetchingRef.current = true;
       try {
         setLoading(true);
         
@@ -65,17 +54,10 @@ export const useServicos = () => {
         toast.error("Erro ao carregar serviços");
       } finally {
         setLoading(false);
-        // Liberar o lock após 2 segundos (segurança)
-        setTimeout(() => sessionStorage.removeItem(lockKey), 2000);
       }
     };
 
     fetchServicos();
-
-    return () => {
-      isFetchingRef.current = false;
-      sessionStorage.removeItem(lockKey);
-    };
   }, []);
 
   const refetch = async () => {
