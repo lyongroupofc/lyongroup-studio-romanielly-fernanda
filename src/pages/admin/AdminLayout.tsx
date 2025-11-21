@@ -12,7 +12,7 @@ import {
   Sparkle,
   Bell,
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { NavLink } from "@/components/NavLink";
 import { format } from "date-fns";
 import {

@@ -1,22 +1,32 @@
-import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 
 export type UserRole = 'super_admin' | 'admin' | 'profissional';
 
-export const useAuth = () => {
+type AuthContextType = {
+  user: User | null;
+  session: Session | null;
+  role: UserRole | null;
+  loading: boolean;
+  signOut: () => Promise<void>;
+  isSuperAdmin: boolean;
+  isAdmin: boolean;
+  isProfissional: boolean;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const isInitializedRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
     
-    // Função para buscar role do usuário
     const fetchUserRole = async (userId: string) => {
       try {
         const { data: roleData, error } = await supabase
@@ -37,12 +47,10 @@ export const useAuth = () => {
       }
     };
 
-    // Verificar sessão existente uma única vez
     const initAuth = async () => {
-      if (isInitializedRef.current) {
-        return;
-      }
+      if (isInitializedRef.current) return;
       isInitializedRef.current = true;
+
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
@@ -53,22 +61,17 @@ export const useAuth = () => {
 
         if (session?.user) {
           const userRole = await fetchUserRole(session.user.id);
-          if (isMounted) {
-            setRole(userRole);
-          }
+          if (isMounted) setRole(userRole);
         } else {
           setRole(null);
         }
       } catch (error) {
         console.error('Erro na inicialização:', error);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
-    // Configurar listener de auth (apenas para mudanças futuras)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!isMounted) return;
@@ -78,20 +81,15 @@ export const useAuth = () => {
 
         if (session?.user) {
           const userRole = await fetchUserRole(session.user.id);
-          if (isMounted) {
-            setRole(userRole);
-          }
+          if (isMounted) setRole(userRole);
         } else {
           setRole(null);
         }
 
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     );
 
-    // Inicializar
     initAuth();
 
     return () => {
@@ -112,14 +110,28 @@ export const useAuth = () => {
     }
   };
 
-  return {
-    user,
-    session,
-    role,
-    loading,
-    signOut,
-    isSuperAdmin: role === 'super_admin',
-    isAdmin: role === 'admin',
-    isProfissional: role === 'profissional',
-  };
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        role,
+        loading,
+        signOut,
+        isSuperAdmin: role === 'super_admin',
+        isAdmin: role === 'admin',
+        isProfissional: role === 'profissional',
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
