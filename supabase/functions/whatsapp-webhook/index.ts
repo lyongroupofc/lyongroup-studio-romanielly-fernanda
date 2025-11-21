@@ -277,7 +277,10 @@ ${servicosFormatados}
 ${profissionaisFormatados}
 
 **Horário de Funcionamento:**
-- Segunda a Sábado: 08:00 às 21:00
+- Segunda-feira: FECHADO
+- Terça e Quarta: 13:00 às 20:00
+- Quinta e Sexta: 09:00 às 19:00
+- Sábado: 08:00 às 13:00
 - Domingo: FECHADO
 
 **Localização:**
@@ -783,6 +786,24 @@ Você: ❌ "Para qual dia você gostaria?" [ERRO: ela já disse "amanhã"]
           const dataHoje = new Date().toISOString().split('T')[0];
           console.log('📅 Data de hoje:', dataHoje, '| Data novo agendamento:', args.data);
           
+          // PRIMEIRO: Verificar se já existe agendamento EXATO (mesma data e horário) - se sim, não criar duplicado
+          const { data: agendamentoDuplicado } = await supabase
+            .from('agendamentos')
+            .select('*')
+            .eq('cliente_telefone', telefone)
+            .eq('data', args.data)
+            .eq('horario', args.horario)
+            .neq('status', 'Cancelado')
+            .maybeSingle();
+          
+          if (agendamentoDuplicado) {
+            console.log('⚠️ Agendamento duplicado detectado - já existe para esta data/horário');
+            const [yyyyDup, mmDup, ddDup] = agendamentoDuplicado.data.split('-');
+            resposta = `Você já tem um agendamento confirmado para ${ddDup}/${mmDup} às ${agendamentoDuplicado.horario}! 💜`;
+            continue;
+          }
+          
+          // SEGUNDO: Buscar qualquer agendamento anterior diferente para reagendamento
           const { data: agendamentoAnterior, error: erroConsulta } = await supabase
             .from('agendamentos')
             .select('*')
