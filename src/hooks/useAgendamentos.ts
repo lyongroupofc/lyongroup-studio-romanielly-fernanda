@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -26,7 +26,7 @@ export const useAgendamentos = () => {
         setLoading(true);
         
         const dataLimite = new Date();
-        dataLimite.setDate(dataLimite.getDate() - 30);
+        dataLimite.setDate(dataLimite.getDate() - 14);
         const dataLimiteStr = dataLimite.toISOString().split('T')[0];
 
         const { data, error } = await supabase
@@ -34,8 +34,7 @@ export const useAgendamentos = () => {
           .select("id, data, horario, cliente_nome, cliente_telefone, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes")
           .gte("data", dataLimiteStr)
           .order("data", { ascending: false })
-          .order("horario", { ascending: true })
-          .limit(200);
+          .order("horario", { ascending: true });
 
         if (error) {
           console.error("Erro ao carregar agendamentos:", error);
@@ -60,7 +59,7 @@ export const useAgendamentos = () => {
       setLoading(true);
       
       const dataLimite = new Date();
-      dataLimite.setDate(dataLimite.getDate() - 30);
+      dataLimite.setDate(dataLimite.getDate() - 14);
       const dataLimiteStr = dataLimite.toISOString().split('T')[0];
 
       const { data, error } = await supabase
@@ -68,8 +67,7 @@ export const useAgendamentos = () => {
         .select("id, data, horario, cliente_nome, cliente_telefone, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes")
         .gte("data", dataLimiteStr)
         .order("data", { ascending: false })
-        .order("horario", { ascending: true })
-        .limit(200);
+        .order("horario", { ascending: true });
 
       if (error) {
         console.error("Erro ao carregar agendamentos:", error);

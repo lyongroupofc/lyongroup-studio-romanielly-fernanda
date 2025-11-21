@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Sparkles, Calendar as CalendarIcon, Clock, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { isBefore, startOfToday, isSunday, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -29,7 +30,7 @@ const Agendar = () => {
 
   const { servicos, loading: loadingServicos } = useServicos();
   const { profissionais, loading: loadingProfissionais } = useProfissionais();
-  const { agendamentos, addAgendamento } = useAgendamentos();
+  const { agendamentos, loading: loadingAgendamentos, addAgendamento } = useAgendamentos();
   const { configs, getConfig } = useAgendaConfig();
 
   const fmtKey = (d: Date) => format(d, "yyyy-MM-dd");
@@ -106,42 +107,46 @@ const Agendar = () => {
     return horariosBloqueados;
   };
 
-  const getAvailableSlots = (d: Date | undefined) => {
-    if (!d) return [];
-    const dayData = getDayData(d);
-    
-    const dateStr = fmtKey(d);
-    const agendamentosDay = agendamentos.filter(a => a.data === dateStr);
-    
-    // Calcula todos os horários bloqueados considerando a duração de cada serviço
-    const todosBloqueados = new Set<string>();
-    
-    agendamentosDay.forEach(ag => {
-      const servico = servicos.find(s => s.id === ag.servico_id);
-      if (servico) {
-        const horariosBloqueados = calcularHorariosBloqueados(ag.horario, servico.duracao);
-        horariosBloqueados.forEach(h => todosBloqueados.add(h));
-      } else {
-        // Se não encontrar o serviço, bloqueia apenas o horário inicial
-        todosBloqueados.add(ag.horario);
-      }
-    });
-    
-    // Adiciona horários bloqueados manualmente
-    dayData.horariosBloqueados.forEach(h => todosBloqueados.add(h));
-    
-    // Se o dia está fechado, retornar apenas horários extras (se houver)
-    // Se o dia está aberto, retornar horários normais + horários extras
-    const base = dayData.fechado 
-      ? dayData.horariosExtras 
-      : [...generateSlots(d), ...dayData.horariosExtras];
-    
-    return base.filter((t) => !todosBloqueados.has(t)).sort();
-  };
+  const getAvailableSlots = useMemo(() => {
+    return (d: Date | undefined) => {
+      if (!d) return [];
+      const dayData = getDayData(d);
+      
+      const dateStr = fmtKey(d);
+      const agendamentosDay = agendamentos.filter(a => a.data === dateStr);
+      
+      // Calcula todos os horários bloqueados considerando a duração de cada serviço
+      const todosBloqueados = new Set<string>();
+      
+      agendamentosDay.forEach(ag => {
+        const servico = servicos.find(s => s.id === ag.servico_id);
+        if (servico) {
+          const horariosBloqueados = calcularHorariosBloqueados(ag.horario, servico.duracao);
+          horariosBloqueados.forEach(h => todosBloqueados.add(h));
+        } else {
+          // Se não encontrar o serviço, bloqueia apenas o horário inicial
+          todosBloqueados.add(ag.horario);
+        }
+      });
+      
+      // Adiciona horários bloqueados manualmente
+      dayData.horariosBloqueados.forEach(h => todosBloqueados.add(h));
+      
+      // Se o dia está fechado, retornar apenas horários extras (se houver)
+      // Se o dia está aberto, retornar horários normais + horários extras
+      const base = dayData.fechado 
+        ? dayData.horariosExtras 
+        : [...generateSlots(d), ...dayData.horariosExtras];
+      
+      return base.filter((t) => !todosBloqueados.has(t)).sort();
+    };
+  }, [agendamentos, servicos, configs]);
 
-  const isDayFull = (d: Date) => {
-    return getAvailableSlots(d).length === 0;
-  };
+  const isDayFull = useMemo(() => {
+    return (d: Date) => {
+      return getAvailableSlots(d).length === 0;
+    };
+  }, [getAvailableSlots]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,15 +188,11 @@ const Agendar = () => {
     }
   };
 
-  if (loadingServicos || loadingProfissionais) {
-    return (
-      <div className="min-h-screen gradient-soft flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  const horariosDisponiveis = getAvailableSlots(date);
+  const horariosDisponiveis = useMemo(() => {
+    return getAvailableSlots(date);
+  }, [date, getAvailableSlots]);
+  
+  const isLoading = loadingServicos || loadingProfissionais || loadingAgendamentos;
 
   return (
     <div className="min-h-screen gradient-soft py-12 px-4">
@@ -236,40 +237,48 @@ const Agendar = () => {
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="servico">Serviço Desejado *</Label>
-                <Select
-                  value={formData.servico}
-                  onValueChange={(value) => setFormData({ ...formData, servico: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o serviço" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {servicos.map((servico) => (
-                      <SelectItem key={servico.id} value={servico.id}>
-                        {servico.nome} - R$ {servico.preco.toFixed(2)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {loadingServicos ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select
+                    value={formData.servico}
+                    onValueChange={(value) => setFormData({ ...formData, servico: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o serviço" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {servicos.map((servico) => (
+                        <SelectItem key={servico.id} value={servico.id}>
+                          {servico.nome} - R$ {servico.preco.toFixed(2)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="profissional">Profissional (Opcional)</Label>
-                <Select
-                  value={formData.profissional}
-                  onValueChange={(value) => setFormData({ ...formData, profissional: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sem preferência" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {profissionais.map((prof) => (
-                      <SelectItem key={prof.id} value={prof.id}>
-                        {prof.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {loadingProfissionais ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select
+                    value={formData.profissional}
+                    onValueChange={(value) => setFormData({ ...formData, profissional: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sem preferência" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profissionais.map((prof) => (
+                        <SelectItem key={prof.id} value={prof.id}>
+                          {prof.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
@@ -279,28 +288,32 @@ const Agendar = () => {
                 Escolha a Data *
               </Label>
               <div className="flex justify-center">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  locale={ptBR}
-                  modifiers={{
-                    disponivel: (d: Date) => !getDayData(d).fechado && !isDayFull(d) && !isFeriado(d),
-                    fechado: (d: Date) => getDayData(d).fechado && !isFeriado(d),
-                    cheio: (d: Date) => !getDayData(d).fechado && isDayFull(d) && !isFeriado(d),
-                    past: (d: Date) => isBefore(d, startOfToday()) && !isFeriado(d),
-                    feriado: (d: Date) => isFeriado(d),
-                  }}
-                  modifiersStyles={{
-                    disponivel: { backgroundColor: "hsl(var(--success) / 0.2)", color: "hsl(var(--success))" },
-                    fechado: { backgroundColor: "hsl(var(--destructive) / 0.2)", color: "hsl(var(--destructive))" },
-                    cheio: { backgroundColor: "hsl(280 65% 60% / 0.2)", color: "hsl(280 65% 60%)" },
-                    past: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", opacity: 0.6 },
-                    feriado: { backgroundColor: "hsl(var(--holiday) / 0.25)", color: "hsl(var(--holiday))", fontWeight: "700", border: "2px solid hsl(var(--holiday))" },
-                  }}
-                  disabled={(d) => getDayData(d).fechado || isFeriado(d)}
-                  className="rounded-md border shadow-sm pointer-events-auto"
-                />
+                {loadingAgendamentos ? (
+                  <Skeleton className="h-[300px] w-[300px] rounded-md" />
+                ) : (
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    locale={ptBR}
+                    modifiers={{
+                      disponivel: (d: Date) => !getDayData(d).fechado && !isDayFull(d) && !isFeriado(d),
+                      fechado: (d: Date) => getDayData(d).fechado && !isFeriado(d),
+                      cheio: (d: Date) => !getDayData(d).fechado && isDayFull(d) && !isFeriado(d),
+                      past: (d: Date) => isBefore(d, startOfToday()) && !isFeriado(d),
+                      feriado: (d: Date) => isFeriado(d),
+                    }}
+                    modifiersStyles={{
+                      disponivel: { backgroundColor: "hsl(var(--success) / 0.2)", color: "hsl(var(--success))" },
+                      fechado: { backgroundColor: "hsl(var(--destructive) / 0.2)", color: "hsl(var(--destructive))" },
+                      cheio: { backgroundColor: "hsl(280 65% 60% / 0.2)", color: "hsl(280 65% 60%)" },
+                      past: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", opacity: 0.6 },
+                      feriado: { backgroundColor: "hsl(var(--holiday) / 0.25)", color: "hsl(var(--holiday))", fontWeight: "700", border: "2px solid hsl(var(--holiday))" },
+                    }}
+                    disabled={(d) => getDayData(d).fechado || isFeriado(d)}
+                    className="rounded-md border shadow-sm pointer-events-auto"
+                  />
+                )}
               </div>
             </div>
 
@@ -309,29 +322,49 @@ const Agendar = () => {
                 <Clock className="w-4 h-4" />
                 Horário Disponível *
               </Label>
-              <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-                {horariosDisponiveis.length > 0 ? (
-                  horariosDisponiveis.map((horario) => (
-                    <Button
-                      key={horario}
-                      type="button"
-                      variant={formData.horario === horario ? "default" : "outline"}
-                      onClick={() => setFormData({ ...formData, horario })}
-                      className="w-full"
-                    >
-                      {horario}
-                    </Button>
-                  ))
-                ) : (
-                  <div className="col-span-3 md:col-span-4 text-center text-muted-foreground py-2">
-                    Sem horários disponíveis para esta data
-                  </div>
-                )}
-              </div>
+              {loadingAgendamentos ? (
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                  {horariosDisponiveis.length > 0 ? (
+                    horariosDisponiveis.map((horario) => (
+                      <Button
+                        key={horario}
+                        type="button"
+                        variant={formData.horario === horario ? "default" : "outline"}
+                        onClick={() => setFormData({ ...formData, horario })}
+                        className="w-full"
+                      >
+                        {horario}
+                      </Button>
+                    ))
+                  ) : (
+                    <div className="col-span-3 md:col-span-4 text-center text-muted-foreground py-2">
+                      Sem horários disponíveis para esta data
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <Button type="submit" size="lg" className="w-full">
-              Confirmar Agendamento
+            <Button 
+              type="submit" 
+              size="lg" 
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Carregando...
+                </>
+              ) : (
+                "Confirmar Agendamento"
+              )}
             </Button>
           </form>
         </Card>
