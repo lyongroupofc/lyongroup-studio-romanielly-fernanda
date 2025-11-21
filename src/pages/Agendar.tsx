@@ -23,6 +23,7 @@ const Agendar = () => {
   const [formData, setFormData] = useState({
     nome: "",
     telefone: "",
+    dataNascimento: "",
     servico: "",
     profissional: "",
     horario: "",
@@ -151,7 +152,7 @@ const Agendar = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!date || !formData.nome || !formData.telefone || !formData.servico || !formData.horario) {
+    if (!date || !formData.nome || !formData.telefone || !formData.servico || !formData.horario || !formData.dataNascimento) {
       toast.error("Por favor, preencha todos os campos obrigatórios");
       return;
     }
@@ -160,11 +161,43 @@ const Agendar = () => {
       const servico = servicos.find(s => s.id === formData.servico);
       const profissional = formData.profissional ? profissionais.find(p => p.id === formData.profissional) : null;
 
+      // Criar ou atualizar cliente
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: clienteExistente } = await supabase
+        .from('clientes')
+        .select('*')
+        .eq('telefone', formData.telefone)
+        .maybeSingle();
+
+      let clienteId = clienteExistente?.id;
+
+      if (clienteExistente) {
+        await supabase
+          .from('clientes')
+          .update({
+            nome: formData.nome,
+            data_nascimento: formData.dataNascimento,
+          })
+          .eq('id', clienteExistente.id);
+      } else {
+        const { data: novoCliente } = await supabase
+          .from('clientes')
+          .insert({
+            nome: formData.nome,
+            telefone: formData.telefone,
+            data_nascimento: formData.dataNascimento,
+          })
+          .select()
+          .single();
+        clienteId = novoCliente?.id;
+      }
+
       await addAgendamento({
         data: fmtKey(date),
         horario: formData.horario,
         cliente_nome: formData.nome,
         cliente_telefone: formData.telefone,
+        cliente_id: clienteId,
         servico_id: formData.servico,
         servico_nome: servico?.nome || "",
         profissional_id: formData.profissional || null,
@@ -232,6 +265,18 @@ const Agendar = () => {
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="dataNascimento">Data de Nascimento *</Label>
+              <Input
+                id="dataNascimento"
+                type="date"
+                value={formData.dataNascimento}
+                onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
+                required
+                max={new Date().toISOString().split('T')[0]}
+              />
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
