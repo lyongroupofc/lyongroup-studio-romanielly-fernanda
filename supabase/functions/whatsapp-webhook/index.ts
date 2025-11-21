@@ -139,6 +139,27 @@ serve(async (req) => {
       `• ${p.nome}${p.especialidades?.length ? ` - ${p.especialidades.join(', ')}` : ''}`
     ).join('\n');
 
+    // Função para extrair informações do contexto dos tool calls
+    function extrairInformacoesDoContexto(contextoAtual: any, toolCalls: any[]): any {
+      const novoContexto = { ...contextoAtual };
+      
+      if (toolCalls && toolCalls.length > 0) {
+        for (const toolCall of toolCalls) {
+          if (toolCall.function.name === 'criar_agendamento') {
+            const args = JSON.parse(toolCall.function.arguments);
+            if (args.servico_id) novoContexto.servico_id = args.servico_id;
+            if (args.servico_nome) novoContexto.servico_nome = args.servico_nome;
+            if (args.data) novoContexto.data = args.data;
+            if (args.horario) novoContexto.horario = args.horario;
+            if (args.cliente_nome) novoContexto.nome_completo = args.cliente_nome;
+            if (args.data_nascimento) novoContexto.data_nascimento = args.data_nascimento;
+          }
+        }
+      }
+      
+      return novoContexto;
+    }
+
     // Preparar mensagens para IA
     const mensagensIA = (historicoMensagens || []).map(msg => ({
       role: msg.tipo === 'recebida' ? 'user' : 'assistant',
@@ -168,8 +189,25 @@ serve(async (req) => {
     const segundaSeguinte = new Date(proximaSegunda);
     segundaSeguinte.setDate(proximaSegunda.getDate() + 7);
     
+    // Obter contexto atual
+    const contexto = conversa.contexto || {};
+    
     // System prompt
     const systemPrompt = `Você é a Thaty, recepcionista do Studio Romanielly Fernanda, um studio de beleza especializado em estética e cuidados com unhas.
+
+**CONTEXTO DA CONVERSA ATUAL:**
+${contexto.servico_nome ? `✅ Serviço: JÁ ESCOLHIDO (${contexto.servico_nome})` : '❌ Serviço: ainda não escolhido'}
+${contexto.data ? `✅ Data: JÁ INFORMADA (${contexto.data})` : '❌ Data: ainda não informada'}
+${contexto.horario ? `✅ Horário: JÁ ESCOLHIDO (${contexto.horario})` : '❌ Horário: ainda não escolhido'}
+${contexto.nome_completo ? `✅ Nome: JÁ COLETADO (${contexto.nome_completo})` : '❌ Nome: ainda não coletado'}
+${contexto.data_nascimento ? `✅ Data de Nascimento: JÁ COLETADA (${contexto.data_nascimento})` : '❌ Data de Nascimento: ainda não coletada'}
+
+**⚠️ ATENÇÃO MÁXIMA - REGRAS DE CONTEXTO:**
+- Se uma informação está marcada com ✅ (JÁ ESCOLHIDO/INFORMADO/COLETADO), você NUNCA, EM HIPÓTESE ALGUMA, deve perguntar novamente!
+- SEMPRE revise o CONTEXTO DA CONVERSA ATUAL acima ANTES de fazer qualquer pergunta!
+- Se a cliente perguntar "que horários tem disponível?", você deve APENAS mostrar os horários e perguntar qual ela prefere
+- NÃO repita perguntas sobre informações que já têm ✅
+- Quando tiver TODOS os ✅ (serviço + data + horário + nome + data_nascimento) = CHAME criar_agendamento IMEDIATAMENTE
 
 **SOBRE VOCÊ:**
 - Seu nome é Thaty e você é a recepcionista do studio
@@ -364,6 +402,25 @@ Você: ❌ "Para qual dia você gostaria?" [ERRO: ela já disse "amanhã"]
 
     let resposta = aiData.choices[0]?.message?.content || 'Desculpe, não entendi. Pode reformular?';
     const toolCalls = aiData.choices[0]?.message?.tool_calls;
+
+    // Extrair e salvar contexto após resposta da IA
+    const novoContexto = extrairInformacoesDoContexto(
+      conversa.contexto || {}, 
+      toolCalls || []
+    );
+
+    // Atualizar contexto no banco se houver mudanças
+    if (JSON.stringify(novoContexto) !== JSON.stringify(conversa.contexto || {})) {
+      await supabase
+        .from('bot_conversas')
+        .update({ 
+          contexto: novoContexto,
+          ultimo_contato: new Date().toISOString()
+        })
+        .eq('id', conversa.id);
+      
+      console.log('💾 Contexto atualizado:', novoContexto);
+    }
 
     // Processar tool calls
     if (toolCalls && toolCalls.length > 0) {

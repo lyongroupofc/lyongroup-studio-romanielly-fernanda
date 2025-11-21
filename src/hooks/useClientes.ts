@@ -71,6 +71,32 @@ export const useClientes = () => {
     }
   };
 
+  const buscarAniversariantesPorDia = async (data: string) => {
+    try {
+      // Buscar todos clientes com data de nascimento
+      const { data: todos, error } = await supabase
+        .from('clientes')
+        .select('*')
+        .not('data_nascimento', 'is', null);
+        
+      if (error) throw error;
+      
+      // Extrair dia do parâmetro de data
+      const [ano, mes, dia] = data.split('-');
+      const diaInt = parseInt(dia, 10);
+      const mesInt = parseInt(mes, 10) - 1; // JavaScript usa 0-11 para meses
+      
+      // Filtrar clientes que fazem aniversário neste dia e mês
+      return (todos || []).filter(cliente => {
+        const nascimento = new Date(cliente.data_nascimento + 'T00:00:00');
+        return nascimento.getDate() === diaInt && nascimento.getMonth() === mesInt;
+      });
+    } catch (error) {
+      console.error('Erro ao buscar aniversariantes do dia:', error);
+      return [];
+    }
+  };
+
   const criarOuAtualizarCliente = async (clienteData: {
     nome: string;
     telefone: string;
@@ -134,6 +160,7 @@ export const useClientes = () => {
     clientes,
     loading,
     buscarAniversariantesMes,
+    buscarAniversariantesPorDia,
     criarOuAtualizarCliente,
     refetch: fetchClientes,
   };
