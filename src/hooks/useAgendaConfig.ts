@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -14,13 +14,8 @@ export type AgendaConfig = {
 export const useAgendaConfig = () => {
   const [configs, setConfigs] = useState<Record<string, AgendaConfig>>({});
   const [loading, setLoading] = useState(false);
-  const isMountedRef = useRef(false);
 
   useEffect(() => {
-    // Prevenir execução duplicada
-    if (isMountedRef.current) return;
-    isMountedRef.current = true;
-
     const fetchConfigs = async () => {
       try {
         setLoading(true);
@@ -54,10 +49,6 @@ export const useAgendaConfig = () => {
     };
 
     fetchConfigs();
-
-    return () => {
-      isMountedRef.current = false;
-    };
   }, []);
 
   const refetch = async () => {

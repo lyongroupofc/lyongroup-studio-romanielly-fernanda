@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -17,13 +17,8 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
 export const useProfissionais = () => {
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [loading, setLoading] = useState(false);
-  const isMountedRef = useRef(false);
 
   useEffect(() => {
-    // Prevenir execução duplicada
-    if (isMountedRef.current) return;
-    isMountedRef.current = true;
-
     const fetchProfissionais = async () => {
       try {
         setLoading(true);
@@ -63,10 +58,6 @@ export const useProfissionais = () => {
     };
 
     fetchProfissionais();
-
-    return () => {
-      isMountedRef.current = false;
-    };
   }, []);
 
   const refetch = async () => {
