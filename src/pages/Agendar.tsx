@@ -19,7 +19,7 @@ import { isFeriado } from "@/lib/feriados";
 
 const Agendar = () => {
   const navigate = useNavigate();
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [date, setDate] = useState<Date | undefined>();
   const [formData, setFormData] = useState({
     nome: "",
     telefone: "",
@@ -337,6 +337,7 @@ const Agendar = () => {
                   <Skeleton className="h-[300px] w-[300px] rounded-md" />
                 ) : (
                   <Calendar
+                    key="booking-calendar"
                     mode="single"
                     selected={date}
                     onSelect={setDate}
