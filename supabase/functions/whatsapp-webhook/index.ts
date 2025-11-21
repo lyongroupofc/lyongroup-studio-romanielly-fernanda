@@ -160,6 +160,42 @@ serve(async (req) => {
       return novoContexto;
     }
 
+    // Função para extrair contexto da resposta da IA
+    function extrairContextoDaResposta(respostaIA: string, contextoAtual: any): any {
+      const novoContexto = { ...contextoAtual };
+      
+      // Detectar serviço mencionado
+      if (servicos && servicos.length > 0) {
+        const servicosLower = servicos.map(s => ({ nome: s.nome.toLowerCase(), id: s.id }));
+        for (const servico of servicosLower) {
+          if (respostaIA.toLowerCase().includes(servico.nome)) {
+            const servicoObj = servicos.find(s => s.id === servico.id);
+            if (servicoObj && !novoContexto.servico_nome) {
+              novoContexto.servico_nome = servicoObj.nome;
+              novoContexto.servico_id = servicoObj.id;
+            }
+          }
+        }
+      }
+      
+      // Detectar data mencionada (DD/MM/YYYY)
+      const regexData = /(\d{2})\/(\d{2})\/(\d{4})/g;
+      const matchData = respostaIA.match(regexData);
+      if (matchData && matchData.length > 0 && !novoContexto.data) {
+        const [dia, mes, ano] = matchData[0].split('/');
+        novoContexto.data = `${ano}-${mes}-${dia}`; // Formato YYYY-MM-DD
+      }
+      
+      // Detectar horário mencionado (HH:MM)
+      const regexHorario = /(\d{1,2}):(\d{2})/g;
+      const matchHorario = respostaIA.match(regexHorario);
+      if (matchHorario && matchHorario.length > 0 && !novoContexto.horario) {
+        novoContexto.horario = matchHorario[0];
+      }
+      
+      return novoContexto;
+    }
+
     // Preparar mensagens para IA
     const mensagensIA = (historicoMensagens || []).map(msg => ({
       role: msg.tipo === 'recebida' ? 'user' : 'assistant',
@@ -175,6 +211,16 @@ serve(async (req) => {
     const hoje = new Date();
     const diaSemana = hoje.getDay(); // 0=domingo, 1=segunda, etc
     const dataAtualFormatada = hoje.toLocaleDateString('pt-BR', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    // Calcular AMANHÃ
+    const amanha = new Date(hoje);
+    amanha.setDate(hoje.getDate() + 1);
+    const amanhaFormatada = amanha.toLocaleDateString('pt-BR', { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
@@ -218,10 +264,11 @@ ${contexto.data_nascimento ? `✅ Data de Nascimento: JÁ COLETADA (${contexto.d
 
 **INFORMAÇÕES DE DATA (MUITO IMPORTANTE):**
 - **HOJE É: ${hoje.getDate().toString().padStart(2, '0')}/${(hoje.getMonth() + 1).toString().padStart(2, '0')}/${hoje.getFullYear()} (${dataAtualFormatada})**
+- **AMANHÃ SERÁ: ${amanha.getDate().toString().padStart(2, '0')}/${(amanha.getMonth() + 1).toString().padStart(2, '0')}/${amanha.getFullYear()} (${amanhaFormatada})**
 - **Próxima segunda-feira:** ${proximaSegunda.getDate().toString().padStart(2, '0')}/${(proximaSegunda.getMonth() + 1).toString().padStart(2, '0')}/${proximaSegunda.getFullYear()}
 - **Segunda seguinte:** ${segundaSeguinte.getDate().toString().padStart(2, '0')}/${(segundaSeguinte.getMonth() + 1).toString().padStart(2, '0')}/${segundaSeguinte.getFullYear()}
 
-ATENÇÃO: Quando a cliente disser "próxima segunda" ou "segunda que vem", use a data da próxima segunda-feira mostrada acima!
+ATENÇÃO: Quando a cliente disser "amanhã", use a data AMANHÃ SERÁ mostrada acima! Quando disser "próxima segunda" ou "segunda que vem", use a data da próxima segunda-feira!
 
 **Serviços do Studio:**
 ${servicosFormatados}
@@ -404,23 +451,31 @@ Você: ❌ "Para qual dia você gostaria?" [ERRO: ela já disse "amanhã"]
     const toolCalls = aiData.choices[0]?.message?.tool_calls;
 
     // Extrair e salvar contexto após resposta da IA
-    const novoContexto = extrairInformacoesDoContexto(
+    console.log('🔍 Contexto ANTES:', JSON.stringify(conversa.contexto || {}));
+    
+    // Primeiro extrair dos tool calls
+    let contextoToolCalls = extrairInformacoesDoContexto(
       conversa.contexto || {}, 
       toolCalls || []
     );
+    
+    // Depois extrair da resposta da IA
+    let contextoResposta = extrairContextoDaResposta(resposta, contextoToolCalls);
+    const novoContexto = contextoResposta;
+    
+    console.log('🔍 Contexto DEPOIS:', JSON.stringify(novoContexto));
+    console.log('🔍 Houve mudança?', JSON.stringify(novoContexto) !== JSON.stringify(conversa.contexto || {}));
 
-    // Atualizar contexto no banco se houver mudanças
-    if (JSON.stringify(novoContexto) !== JSON.stringify(conversa.contexto || {})) {
-      await supabase
-        .from('bot_conversas')
-        .update({ 
-          contexto: novoContexto,
-          ultimo_contato: new Date().toISOString()
-        })
-        .eq('id', conversa.id);
-      
-      console.log('💾 Contexto atualizado:', novoContexto);
-    }
+    // Atualizar contexto no banco (forçado temporariamente para debug)
+    await supabase
+      .from('bot_conversas')
+      .update({ 
+        contexto: novoContexto,
+        ultimo_contato: new Date().toISOString()
+      })
+      .eq('id', conversa.id);
+    
+    console.log('💾 Contexto salvo (forçado para debug):', novoContexto);
 
     // Processar tool calls
     if (toolCalls && toolCalls.length > 0) {
