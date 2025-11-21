@@ -593,6 +593,16 @@ const Agenda = () => {
                 <Input value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} required />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label>Data de Nascimento *</Label>
+              <Input 
+                type="date" 
+                value={formData.dataNascimento} 
+                onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })} 
+                required 
+                max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
             {/* Data do agendamento */}
             <div className="space-y-2">
               <Label>Data *</Label>
