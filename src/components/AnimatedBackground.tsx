@@ -13,12 +13,10 @@ interface Shape {
 }
 
 export const AnimatedBackground = () => {
-  const [shapes, setShapes] = useState<Shape[]>([]);
-
-  useEffect(() => {
-    // Ícones relacionados a nail design: estrelas, corações, sparkles, formas geométricas
+  const [shapes] = useState<Shape[]>(() => {
+    // Gerar shapes apenas uma vez na criação do componente
     const icons = [Sparkles, Heart, Star, Circle, Square, Triangle];
-    const newShapes: Shape[] = Array.from({ length: 20 }, (_, i) => ({
+    return Array.from({ length: 20 }, (_, i) => ({
       id: i,
       Icon: icons[Math.floor(Math.random() * icons.length)],
       x: Math.random() * 100,
@@ -28,8 +26,7 @@ export const AnimatedBackground = () => {
       delay: Math.random() * 5,
       rotation: Math.random() * 360,
     }));
-    setShapes(newShapes);
-  }, []);
+  });
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-[0.15] z-0">
