@@ -14,6 +14,7 @@ export const useAuth = () => {
 
   useEffect(() => {
     let isMounted = true;
+    let isInitialized = false;
     
     // Função para buscar role do usuário
     const fetchUserRole = async (userId: string) => {
@@ -38,6 +39,8 @@ export const useAuth = () => {
 
     // Verificar sessão existente uma única vez
     const initAuth = async () => {
+      if (isInitialized) return;
+      isInitialized = true;
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
