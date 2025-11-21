@@ -22,15 +22,17 @@ export const useAgendamentos = () => {
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    console.log('[useAgendamentos] useEffect executado. isFetchingRef:', isFetchingRef.current);
+    const lockKey = 'agendamentos_fetching';
     
-    if (isFetchingRef.current) {
-      console.log('[useAgendamentos] Bloqueado - já está buscando dados');
+    // Verificar se já está buscando (persiste entre reloads)
+    if (sessionStorage.getItem(lockKey) === 'true') {
+      console.log('[useAgendamentos] Bloqueado - já está buscando (sessionStorage)');
       return;
     }
     
     const fetchAgendamentos = async () => {
-      console.log('[useAgendamentos] Iniciando fetch de dados...');
+      // Marcar como "em andamento" no sessionStorage
+      sessionStorage.setItem(lockKey, 'true');
       isFetchingRef.current = true;
       try {
         setLoading(true);
@@ -58,14 +60,16 @@ export const useAgendamentos = () => {
         setAgendamentos([]);
       } finally {
         setLoading(false);
+        // Liberar o lock após 2 segundos (segurança)
+        setTimeout(() => sessionStorage.removeItem(lockKey), 2000);
       }
     };
 
     fetchAgendamentos();
 
     return () => {
-      console.log('[useAgendamentos] Cleanup executado - resetando isFetchingRef');
       isFetchingRef.current = false;
+      sessionStorage.removeItem(lockKey);
     };
   }, []);
 

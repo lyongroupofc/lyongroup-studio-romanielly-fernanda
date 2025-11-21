@@ -17,9 +17,16 @@ export const useAgendaConfig = () => {
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    if (isFetchingRef.current) return;
+    const lockKey = 'agenda_config_fetching';
+    
+    // Verificar se já está buscando (persiste entre reloads)
+    if (sessionStorage.getItem(lockKey) === 'true') {
+      return;
+    }
     
     const fetchConfigs = async () => {
+      // Marcar como "em andamento" no sessionStorage
+      sessionStorage.setItem(lockKey, 'true');
       isFetchingRef.current = true;
       try {
         setLoading(true);
@@ -49,6 +56,8 @@ export const useAgendaConfig = () => {
         setConfigs({});
       } finally {
         setLoading(false);
+        // Liberar o lock após 2 segundos (segurança)
+        setTimeout(() => sessionStorage.removeItem(lockKey), 2000);
       }
     };
 
@@ -56,6 +65,7 @@ export const useAgendaConfig = () => {
 
     return () => {
       isFetchingRef.current = false;
+      sessionStorage.removeItem(lockKey);
     };
   }, []);
 

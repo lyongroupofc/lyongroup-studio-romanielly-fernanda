@@ -23,15 +23,17 @@ export const usePagamentos = () => {
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    console.log('[usePagamentos] useEffect executado. isFetchingRef:', isFetchingRef.current);
+    const lockKey = 'pagamentos_fetching';
     
-    if (isFetchingRef.current) {
-      console.log('[usePagamentos] Bloqueado - já está buscando dados');
+    // Verificar se já está buscando (persiste entre reloads)
+    if (sessionStorage.getItem(lockKey) === 'true') {
+      console.log('[usePagamentos] Bloqueado - já está buscando (sessionStorage)');
       return;
     }
     
     const fetchPagamentos = async () => {
-      console.log('[usePagamentos] Iniciando fetch de dados...');
+      // Marcar como "em andamento" no sessionStorage
+      sessionStorage.setItem(lockKey, 'true');
       isFetchingRef.current = true;
       try {
         setLoading(true);
@@ -75,14 +77,16 @@ export const usePagamentos = () => {
         setPagamentos([]);
       } finally {
         setLoading(false);
+        // Liberar o lock após 2 segundos (segurança)
+        setTimeout(() => sessionStorage.removeItem(lockKey), 2000);
       }
     };
 
     fetchPagamentos();
 
     return () => {
-      console.log('[usePagamentos] Cleanup executado - resetando isFetchingRef');
       isFetchingRef.current = false;
+      sessionStorage.removeItem(lockKey);
     };
   }, []);
 
