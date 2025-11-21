@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -19,8 +19,13 @@ export type Agendamento = {
 export const useAgendamentos = () => {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(false);
+  const isMountedRef = useRef(false);
 
   useEffect(() => {
+    // Prevenir execução duplicada
+    if (isMountedRef.current) return;
+    isMountedRef.current = true;
+
     const fetchAgendamentos = async () => {
       try {
         setLoading(true);
@@ -52,6 +57,10 @@ export const useAgendamentos = () => {
     };
 
     fetchAgendamentos();
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   const refetch = async () => {
