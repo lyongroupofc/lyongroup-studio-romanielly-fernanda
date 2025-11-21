@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -12,6 +12,7 @@ export type NumeroBloqueado = {
 export const useNumerosBloqueados = () => {
   const [numeros, setNumeros] = useState<NumeroBloqueado[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasFetchedRef = useRef(false);
 
   const fetchNumeros = async () => {
     try {
@@ -31,6 +32,10 @@ export const useNumerosBloqueados = () => {
   };
 
   useEffect(() => {
+    // Prevent multiple executions on reload
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     fetchNumeros();
   }, []);
 
