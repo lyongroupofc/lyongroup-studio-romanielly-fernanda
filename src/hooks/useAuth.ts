@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -11,11 +11,10 @@ export const useAuth = () => {
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const isInitializedRef = useRef(false);
 
   useEffect(() => {
-    console.log('[useAuth] useEffect executado');
     let isMounted = true;
-    let isInitialized = false;
     
     // Função para buscar role do usuário
     const fetchUserRole = async (userId: string) => {
@@ -40,12 +39,10 @@ export const useAuth = () => {
 
     // Verificar sessão existente uma única vez
     const initAuth = async () => {
-      if (isInitialized) {
-        console.log('[useAuth] Bloqueado - já inicializado');
+      if (isInitializedRef.current) {
         return;
       }
-      console.log('[useAuth] Inicializando autenticação...');
-      isInitialized = true;
+      isInitializedRef.current = true;
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
@@ -98,7 +95,6 @@ export const useAuth = () => {
     initAuth();
 
     return () => {
-      console.log('[useAuth] Cleanup executado');
       isMounted = false;
       subscription.unsubscribe();
     };

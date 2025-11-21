@@ -22,9 +22,15 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
 export const useAgendamentos = () => {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(false);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
+    if (hasFetchedRef.current) {
+      return;
+    }
+
     const fetchAgendamentos = async () => {
+      hasFetchedRef.current = true;
       try {
         setLoading(true);
         
