@@ -786,20 +786,18 @@ Você: ❌ "Para qual dia você gostaria?" [ERRO: ela já disse "amanhã"]
           const dataHoje = new Date().toISOString().split('T')[0];
           console.log('📅 Data de hoje:', dataHoje, '| Data novo agendamento:', args.data);
           
-          // PRIMEIRO: Verificar se já existe agendamento EXATO (mesma data e horário) - se sim, não criar duplicado
-          const { data: agendamentoDuplicado } = await supabase
+          // PRIMEIRO: Verificar se horário já está ocupado (por qualquer cliente)
+          const { data: horarioOcupado } = await supabase
             .from('agendamentos')
             .select('*')
-            .eq('cliente_telefone', telefone)
             .eq('data', args.data)
             .eq('horario', args.horario)
             .neq('status', 'Cancelado')
             .maybeSingle();
           
-          if (agendamentoDuplicado) {
-            console.log('⚠️ Agendamento duplicado detectado - já existe para esta data/horário');
-            const [yyyyDup, mmDup, ddDup] = agendamentoDuplicado.data.split('-');
-            resposta = `Você já tem um agendamento confirmado para ${ddDup}/${mmDup} às ${agendamentoDuplicado.horario}! 💜`;
+          if (horarioOcupado) {
+            console.log('⚠️ Horário já ocupado - não pode criar agendamento');
+            resposta = `Desculpa amor, ${args.horario} já está ocupado! 😔 Pode escolher outro horário disponível? 💜`;
             continue;
           }
           
