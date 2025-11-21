@@ -8,6 +8,7 @@ export type Agendamento = {
   horario: string;
   cliente_nome: string;
   cliente_telefone: string;
+  cliente_id: string | null;
   servico_id: string | null;
   servico_nome: string;
   profissional_id: string | null;
@@ -51,7 +52,7 @@ export const useAgendamentos = () => {
 
         const { data, error } = await supabase
           .from("agendamentos")
-          .select("id, data, horario, cliente_nome, cliente_telefone, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes")
+          .select("id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes")
           .gte("data", dataLimiteStr)
           .order("data", { ascending: false })
           .order("horario", { ascending: true });
@@ -93,7 +94,7 @@ export const useAgendamentos = () => {
 
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("id, data, horario, cliente_nome, cliente_telefone, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes")
+        .select("id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes")
         .gte("data", dataLimiteStr)
         .order("data", { ascending: false })
         .order("horario", { ascending: true });

@@ -47,6 +47,7 @@ export type Database = {
       agendamentos: {
         Row: {
           bot_conversa_id: string | null
+          cliente_id: string | null
           cliente_nome: string
           cliente_telefone: string
           created_at: string | null
@@ -64,6 +65,7 @@ export type Database = {
         }
         Insert: {
           bot_conversa_id?: string | null
+          cliente_id?: string | null
           cliente_nome: string
           cliente_telefone: string
           created_at?: string | null
@@ -81,6 +83,7 @@ export type Database = {
         }
         Update: {
           bot_conversa_id?: string | null
+          cliente_id?: string | null
           cliente_nome?: string
           cliente_telefone?: string
           created_at?: string | null
@@ -102,6 +105,13 @@ export type Database = {
             columns: ["bot_conversa_id"]
             isOneToOne: false
             referencedRelation: "bot_conversas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
             referencedColumns: ["id"]
           },
           {
@@ -251,6 +261,36 @@ export type Database = {
           qr_code?: string | null
           status?: string
           ultima_atividade?: string | null
+        }
+        Relationships: []
+      }
+      clientes: {
+        Row: {
+          created_at: string | null
+          data_nascimento: string | null
+          email: string | null
+          id: string
+          nome: string
+          telefone: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_nascimento?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          telefone: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data_nascimento?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          telefone?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

@@ -230,9 +230,10 @@ Romanielly - Banco Sicoob
 2. Pergunte a data preferida (use as datas de referência acima)
 3. Pergunte o horário preferido  
 4. Pergunte o nome da cliente
-5. Assim que tiver TODAS essas 4 informações, chame a ferramenta criar_agendamento
-6. NÃO peça telefone - ele já está no sistema
-7. Confirme o agendamento com data/hora formatada
+5. Pergunte a data de nascimento no formato DD/MM/AAAA
+6. Assim que tiver TODAS essas 5 informações, chame a ferramenta criar_agendamento
+7. NÃO peça telefone - ele já está no sistema
+8. Confirme o agendamento com data/hora formatada
 
 **Importante:**
 - Se a cliente mencionar "alisamento" ou "cabelo afro", ajude a identificar o serviço correto
@@ -245,7 +246,7 @@ Romanielly - Banco Sicoob
         type: "function",
         function: {
           name: "criar_agendamento",
-          description: "Cria um agendamento no sistema. IMPORTANTE: Esta ferramenta valida automaticamente a disponibilidade considerando a duração do serviço. Use apenas quando tiver TODOS os dados: servico_nome, data (YYYY-MM-DD), horario (HH:MM) e cliente_nome. O telefone já está disponível no contexto da conversa. Não invente IDs de serviço; se não souber o servico_id, deixe-o vazio que o sistema resolve pelo nome.",
+          description: "Cria um agendamento no sistema. IMPORTANTE: Esta ferramenta valida automaticamente a disponibilidade considerando a duração do serviço. Use apenas quando tiver TODOS os dados: servico_nome, data (YYYY-MM-DD), horario (HH:MM), cliente_nome e data_nascimento (DD/MM/AAAA). O telefone já está disponível no contexto da conversa.",
           parameters: {
             type: "object",
             properties: {
@@ -268,9 +269,13 @@ Romanielly - Banco Sicoob
               cliente_nome: {
                 type: "string",
                 description: "Nome completo da cliente"
+              },
+              data_nascimento: {
+                type: "string",
+                description: "Data de nascimento no formato DD/MM/AAAA"
               }
             },
-            required: ["servico_nome", "data", "horario", "cliente_nome"]
+            required: ["servico_nome", "data", "horario", "cliente_nome", "data_nascimento"]
           }
         }
       },
@@ -702,6 +707,45 @@ Romanielly - Banco Sicoob
             console.log('ℹ️ Nenhum agendamento anterior encontrado - primeiro agendamento');
           }
 
+          // Converter data de nascimento de DD/MM/AAAA para YYYY-MM-DD
+          let dataNascimentoFormatada = null;
+          if (args.data_nascimento) {
+            const [dia, mes, ano] = args.data_nascimento.split('/');
+            dataNascimentoFormatada = `${ano}-${mes}-${dia}`;
+          }
+
+          // Criar ou atualizar cliente
+          const { data: clienteExistente } = await supabase
+            .from('clientes')
+            .select('*')
+            .eq('telefone', telefone)
+            .maybeSingle();
+
+          let clienteId = clienteExistente?.id;
+
+          if (clienteExistente) {
+            // Atualizar cliente existente
+            await supabase
+              .from('clientes')
+              .update({
+                nome: args.cliente_nome,
+                data_nascimento: dataNascimentoFormatada || clienteExistente.data_nascimento,
+              })
+              .eq('id', clienteExistente.id);
+          } else {
+            // Criar novo cliente
+            const { data: novoCliente } = await supabase
+              .from('clientes')
+              .insert({
+                nome: args.cliente_nome,
+                telefone: telefone,
+                data_nascimento: dataNascimentoFormatada,
+              })
+              .select()
+              .single();
+            clienteId = novoCliente?.id;
+          }
+
           // Criar novo agendamento
           const { data: novoAgendamento, error: erroAgendamento } = await supabase
             .from('agendamentos')
@@ -712,6 +756,7 @@ Romanielly - Banco Sicoob
               horario: args.horario,
               cliente_nome: args.cliente_nome,
               cliente_telefone: telefone,
+              cliente_id: clienteId,
               status: 'Confirmado',
               origem: 'whatsapp',
               bot_conversa_id: conversa.id,

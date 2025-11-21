@@ -11,6 +11,7 @@ import {
   Clock,
   Sparkle,
   Bell,
+  Cake,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { NavLink } from "@/components/NavLink";
@@ -39,6 +40,7 @@ const menuItems = [
   { icon: DollarSign, label: "Faturamento", path: "/admin/faturamento" },
   { icon: MessageCircle, label: "Bot WhatsApp", path: "/admin/bot-whatsapp" },
   { icon: Bell, label: "Lembretes", path: "/admin/lembretes" },
+  { icon: Cake, label: "Aniversariantes", path: "/admin/aniversariantes" },
 ];
 
 function AppSidebar() {
