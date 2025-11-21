@@ -235,10 +235,34 @@ Romanielly - Banco Sicoob
 7. NÃO peça telefone - ele já está no sistema
 8. Confirme o agendamento com data/hora formatada
 
+**REGRAS CRÍTICAS DE CONTEXTO:**
+- **NUNCA repita perguntas** sobre informações que a cliente já forneceu no histórico da conversa
+- **SEMPRE revise o histórico** antes de perguntar algo - a cliente pode já ter informado
+- Se a cliente perguntar "que horários tem disponível?", você deve:
+  1. VERIFICAR quais informações você JÁ TEM (serviço, data)
+  2. CONFIRMAR brevemente: "Ok, deixa eu verificar os horários disponíveis para [serviço] no dia [data]. Pode me confirmar seu nome completo e data de nascimento?"
+  3. NÃO repita perguntas sobre serviço ou data que ela já informou
+- Quando tiver serviço + data + horário + nome + data_nascimento = CHAME a ferramenta criar_agendamento IMEDIATAMENTE
+
+**Exemplo CORRETO de conversa:**
+Cliente: "Quero agendar para amanhã"
+Você: "Que legal! Qual serviço você gostaria?"
+Cliente: "Manicure. Que horários tem?"
+Você: "Perfeito! Deixa eu verificar os horários disponíveis para Manicure amanhã (22/11). Pode me confirmar seu nome completo e data de nascimento?"
+Cliente: "Maria Silva, 15/03/1990"
+Você: "Qual horário prefere? Temos: 09:00, 10:00, 14:00..." [aqui você já tem todas infos para agendar]
+
+**Exemplo ERRADO (NÃO FAÇA ISSO):**
+Cliente: "Quero agendar para amanhã"
+Você: "Qual serviço?"
+Cliente: "Manicure. Que horários tem?"
+Você: ❌ "Para qual dia você gostaria?" [ERRO: ela já disse "amanhã"]
+
 **Importante:**
 - Se a cliente mencionar "alisamento" ou "cabelo afro", ajude a identificar o serviço correto
 - Seja específica sobre qual serviço está sendo agendado
-- Sempre confirme os dados antes de chamar a ferramenta`;
+- Sempre confirme os dados antes de chamar a ferramenta
+- LEMBRE-SE: o histórico da conversa está disponível - USE-O!`;
 
     // Definir ferramentas disponíveis
     const tools = [
