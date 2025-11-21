@@ -18,23 +18,14 @@ const Dashboard = () => {
   const { agendamentos, loading: loadingAgendamentos, refetch: refetchAgendamentos } = useAgendamentos();
   const { pagamentos, loading: loadingPagamentos, refetch: refetchPagamentos } = usePagamentos();
 
-  // Timer usando requestAnimationFrame para melhor performance
+  // Timer atualiza a cada segundo
   useEffect(() => {
-    let animationFrameId: number;
-    let lastUpdate = Date.now();
-
     const updateTime = () => {
-      const now = Date.now();
-      // Atualizar apenas a cada segundo
-      if (now - lastUpdate >= 1000) {
-        setCurrentTime(new Date());
-        lastUpdate = now;
-      }
-      animationFrameId = requestAnimationFrame(updateTime);
+      setCurrentTime(new Date());
     };
-
-    animationFrameId = requestAnimationFrame(updateTime);
-    return () => cancelAnimationFrame(animationFrameId);
+    
+    const intervalId = setInterval(updateTime, 1000);
+    return () => clearInterval(intervalId);
   }, []);
 
   // Desabilitado polling automático para evitar sobrecarga
