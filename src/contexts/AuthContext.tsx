@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let isMounted = true;
+    let subscription: any = null;
     
     const fetchUserRole = async (userId: string) => {
       try {
@@ -52,6 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isInitializedRef.current = true;
 
       try {
+        // CRITICAL: Get session FIRST before setting up listener
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!isMounted) return;
@@ -68,38 +70,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch (error) {
         console.error('Erro na inicialização:', error);
       } finally {
+        // CRITICAL: Only set loading to false AFTER session is restored
         if (isMounted) setLoading(false);
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!isMounted) return;
-        
-        setSession(session);
-        setUser(session?.user ?? null);
+    // CRITICAL: Initialize auth FIRST, then set up listener
+    initAuth().then(() => {
+      if (!isMounted) return;
 
-        if (session?.user) {
-          // CRITICAL: Use setTimeout to avoid deadlocks (Supabase recommendation)
-          setTimeout(() => {
-            if (!isMounted) return;
-            fetchUserRole(session.user.id).then((userRole) => {
-              if (isMounted) setRole(userRole);
-            });
-          }, 0);
-        } else {
-          setRole(null);
+      // Now set up the auth state change listener
+      const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          if (!isMounted) return;
+          
+          setSession(session);
+          setUser(session?.user ?? null);
+
+          if (session?.user) {
+            // CRITICAL: Use setTimeout to avoid deadlocks (Supabase recommendation)
+            setTimeout(() => {
+              if (!isMounted) return;
+              fetchUserRole(session.user.id).then((userRole) => {
+                if (isMounted) setRole(userRole);
+              });
+            }, 0);
+          } else {
+            setRole(null);
+          }
         }
-
-        if (isMounted) setLoading(false);
-      }
-    );
-
-    initAuth();
+      );
+      
+      subscription = sub;
+    });
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
