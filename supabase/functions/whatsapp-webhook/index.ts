@@ -310,8 +310,8 @@ Romanielly - Banco Sicoob
 7. A ferramenta vai validar se há disponibilidade e criar o agendamento automaticamente
 8. Se não houver vaga, a ferramenta vai retornar sugestões de horários alternativos
 **Política de Cancelamento:**
-- Cancelamento: permitido até 5 dias antes
-- Reagendamento: permitido até 2 dias antes
+- Cancelamento: permitido até 24 horas antes
+- Reagendamento: permitido até 24 horas antes
 
 **Fluxo de Agendamento:**
 1. Identifique o serviço desejado
@@ -407,7 +407,7 @@ Você: ❌ "Para qual dia você gostaria?" [ERRO: ela já disse "amanhã"]
         type: "function",
         function: {
           name: "cancelar_agendamento",
-          description: "Cancela o agendamento do cliente. IMPORTANTE: Só pode cancelar até 5 dias antes. Sempre consulte o agendamento primeiro para confirmar os dados.",
+          description: "Cancela o agendamento do cliente. IMPORTANTE: Só pode cancelar até 24 horas antes. Sempre consulte o agendamento primeiro para confirmar os dados.",
           parameters: {
             type: "object",
             properties: {
@@ -523,14 +523,14 @@ Você: ❌ "Para qual dia você gostaria?" [ERRO: ela já disse "amanhã"]
 
           const agendamento = agendamentosAtivos[0];
           
-          // Verificar se está dentro do prazo (5 dias antes)
+          // Verificar se está dentro do prazo (24 horas / 1 dia antes)
           const hoje = new Date();
           hoje.setHours(0, 0, 0, 0);
           const dataAgendamento = new Date(agendamento.data + 'T00:00:00');
           const diasRestantes = Math.floor((dataAgendamento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 
-          if (diasRestantes < 5) {
-            resposta = `Desculpa amor, mas não é possível cancelar com menos de 5 dias de antecedência. Seu agendamento é daqui ${diasRestantes} dia(s). Entre em contato direto para casos especiais. 💜`;
+          if (diasRestantes < 1) {
+            resposta = `Desculpa amor, mas não é possível cancelar com menos de 24 horas de antecedência. Seu agendamento é daqui ${diasRestantes} dia(s). Entre em contato direto para casos especiais. 💜`;
             continue;
           }
 
