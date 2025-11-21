@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -11,6 +11,9 @@ export type Profissional = {
   ativo: boolean;
 };
 
+const CACHE_KEY = 'profissionais_cache';
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
+
 export const useProfissionais = () => {
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [loading, setLoading] = useState(false);
@@ -20,6 +23,17 @@ export const useProfissionais = () => {
       try {
         setLoading(true);
         
+        // Verificar cache
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_DURATION) {
+            setProfissionais(data);
+            setLoading(false);
+            return;
+          }
+        }
+        
         const { data, error } = await supabase
           .from("profissionais")
           .select("*")
@@ -27,6 +41,12 @@ export const useProfissionais = () => {
           .order("nome");
 
         if (error) throw error;
+        
+        // Salvar no cache
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+          data: data || [],
+          timestamp: Date.now()
+        }));
         
         setProfissionais(data || []);
       } catch (error) {
@@ -44,6 +64,9 @@ export const useProfissionais = () => {
     try {
       setLoading(true);
       
+      // Invalidar cache
+      sessionStorage.removeItem(CACHE_KEY);
+      
       const { data, error } = await supabase
         .from("profissionais")
         .select("*")
@@ -51,6 +74,12 @@ export const useProfissionais = () => {
         .order("nome");
 
       if (error) throw error;
+      
+      // Salvar no cache
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+        data: data || [],
+        timestamp: Date.now()
+      }));
       
       setProfissionais(data || []);
     } catch (error) {
