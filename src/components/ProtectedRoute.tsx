@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { useAuth, UserRole } from "@/hooks/useAuth";
+import { useAuth, UserRole } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
   children: JSX.Element;
