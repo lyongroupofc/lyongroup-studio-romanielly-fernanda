@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -14,6 +14,9 @@ export type Pagamento = {
   created_at?: string;
 };
 
+const CACHE_KEY = 'pagamentos_cache';
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
+
 export const usePagamentos = () => {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [loading, setLoading] = useState(false);
@@ -23,22 +26,39 @@ export const usePagamentos = () => {
       try {
         setLoading(true);
         
+        // Verificar cache
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_DURATION) {
+            setPagamentos(data);
+            setLoading(false);
+            return;
+          }
+        }
+        
         const dataLimite = new Date();
-        dataLimite.setDate(dataLimite.getDate() - 30);
+        dataLimite.setDate(dataLimite.getDate() - 14); // Reduzido de 30 para 14 dias
         const dataLimiteStr = dataLimite.toISOString().split('T')[0];
 
         const { data, error } = await supabase
           .from("pagamentos")
           .select("id, agendamento_id, cliente_nome, servico, valor, metodo_pagamento, status, data, created_at")
           .gte("data", dataLimiteStr)
-          .order("data", { ascending: false })
-          .limit(200);
+          .order("data", { ascending: false });
+          // Removido .limit(200) para buscar apenas o necessário
 
         if (error) {
           console.error("Erro ao buscar pagamentos:", error);
           setPagamentos([]);
           return;
         }
+        
+        // Salvar no cache
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+          data: data || [],
+          timestamp: Date.now()
+        }));
         
         setPagamentos(data || []);
       } catch (error) {
@@ -56,22 +76,31 @@ export const usePagamentos = () => {
     try {
       setLoading(true);
       
+      // Invalidar cache
+      sessionStorage.removeItem(CACHE_KEY);
+      
       const dataLimite = new Date();
-      dataLimite.setDate(dataLimite.getDate() - 30);
+      dataLimite.setDate(dataLimite.getDate() - 14); // Reduzido de 30 para 14 dias
       const dataLimiteStr = dataLimite.toISOString().split('T')[0];
 
       const { data, error } = await supabase
         .from("pagamentos")
         .select("id, agendamento_id, cliente_nome, servico, valor, metodo_pagamento, status, data, created_at")
         .gte("data", dataLimiteStr)
-        .order("data", { ascending: false })
-        .limit(200);
+        .order("data", { ascending: false });
+        // Removido .limit(200)
 
       if (error) {
         console.error("Erro ao buscar pagamentos:", error);
         setPagamentos([]);
         return;
       }
+      
+      // Salvar no cache
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+        data: data || [],
+        timestamp: Date.now()
+      }));
       
       setPagamentos(data || []);
     } catch (error) {
