@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -20,8 +20,13 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
 export const usePagamentos = () => {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [loading, setLoading] = useState(false);
+  const isMountedRef = useRef(false);
 
   useEffect(() => {
+    // Prevenir execução duplicada
+    if (isMountedRef.current) return;
+    isMountedRef.current = true;
+
     const fetchPagamentos = async () => {
       try {
         setLoading(true);
@@ -38,7 +43,7 @@ export const usePagamentos = () => {
         }
         
         const dataLimite = new Date();
-        dataLimite.setDate(dataLimite.getDate() - 14); // Reduzido de 30 para 14 dias
+        dataLimite.setDate(dataLimite.getDate() - 14);
         const dataLimiteStr = dataLimite.toISOString().split('T')[0];
 
         const { data, error } = await supabase
@@ -46,7 +51,6 @@ export const usePagamentos = () => {
           .select("id, agendamento_id, cliente_nome, servico, valor, metodo_pagamento, status, data, created_at")
           .gte("data", dataLimiteStr)
           .order("data", { ascending: false });
-          // Removido .limit(200) para buscar apenas o necessário
 
         if (error) {
           console.error("Erro ao buscar pagamentos:", error);
@@ -70,6 +74,10 @@ export const usePagamentos = () => {
     };
 
     fetchPagamentos();
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   const refetch = async () => {
