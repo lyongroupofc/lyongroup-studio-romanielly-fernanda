@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -20,21 +20,9 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
 export const usePagamentos = () => {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [loading, setLoading] = useState(false);
-  const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    const lockKey = 'pagamentos_fetching';
-    
-    // Verificar se já está buscando (persiste entre reloads)
-    if (sessionStorage.getItem(lockKey) === 'true') {
-      console.log('[usePagamentos] Bloqueado - já está buscando (sessionStorage)');
-      return;
-    }
-    
     const fetchPagamentos = async () => {
-      // Marcar como "em andamento" no sessionStorage
-      sessionStorage.setItem(lockKey, 'true');
-      isFetchingRef.current = true;
       try {
         setLoading(true);
         
@@ -77,17 +65,10 @@ export const usePagamentos = () => {
         setPagamentos([]);
       } finally {
         setLoading(false);
-        // Liberar o lock após 2 segundos (segurança)
-        setTimeout(() => sessionStorage.removeItem(lockKey), 2000);
       }
     };
 
     fetchPagamentos();
-
-    return () => {
-      isFetchingRef.current = false;
-      sessionStorage.removeItem(lockKey);
-    };
   }, []);
 
   const refetch = async () => {
@@ -98,7 +79,7 @@ export const usePagamentos = () => {
       sessionStorage.removeItem(CACHE_KEY);
       
       const dataLimite = new Date();
-      dataLimite.setDate(dataLimite.getDate() - 14); // Reduzido de 30 para 14 dias
+      dataLimite.setDate(dataLimite.getDate() - 14);
       const dataLimiteStr = dataLimite.toISOString().split('T')[0];
 
       const { data, error } = await supabase
@@ -106,7 +87,6 @@ export const usePagamentos = () => {
         .select("id, agendamento_id, cliente_nome, servico, valor, metodo_pagamento, status, data, created_at")
         .gte("data", dataLimiteStr)
         .order("data", { ascending: false });
-        // Removido .limit(200)
 
       if (error) {
         console.error("Erro ao buscar pagamentos:", error);
