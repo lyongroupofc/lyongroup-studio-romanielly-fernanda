@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard,
   Calendar,
@@ -47,16 +47,24 @@ function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
     const updateTime = () => {
       setCurrentTime(new Date());
     };
     
-    const intervalId = setInterval(updateTime, 1000);
+    intervalRef.current = setInterval(updateTime, 1000);
     
     return () => {
-      clearInterval(intervalId);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
   }, []);
 

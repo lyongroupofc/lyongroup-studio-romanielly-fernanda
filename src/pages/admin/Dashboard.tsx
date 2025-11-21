@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Users, DollarSign, Plus, Eye, EyeOff, Palette, Brush, Sparkle, Gem } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { usePagamentos } from "@/hooks/usePagamentos";
 import { format } from "date-fns";
@@ -15,17 +15,27 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [showTotal, setShowTotal] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { agendamentos, loading: loadingAgendamentos, refetch: refetchAgendamentos } = useAgendamentos();
   const { pagamentos, loading: loadingPagamentos, refetch: refetchPagamentos } = usePagamentos();
 
   // Timer atualiza a cada segundo
   useEffect(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
     const updateTime = () => {
       setCurrentTime(new Date());
     };
     
-    const intervalId = setInterval(updateTime, 1000);
-    return () => clearInterval(intervalId);
+    intervalRef.current = setInterval(updateTime, 1000);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, []);
 
   // Desabilitado polling automático para evitar sobrecarga

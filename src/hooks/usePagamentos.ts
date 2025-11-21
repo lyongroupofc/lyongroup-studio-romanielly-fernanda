@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -9,9 +9,9 @@ export type Pagamento = {
   servico: string;
   valor: number;
   metodo_pagamento: string | null;
-  status: string;
+  status: string | null;
   data: string;
-  created_at?: string;
+  created_at: string | null;
 };
 
 const CACHE_KEY = 'pagamentos_cache';
@@ -20,9 +20,15 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
 export const usePagamentos = () => {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [loading, setLoading] = useState(false);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
+    if (hasFetchedRef.current) {
+      return;
+    }
+
     const fetchPagamentos = async () => {
+      hasFetchedRef.current = true;
       try {
         setLoading(true);
         
