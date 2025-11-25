@@ -133,11 +133,11 @@ export const useAgendamentos = () => {
         throw error;
       }
       
-      // Atualizar estado local
-      setAgendamentos([...agendamentos, data]);
-      
-      // Invalidar cache
+      // Invalidar cache e forçar refetch
       sessionStorage.removeItem(CACHE_KEY);
+      
+      // Refetch para garantir que a lista está atualizada
+      await refetch();
       
       toast.success("Agendamento criado com sucesso!", {
         position: "top-center",

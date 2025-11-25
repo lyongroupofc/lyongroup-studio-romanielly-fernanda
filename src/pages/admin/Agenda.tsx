@@ -293,6 +293,11 @@ const Agenda = () => {
 
     try {
       const servico = servicos.find((s) => s.id === formData.servico);
+      if (!servico) {
+        toast.error("Serviço não encontrado");
+        return;
+      }
+      
       const profissional = formData.profissional ? profissionais.find((p) => p.id === formData.profissional) : null;
 
       // Criar ou atualizar cliente com data de nascimento
@@ -346,14 +351,12 @@ const Agenda = () => {
         clienteId = novoCliente?.id;
       }
 
-      // VALIDAÇÃO CRÍTICA: Verificar se horário já está ocupado
-      const { data: horarioOcupado, error: checkError } = await supabase
+      // VALIDAÇÃO CRÍTICA: Verificar conflitos de horário considerando duração dos serviços
+      const { data: agendamentosDia, error: checkError } = await supabase
         .from('agendamentos')
-        .select('id')
+        .select('*, servico_id')
         .eq('data', fmtKey(selectedDate))
-        .eq('horario', formData.horario)
-        .neq('status', 'Cancelado')
-        .maybeSingle();
+        .neq('status', 'Cancelado');
 
       if (checkError) {
         console.error("Erro ao verificar disponibilidade:", checkError);
@@ -361,8 +364,26 @@ const Agenda = () => {
         return;
       }
 
-      if (horarioOcupado) {
-        toast.error("Este horário já está ocupado! Por favor, escolha outro horário disponível.");
+      // Calcular slots que o novo agendamento vai ocupar
+      const slotsNovoAgendamento = calcularHorariosBloqueados(formData.horario, servico.duracao);
+
+      // Verificar se algum slot conflita com agendamentos existentes
+      let temConflito = false;
+      for (const ag of agendamentosDia || []) {
+        const servicoExistente = servicos.find(s => s.id === ag.servico_id);
+        if (servicoExistente) {
+          const slotsExistentes = calcularHorariosBloqueados(ag.horario, servicoExistente.duracao);
+          // Verificar se há interseção entre os slots
+          const haIntersecao = slotsNovoAgendamento.some(slot => slotsExistentes.includes(slot));
+          if (haIntersecao) {
+            temConflito = true;
+            break;
+          }
+        }
+      }
+
+      if (temConflito) {
+        toast.error("Este horário conflita com outro agendamento! Por favor, escolha outro horário disponível.");
         return;
       }
 
