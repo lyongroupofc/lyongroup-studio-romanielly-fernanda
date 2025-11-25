@@ -346,6 +346,26 @@ const Agenda = () => {
         clienteId = novoCliente?.id;
       }
 
+      // VALIDAÇÃO CRÍTICA: Verificar se horário já está ocupado
+      const { data: horarioOcupado, error: checkError } = await supabase
+        .from('agendamentos')
+        .select('id')
+        .eq('data', fmtKey(selectedDate))
+        .eq('horario', formData.horario)
+        .neq('status', 'Cancelado')
+        .maybeSingle();
+
+      if (checkError) {
+        console.error("Erro ao verificar disponibilidade:", checkError);
+        toast.error("Erro ao verificar disponibilidade do horário");
+        return;
+      }
+
+      if (horarioOcupado) {
+        toast.error("Este horário já está ocupado! Por favor, escolha outro horário disponível.");
+        return;
+      }
+
       // Criar agendamento
       await addAgendamento({
         data: fmtKey(selectedDate),
