@@ -440,7 +440,9 @@ const Agenda = () => {
       for (const ag of agendamentosDia || []) {
         const servicoExistente = servicos.find(s => s.id === ag.servico_id);
         if (servicoExistente) {
-          const slotsExistentes = calcularHorariosBloqueados(ag.horario, servicoExistente.duracao);
+          // NORMALIZAR: Remover segundos do horário do banco (HH:MM:SS -> HH:MM)
+          const horarioNormalizado = ag.horario.substring(0, 5);
+          const slotsExistentes = calcularHorariosBloqueados(horarioNormalizado, servicoExistente.duracao);
           // Verificar se há interseção entre os slots
           const haIntersecao = slotsNovoAgendamento.some(slot => slotsExistentes.includes(slot));
           if (haIntersecao) {
