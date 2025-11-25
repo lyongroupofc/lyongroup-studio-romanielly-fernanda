@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
@@ -36,6 +37,42 @@ const Agenda = () => {
   const { configs, getConfig, updateConfig, refetch: refetchConfig } = useAgendaConfig();
   const { servicos, loading: loadingServicos, refetch: refetchServicos } = useServicos();
   const { profissionais, loading: loadingProfissionais, refetch: refetchProfissionais } = useProfissionais();
+
+  // Estado para agendamentos em tempo real da data selecionada
+  const [agendamentosDataAtual, setAgendamentosDataAtual] = useState<Agendamento[]>([]);
+  const [loadingDisponibilidade, setLoadingDisponibilidade] = useState(false);
+
+  // Buscar agendamentos em tempo real quando abrir o dialog de reserva
+  useEffect(() => {
+    if (!openReservarDialog || !selectedDate) {
+      return;
+    }
+
+    const fetchDisponibilidadeRealTime = async () => {
+      setLoadingDisponibilidade(true);
+      try {
+        const { data: agendamentosDia, error } = await supabase
+          .from('agendamentos')
+          .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes')
+          .eq('data', fmtKey(selectedDate))
+          .neq('status', 'Cancelado');
+
+        if (error) {
+          console.error("Erro ao buscar disponibilidade:", error);
+          setAgendamentosDataAtual([]);
+        } else {
+          setAgendamentosDataAtual(agendamentosDia || []);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar disponibilidade:", error);
+        setAgendamentosDataAtual([]);
+      } finally {
+        setLoadingDisponibilidade(false);
+      }
+    };
+
+    fetchDisponibilidadeRealTime();
+  }, [openReservarDialog, selectedDate]);
 
   // Desabilitado refetch automático para evitar loops
   // useEffect(() => {
@@ -166,12 +203,15 @@ const Agenda = () => {
   };
 
   const getAvailableSlots = useMemo(() => {
-    return (d: Date | undefined) => {
+    return (d: Date | undefined, useRealTimeData: boolean = false) => {
       if (!d) return [];
       const dayData = getDayData(d);
 
       const dateStr = fmtKey(d);
-      const agendamentosDay = agendamentos.filter((a) => a.data === dateStr && a.status !== 'Cancelado');
+      // Usar dados em tempo real quando disponível para a data selecionada no dialog
+      const agendamentosDay = useRealTimeData && openReservarDialog
+        ? agendamentosDataAtual 
+        : agendamentos.filter((a) => a.data === dateStr && a.status !== 'Cancelado');
       
       // Calcula todos os horários bloqueados considerando a duração de cada serviço
       const todosBloqueados = new Set<string>();
@@ -196,11 +236,11 @@ const Agenda = () => {
       
       return base.filter((t) => !todosBloqueados.has(t)).sort();
     };
-  }, [agendamentos, servicos, configs]);
+  }, [agendamentos, agendamentosDataAtual, servicos, configs, openReservarDialog]);
 
-  const getServiceStartSlots = (d: Date | undefined, servicoId?: string) => {
+  const getServiceStartSlots = (d: Date | undefined, servicoId?: string, useRealTimeData: boolean = false) => {
     if (!d || !servicoId) return [];
-    const base = getAvailableSlots(d);
+    const base = getAvailableSlots(d, useRealTimeData);
     const baseSet = new Set(base);
     const serv = servicos.find((s) => s.id === servicoId);
     if (!serv) return base;
@@ -865,7 +905,7 @@ const Agenda = () => {
                   <SelectValue placeholder={formData.servico ? "Selecione um horário" : "Selecione um serviço primeiro"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {getServiceStartSlots(selectedDate, formData.servico).map((h) => (
+                  {getServiceStartSlots(selectedDate, formData.servico, false).map((h) => (
                     <SelectItem key={h} value={h}>{h}</SelectItem>
                   ))}
                 </SelectContent>
@@ -951,9 +991,13 @@ const Agenda = () => {
                   <SelectValue placeholder={formData.servico ? "Selecione um horário" : "Selecione um serviço primeiro"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {getServiceStartSlots(selectedDate, formData.servico).map((h) => (
-                    <SelectItem key={h} value={h}>{h}</SelectItem>
-                  ))}
+                  {loadingDisponibilidade ? (
+                    <div className="p-2 text-center text-sm text-muted-foreground">Carregando horários...</div>
+                  ) : (
+                    getServiceStartSlots(selectedDate, formData.servico, true).map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

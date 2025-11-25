@@ -18,7 +18,7 @@ export type Agendamento = {
 };
 
 const CACHE_KEY = 'agendamentos_cache';
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
+const CACHE_DURATION = 30 * 1000; // 30 segundos (reduzido de 10 minutos)
 
 export const useAgendamentos = () => {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
