@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Plus, Loader2, Clock, User, Phone, Scissors } from "lucide-react";
+import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { isBefore, startOfToday, isSunday, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -30,6 +30,7 @@ const Agenda = () => {
   const [openSideSheet, setOpenSideSheet] = useState(false);
   const [selectedAgendamento, setSelectedAgendamento] = useState<Agendamento | null>(null);
   const [highlightedAgendamento, setHighlightedAgendamento] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { agendamentos, loading: loadingAgendamentos, addAgendamento, updateAgendamento, deleteAgendamento, cancelAgendamento, refetch: refetchAgendamentos } = useAgendamentos();
   const { configs, getConfig, updateConfig, refetch: refetchConfig } = useAgendaConfig();
@@ -387,6 +388,44 @@ const Agenda = () => {
   const agendamentosHoje = agendamentos.filter((a) => a.data === format(new Date(), "yyyy-MM-dd"));
   const agendamentosDia = selectedDate ? agendamentos.filter((a) => a.data === fmtKey(selectedDate)) : [];
 
+  // Filtro de busca
+  const agendamentosFiltrados = useMemo(() => {
+    if (!searchTerm.trim()) return [];
+    
+    const termo = searchTerm.toLowerCase().trim();
+    
+    return agendamentos.filter((ag) => {
+      // Busca por nome
+      if (ag.cliente_nome?.toLowerCase().includes(termo)) return true;
+      
+      // Busca por telefone (remove formatação)
+      if (ag.cliente_telefone?.replace(/\D/g, '').includes(termo.replace(/\D/g, ''))) return true;
+      
+      // Busca por serviço
+      if (ag.servico_nome?.toLowerCase().includes(termo)) return true;
+      
+      // Busca por profissional
+      if (ag.profissional_nome?.toLowerCase().includes(termo)) return true;
+      
+      // Busca por data (formato DD/MM/YYYY)
+      const [ano, mes, dia] = ag.data.split('-');
+      const dataFormatada = `${dia}/${mes}/${ano}`;
+      if (dataFormatada.includes(termo)) return true;
+      
+      // Busca por horário
+      if (ag.horario.includes(termo)) return true;
+      
+      // Busca por status
+      if (ag.status?.toLowerCase().includes(termo)) return true;
+      
+      return false;
+    }).sort((a, b) => {
+      // Ordenar por data mais recente primeiro
+      if (a.data !== b.data) return b.data.localeCompare(a.data);
+      return a.horario.localeCompare(b.horario);
+    });
+  }, [agendamentos, searchTerm]);
+
   if (loadingAgendamentos || loadingServicos || loadingProfissionais) {
     return (
       <div className="space-y-6">
@@ -433,6 +472,92 @@ const Agenda = () => {
           Novo Agendamento
         </Button>
       </div>
+
+      {/* Barra de Busca */}
+      <Card className="p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Buscar por nome, telefone, data, serviço..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchTerm("")}
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+        
+        {/* Resultados da Busca */}
+        {searchTerm && (
+          <div className="mt-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              {agendamentosFiltrados.length} resultado(s) encontrado(s)
+            </p>
+            
+            {agendamentosFiltrados.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Nenhum agendamento encontrado</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {agendamentosFiltrados.map((ag) => (
+                  <Card
+                    key={ag.id}
+                    className="p-3 hover:bg-accent cursor-pointer transition-colors"
+                    onClick={() => {
+                      setSelectedAgendamento(ag);
+                      setOpenDetalhesDialog(true);
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <span className="font-medium truncate">{ag.cliente_nome}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
+                          <Phone className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{ag.cliente_telefone}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-1 text-sm">
+                          <Scissors className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate">{ag.servico_nome}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="w-3 h-3 flex-shrink-0" />
+                          <span>
+                            {format(new Date(ag.data + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR })} às {ag.horario}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          ag.status === "Confirmado" 
+                            ? "bg-success/20 text-success" 
+                            : ag.status === "Cancelado"
+                            ? "bg-destructive/20 text-destructive"
+                            : "bg-muted text-muted-foreground"
+                        }`}>
+                          {ag.status}
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Calendário */}
