@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,43 @@ const Agendar = () => {
   const { profissionais, loading: loadingProfissionais } = useProfissionais();
   const { agendamentos, loading: loadingAgendamentos, addAgendamento } = useAgendamentos();
   const { configs, getConfig } = useAgendaConfig();
+
+  // Estado para agendamentos em tempo real da data selecionada
+  const [agendamentosDataAtual, setAgendamentosDataAtual] = useState<typeof agendamentos>([]);
+  const [loadingDisponibilidade, setLoadingDisponibilidade] = useState(false);
+
+  // Buscar agendamentos em tempo real quando a data é selecionada
+  useEffect(() => {
+    if (!date) {
+      setAgendamentosDataAtual([]);
+      return;
+    }
+
+    const fetchDisponibilidadeRealTime = async () => {
+      setLoadingDisponibilidade(true);
+      try {
+        const { data: agendamentosDia, error } = await supabase
+          .from('agendamentos')
+          .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes')
+          .eq('data', fmtKey(date))
+          .neq('status', 'Cancelado');
+
+        if (error) {
+          console.error("Erro ao buscar disponibilidade:", error);
+          setAgendamentosDataAtual([]);
+        } else {
+          setAgendamentosDataAtual(agendamentosDia || []);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar disponibilidade:", error);
+        setAgendamentosDataAtual([]);
+      } finally {
+        setLoadingDisponibilidade(false);
+      }
+    };
+
+    fetchDisponibilidadeRealTime();
+  }, [date]);
 
   const fmtKey = (d: Date) => format(d, "yyyy-MM-dd");
 
@@ -109,12 +147,15 @@ const Agendar = () => {
   };
 
   const getAvailableSlots = useMemo(() => {
-    return (d: Date | undefined) => {
+    return (d: Date | undefined, useRealTimeData: boolean = false) => {
       if (!d) return [];
       const dayData = getDayData(d);
       
       const dateStr = fmtKey(d);
-      const agendamentosDay = agendamentos.filter(a => a.data === dateStr && a.status !== 'Cancelado');
+      // Usar dados em tempo real quando disponível para a data selecionada
+      const agendamentosDay = useRealTimeData 
+        ? agendamentosDataAtual 
+        : agendamentos.filter(a => a.data === dateStr && a.status !== 'Cancelado');
       
       // Calcula todos os horários bloqueados considerando a duração de cada serviço
       const todosBloqueados = new Set<string>();
@@ -141,12 +182,12 @@ const Agendar = () => {
       
       return base.filter((t) => !todosBloqueados.has(t)).sort();
     };
-  }, [agendamentos, servicos, configs]);
+  }, [agendamentos, agendamentosDataAtual, servicos, configs]);
 
   const getServiceStartSlots = useMemo(() => {
-    return (d: Date | undefined, servicoId?: string) => {
+    return (d: Date | undefined, servicoId?: string, useRealTimeData: boolean = false) => {
       if (!d || !servicoId) return [];
-      const base = getAvailableSlots(d);
+      const base = getAvailableSlots(d, useRealTimeData);
       const baseSet = new Set(base);
       const serv = servicos.find((s) => s.id === servicoId);
       if (!serv) return base;
@@ -304,10 +345,11 @@ const Agendar = () => {
   };
 
   const horariosDisponiveis = useMemo(() => {
-    return getServiceStartSlots(date, formData.servico);
-  }, [date, formData.servico, getServiceStartSlots]);
+    // Usar dados em tempo real para calcular horários disponíveis
+    return getServiceStartSlots(date, formData.servico, true);
+  }, [date, formData.servico, getServiceStartSlots, agendamentosDataAtual]);
   
-  const isLoading = loadingServicos || loadingProfissionais || loadingAgendamentos;
+  const isLoading = loadingServicos || loadingProfissionais || loadingAgendamentos || loadingDisponibilidade;
 
   return (
     <div className="min-h-screen gradient-soft py-12 px-4">
