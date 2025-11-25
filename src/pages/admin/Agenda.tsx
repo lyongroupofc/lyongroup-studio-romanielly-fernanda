@@ -171,7 +171,7 @@ const Agenda = () => {
       const dayData = getDayData(d);
 
       const dateStr = fmtKey(d);
-      const agendamentosDay = agendamentos.filter((a) => a.data === dateStr);
+      const agendamentosDay = agendamentos.filter((a) => a.data === dateStr && a.status !== 'Cancelado');
       
       // Calcula todos os horários bloqueados considerando a duração de cada serviço
       const todosBloqueados = new Set<string>();
@@ -915,7 +915,7 @@ const Agenda = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Serviço *</Label>
-                <Select value={formData.servico} onValueChange={(value) => setFormData({ ...formData, servico: value })}>
+                <Select value={formData.servico} onValueChange={(value) => setFormData({ ...formData, servico: value, horario: '' })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
