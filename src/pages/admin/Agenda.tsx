@@ -388,13 +388,13 @@ const Agenda = () => {
   const agendamentosHoje = agendamentos.filter((a) => a.data === format(new Date(), "yyyy-MM-dd"));
   const agendamentosDia = selectedDate ? agendamentos.filter((a) => a.data === fmtKey(selectedDate)) : [];
 
-  // Filtro de busca
+  // Filtro de busca com priorização de matches exatos
   const agendamentosFiltrados = useMemo(() => {
     if (!searchTerm.trim()) return [];
     
     const termo = searchTerm.toLowerCase().trim();
     
-    return agendamentos.filter((ag) => {
+    const resultados = agendamentos.filter((ag) => {
       // Busca por nome
       if (ag.cliente_nome?.toLowerCase().includes(termo)) return true;
       
@@ -419,10 +419,31 @@ const Agenda = () => {
       if (ag.status?.toLowerCase().includes(termo)) return true;
       
       return false;
-    }).sort((a, b) => {
-      // Ordenar por data mais recente primeiro
+    });
+
+    // Ordenar por relevância: matches exatos primeiro, depois parciais
+    return resultados.sort((a, b) => {
+      // Calcular score de relevância
+      const scoreA = (
+        (a.cliente_nome?.toLowerCase() === termo ? 1000 : 0) +
+        (a.cliente_telefone?.replace(/\D/g, '') === termo.replace(/\D/g, '') ? 1000 : 0) +
+        (a.cliente_nome?.toLowerCase().startsWith(termo) ? 100 : 0) +
+        (a.cliente_telefone?.replace(/\D/g, '').startsWith(termo.replace(/\D/g, '')) ? 100 : 0)
+      );
+      
+      const scoreB = (
+        (b.cliente_nome?.toLowerCase() === termo ? 1000 : 0) +
+        (b.cliente_telefone?.replace(/\D/g, '') === termo.replace(/\D/g, '') ? 1000 : 0) +
+        (b.cliente_nome?.toLowerCase().startsWith(termo) ? 100 : 0) +
+        (b.cliente_telefone?.replace(/\D/g, '').startsWith(termo.replace(/\D/g, '')) ? 100 : 0)
+      );
+      
+      // Se scores diferentes, ordenar por score
+      if (scoreA !== scoreB) return scoreB - scoreA;
+      
+      // Se scores iguais, ordenar por data mais recente
       if (a.data !== b.data) return b.data.localeCompare(a.data);
-      return a.horario.localeCompare(b.horario);
+      return b.horario.localeCompare(a.horario);
     });
   }, [agendamentos, searchTerm]);
 
