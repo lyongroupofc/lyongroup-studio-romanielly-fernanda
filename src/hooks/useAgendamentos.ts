@@ -128,9 +128,16 @@ export const useAgendamentos = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro detalhado ao criar agendamento:", error);
+        throw error;
+      }
       
+      // Atualizar estado local
       setAgendamentos([...agendamentos, data]);
+      
+      // Invalidar cache
+      sessionStorage.removeItem(CACHE_KEY);
       
       toast.success("Agendamento criado com sucesso!", {
         position: "top-center",
@@ -142,7 +149,7 @@ export const useAgendamentos = () => {
       if (error?.code === "23505") {
         toast.error("Já existe um agendamento para este horário");
       } else {
-        toast.error("Erro ao criar agendamento");
+        toast.error(`Erro ao criar agendamento: ${error?.message || 'Desconhecido'}`);
       }
       throw error;
     }

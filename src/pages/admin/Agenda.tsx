@@ -295,26 +295,39 @@ const Agenda = () => {
       const servico = servicos.find((s) => s.id === formData.servico);
       const profissional = formData.profissional ? profissionais.find((p) => p.id === formData.profissional) : null;
 
-      // Criar ou atualizar cliente
+      // Criar ou atualizar cliente com data de nascimento
       const { supabase } = await import('@/integrations/supabase/client');
-      const { data: clienteExistente } = await supabase
+      
+      const { data: clienteExistente, error: clienteError } = await supabase
         .from('clientes')
         .select('*')
         .eq('telefone', formData.telefone)
         .maybeSingle();
 
+      if (clienteError) {
+        console.error("Erro ao buscar cliente:", clienteError);
+        toast.error("Erro ao buscar cliente");
+        return;
+      }
+
       let clienteId = clienteExistente?.id;
 
       if (clienteExistente) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('clientes')
           .update({
             nome: formData.nome,
             data_nascimento: formData.dataNascimento,
           })
           .eq('id', clienteExistente.id);
+        
+        if (updateError) {
+          console.error("Erro ao atualizar cliente:", updateError);
+          toast.error("Erro ao atualizar dados do cliente");
+          return;
+        }
       } else {
-        const { data: novoCliente } = await supabase
+        const { data: novoCliente, error: insertError } = await supabase
           .from('clientes')
           .insert({
             nome: formData.nome,
@@ -323,9 +336,17 @@ const Agenda = () => {
           })
           .select()
           .single();
+        
+        if (insertError) {
+          console.error("Erro ao criar cliente:", insertError);
+          toast.error("Erro ao cadastrar cliente");
+          return;
+        }
+        
         clienteId = novoCliente?.id;
       }
 
+      // Criar agendamento
       await addAgendamento({
         data: fmtKey(selectedDate),
         horario: formData.horario,
@@ -340,10 +361,14 @@ const Agenda = () => {
         observacoes: formData.observacoes || null,
       });
 
+      // Limpar cache para forçar atualização em outras abas
+      sessionStorage.removeItem('agendamentos_cache');
+      
       setOpenReservarDialog(false);
       setFormData({ nome: "", telefone: "", dataNascimento: "", servico: "", profissional: "", horario: "", observacoes: "" });
     } catch (error) {
-      // Erro já tratado no hook
+      console.error("Erro ao criar agendamento:", error);
+      toast.error("Erro ao salvar agendamento. Tente novamente.");
     }
   };
 

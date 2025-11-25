@@ -46,6 +46,10 @@ const Aniversariantes = () => {
     };
 
     carregarAniversariantesMes();
+    
+    // Recarregar a cada 30 segundos para capturar novos cadastros
+    const interval = setInterval(carregarAniversariantesMes, 30000);
+    return () => clearInterval(interval);
   }, [selectedDate, buscarAniversariantesPorDia]);
 
   const calcularIdade = (dataNascimento: string) => {
