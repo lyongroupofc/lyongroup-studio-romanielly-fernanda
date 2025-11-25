@@ -114,7 +114,7 @@ const Agendar = () => {
       const dayData = getDayData(d);
       
       const dateStr = fmtKey(d);
-      const agendamentosDay = agendamentos.filter(a => a.data === dateStr);
+      const agendamentosDay = agendamentos.filter(a => a.data === dateStr && a.status !== 'Cancelado');
       
       // Calcula todos os horários bloqueados considerando a duração de cada serviço
       const todosBloqueados = new Set<string>();
@@ -142,6 +142,47 @@ const Agendar = () => {
       return base.filter((t) => !todosBloqueados.has(t)).sort();
     };
   }, [agendamentos, servicos, configs]);
+
+  const getServiceStartSlots = useMemo(() => {
+    return (d: Date | undefined, servicoId?: string) => {
+      if (!d || !servicoId) return [];
+      const base = getAvailableSlots(d);
+      const baseSet = new Set(base);
+      const serv = servicos.find((s) => s.id === servicoId);
+      if (!serv) return base;
+
+      const steps = Math.ceil(serv.duracao / 30); // número de slots de 30min necessários
+      
+      // Determina horário de fechamento baseado no dia da semana
+      const dayOfWeek = d.getDay();
+      let limiteMinutos = 13 * 60; // Padrão sábado
+      
+      if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
+        limiteMinutos = 20 * 60;
+      } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
+        limiteMinutos = 19 * 60;
+      } else if (dayOfWeek === 6) { // Sábado
+        limiteMinutos = 13 * 60;
+      }
+
+      const toMin = (t: string) => {
+        const [h, m] = t.split(":").map(Number);
+        return h * 60 + m;
+      };
+      const toHHMM = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+      return base.filter((start) => {
+        const inicio = toMin(start);
+        const fim = inicio + serv.duracao;
+        if (fim > limiteMinutos) return false; // precisa terminar antes do horário de fechamento
+        for (let k = 0; k < steps; k++) {
+          const slot = toHHMM(inicio + k * 30);
+          if (!baseSet.has(slot)) return false;
+        }
+        return true;
+      });
+    };
+  }, [getAvailableSlots, servicos]);
 
   const isDayFull = useMemo(() => {
     return (d: Date) => {
@@ -263,8 +304,8 @@ const Agendar = () => {
   };
 
   const horariosDisponiveis = useMemo(() => {
-    return getAvailableSlots(date);
-  }, [date, getAvailableSlots]);
+    return getServiceStartSlots(date, formData.servico);
+  }, [date, formData.servico, getServiceStartSlots]);
   
   const isLoading = loadingServicos || loadingProfissionais || loadingAgendamentos;
 
