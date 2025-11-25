@@ -51,20 +51,25 @@ const Agenda = () => {
     const fetchDisponibilidadeRealTime = async () => {
       setLoadingDisponibilidade(true);
       try {
+        const dateStr = fmtKey(selectedDate);
+        console.log(`[fetchDisponibilidade] Buscando agendamentos para ${dateStr}`);
+        
         const { data: agendamentosDia, error } = await supabase
           .from('agendamentos')
           .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes')
-          .eq('data', fmtKey(selectedDate))
-          .neq('status', 'Cancelado');
+          .eq('data', dateStr)
+          .neq('status', 'Cancelado')
+          .order('horario', { ascending: true });
 
         if (error) {
-          console.error("Erro ao buscar disponibilidade:", error);
+          console.error("[fetchDisponibilidade] Erro:", error);
           setAgendamentosDataAtual([]);
         } else {
+          console.log(`[fetchDisponibilidade] Encontrados ${agendamentosDia?.length || 0} agendamentos:`, agendamentosDia);
           setAgendamentosDataAtual(agendamentosDia || []);
         }
       } catch (error) {
-        console.error("Erro ao buscar disponibilidade:", error);
+        console.error("[fetchDisponibilidade] Erro catch:", error);
         setAgendamentosDataAtual([]);
       } finally {
         setLoadingDisponibilidade(false);
@@ -231,14 +236,17 @@ const Agenda = () => {
       
       console.log(`[getAvailableSlots] Processando ${agendamentosDay.length} agendamentos para ${dateStr}`);
       agendamentosDay.forEach(ag => {
+        // Normalizar horário removendo segundos (ex: "15:00:00" -> "15:00")
+        const horarioNormalizado = ag.horario.substring(0, 5);
+        
         const servico = servicos.find(s => s.id === ag.servico_id);
         if (servico) {
-          const horariosBloqueados = calcularHorariosBloqueados(ag.horario, servico.duracao);
-          console.log(`[getAvailableSlots] Bloqueando ${horariosBloqueados.join(', ')} (${ag.cliente_nome} - ${servico.nome})`);
+          const horariosBloqueados = calcularHorariosBloqueados(horarioNormalizado, servico.duracao);
+          console.log(`[getAvailableSlots] Bloqueando ${horariosBloqueados.join(', ')} (${ag.cliente_nome} - ${servico.nome}, ${servico.duracao}min)`);
           horariosBloqueados.forEach(h => todosBloqueados.add(h));
         } else {
-          console.log(`[getAvailableSlots] Bloqueando ${ag.horario} (serviço não encontrado)`);
-          todosBloqueados.add(ag.horario);
+          console.log(`[getAvailableSlots] AVISO: servico_id null para agendamento ${ag.id} (${ag.cliente_nome}), bloqueando apenas ${horarioNormalizado}`);
+          todosBloqueados.add(horarioNormalizado);
         }
       });
       
