@@ -208,7 +208,10 @@ export const useAgendamentos = () => {
 
       if (error) throw error;
       
-      setAgendamentos(agendamentos.filter(a => a.id !== id));
+      // Invalidar cache e forçar refetch
+      sessionStorage.removeItem(CACHE_KEY);
+      await refetch();
+      
       toast.success("Agendamento removido!");
     } catch (error) {
       console.error("Erro ao deletar agendamento:", error);
