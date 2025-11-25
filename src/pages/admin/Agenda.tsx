@@ -208,20 +208,36 @@ const Agenda = () => {
       const dayData = getDayData(d);
 
       const dateStr = fmtKey(d);
-      // Usar dados em tempo real quando solicitado
-      const agendamentosDay = useRealTimeData
-        ? agendamentosDataAtual 
-        : agendamentos.filter((a) => a.data === dateStr && a.status !== 'Cancelado');
+      
+      // Usar dados em tempo real quando solicitado E a data corresponde à selectedDate
+      let agendamentosDay: Agendamento[];
+      if (useRealTimeData) {
+        // Verificar se a data solicitada é a mesma que selectedDate (dados carregados)
+        const selectedDateStr = selectedDate ? fmtKey(selectedDate) : null;
+        if (selectedDateStr === dateStr) {
+          agendamentosDay = agendamentosDataAtual;
+          console.log(`[getAvailableSlots] Usando dados em tempo real para ${dateStr}:`, agendamentosDay);
+        } else {
+          // Fallback: usar dados do cache se a data não corresponde
+          console.warn(`[getAvailableSlots] Data solicitada (${dateStr}) difere de selectedDate (${selectedDateStr}), usando cache`);
+          agendamentosDay = agendamentos.filter((a) => a.data === dateStr && a.status !== 'Cancelado');
+        }
+      } else {
+        agendamentosDay = agendamentos.filter((a) => a.data === dateStr && a.status !== 'Cancelado');
+      }
       
       // Calcula todos os horários bloqueados considerando a duração de cada serviço
       const todosBloqueados = new Set<string>();
       
+      console.log(`[getAvailableSlots] Processando ${agendamentosDay.length} agendamentos para ${dateStr}`);
       agendamentosDay.forEach(ag => {
         const servico = servicos.find(s => s.id === ag.servico_id);
         if (servico) {
           const horariosBloqueados = calcularHorariosBloqueados(ag.horario, servico.duracao);
+          console.log(`[getAvailableSlots] Bloqueando ${horariosBloqueados.join(', ')} (${ag.cliente_nome} - ${servico.nome})`);
           horariosBloqueados.forEach(h => todosBloqueados.add(h));
         } else {
+          console.log(`[getAvailableSlots] Bloqueando ${ag.horario} (serviço não encontrado)`);
           todosBloqueados.add(ag.horario);
         }
       });
@@ -234,9 +250,13 @@ const Agenda = () => {
         ? dayData.horariosExtras 
         : [...generateSlots(d), ...dayData.horariosExtras];
       
-      return base.filter((t) => !todosBloqueados.has(t)).sort();
+      const disponiveis = base.filter((t) => !todosBloqueados.has(t)).sort();
+      console.log(`[getAvailableSlots] Horários disponíveis para ${dateStr}:`, disponiveis);
+      console.log(`[getAvailableSlots] Total bloqueados:`, Array.from(todosBloqueados).sort());
+      
+      return disponiveis;
     };
-  }, [agendamentos, agendamentosDataAtual, servicos, configs, openReservarDialog, openNovoDialog]);
+  }, [agendamentos, agendamentosDataAtual, servicos, configs, openReservarDialog, openNovoDialog, selectedDate]);
 
   const getServiceStartSlots = (d: Date | undefined, servicoId?: string, useRealTimeData: boolean = false) => {
     if (!d || !servicoId) return [];
