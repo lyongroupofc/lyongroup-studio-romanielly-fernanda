@@ -42,9 +42,9 @@ const Agenda = () => {
   const [agendamentosDataAtual, setAgendamentosDataAtual] = useState<Agendamento[]>([]);
   const [loadingDisponibilidade, setLoadingDisponibilidade] = useState(false);
 
-  // Buscar agendamentos em tempo real quando abrir o dialog de reserva
+  // Buscar agendamentos em tempo real quando abrir QUALQUER dialog de agendamento
   useEffect(() => {
-    if (!openReservarDialog || !selectedDate) {
+    if ((!openReservarDialog && !openNovoDialog) || !selectedDate) {
       return;
     }
 
@@ -72,7 +72,7 @@ const Agenda = () => {
     };
 
     fetchDisponibilidadeRealTime();
-  }, [openReservarDialog, selectedDate]);
+  }, [openReservarDialog, openNovoDialog, selectedDate]);
 
   // Desabilitado refetch automático para evitar loops
   // useEffect(() => {
@@ -208,8 +208,8 @@ const Agenda = () => {
       const dayData = getDayData(d);
 
       const dateStr = fmtKey(d);
-      // Usar dados em tempo real quando disponível para a data selecionada no dialog
-      const agendamentosDay = useRealTimeData && openReservarDialog
+      // Usar dados em tempo real quando solicitado
+      const agendamentosDay = useRealTimeData
         ? agendamentosDataAtual 
         : agendamentos.filter((a) => a.data === dateStr && a.status !== 'Cancelado');
       
@@ -236,7 +236,7 @@ const Agenda = () => {
       
       return base.filter((t) => !todosBloqueados.has(t)).sort();
     };
-  }, [agendamentos, agendamentosDataAtual, servicos, configs, openReservarDialog]);
+  }, [agendamentos, agendamentosDataAtual, servicos, configs, openReservarDialog, openNovoDialog]);
 
   const getServiceStartSlots = (d: Date | undefined, servicoId?: string, useRealTimeData: boolean = false) => {
     if (!d || !servicoId) return [];
@@ -905,9 +905,13 @@ const Agenda = () => {
                   <SelectValue placeholder={formData.servico ? "Selecione um horário" : "Selecione um serviço primeiro"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {getServiceStartSlots(selectedDate, formData.servico, false).map((h) => (
-                    <SelectItem key={h} value={h}>{h}</SelectItem>
-                  ))}
+                  {loadingDisponibilidade ? (
+                    <div className="p-2 text-center text-sm text-muted-foreground">Carregando horários...</div>
+                  ) : (
+                    getServiceStartSlots(selectedDate, formData.servico, true).map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
