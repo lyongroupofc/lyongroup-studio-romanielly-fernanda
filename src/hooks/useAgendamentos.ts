@@ -122,9 +122,19 @@ export const useAgendamentos = () => {
 
   const addAgendamento = async (agendamento: Omit<Agendamento, "id">) => {
     try {
+      // Garantir formato HH:MM:SS para o horário
+      const horarioComSegundos = agendamento.horario.length === 5 
+        ? `${agendamento.horario}:00` 
+        : agendamento.horario;
+      
+      console.log("[useAgendamentos] Criando agendamento:", {
+        ...agendamento,
+        horario: horarioComSegundos
+      });
+      
       const { data, error } = await supabase
         .from("agendamentos")
-        .insert([agendamento])
+        .insert([{ ...agendamento, horario: horarioComSegundos }])
         .select()
         .single();
 
@@ -132,6 +142,8 @@ export const useAgendamentos = () => {
         console.error("Erro detalhado ao criar agendamento:", error);
         throw error;
       }
+      
+      console.log("[useAgendamentos] Agendamento criado com sucesso:", data);
       
       // Invalidar cache e forçar refetch
       sessionStorage.removeItem(CACHE_KEY);
