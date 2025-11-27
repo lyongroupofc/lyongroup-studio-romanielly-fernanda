@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X } from "lucide-react";
+import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { isBefore, startOfToday, isSunday, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -1181,6 +1181,24 @@ const Agenda = () => {
                 <div className="flex items-center gap-2">
                   <Scissors className="w-4 h-4" />
                   <span>{selectedAgendamento.servico_nome}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedAgendamento.origem === 'bot' ? (
+                    <>
+                      <Bot className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-600">Agendamento feito pelo Bot</span>
+                    </>
+                  ) : selectedAgendamento.origem === 'link_externo' ? (
+                    <>
+                      <Link2 className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-600">Agendamento via Link Externo</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4 text-amber-600" />
+                      <span className="text-sm font-medium text-amber-600">Agendamento Manual</span>
+                    </>
+                  )}
                 </div>
                 {selectedAgendamento.profissional_nome && (
                   <div className="text-sm text-muted-foreground">
