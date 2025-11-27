@@ -207,33 +207,27 @@ serve(async (req) => {
       content: mensagem
     });
 
-    // Data atual para contexto da IA
+    // Data atual para contexto da IA - calendário dos próximos 15 dias
     const hoje = new Date();
-    const diaSemana = hoje.getDay(); // 0=domingo, 1=segunda, etc
-    const dataAtualFormatada = hoje.toLocaleDateString('pt-BR', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
+    hoje.setHours(0, 0, 0, 0);
     
-    // Calcular AMANHÃ
-    const amanha = new Date(hoje);
-    amanha.setDate(hoje.getDate() + 1);
-    const amanhaFormatada = amanha.toLocaleDateString('pt-BR', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
+    const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
     
-    // Calcular próximas segundas
-    const proximaSegunda = new Date(hoje);
-    const diasAteSegunda = (8 - diaSemana) % 7 || 7;
-    proximaSegunda.setDate(hoje.getDate() + diasAteSegunda);
+    // Criar calendário dos próximos 15 dias
+    const calendario: string[] = [];
+    for (let i = 0; i < 15; i++) {
+      const data = new Date(hoje);
+      data.setDate(hoje.getDate() + i);
+      const dia = data.getDate().toString().padStart(2, '0');
+      const mes = (data.getMonth() + 1).toString().padStart(2, '0');
+      const ano = data.getFullYear();
+      const diaSemanaTexto = diasSemana[data.getDay()];
+      
+      const prefixo = i === 0 ? '**HOJE**' : i === 1 ? '**AMANHÃ**' : '';
+      calendario.push(`${prefixo} ${dia}/${mes}/${ano} (${diaSemanaTexto})`.trim());
+    }
     
-    const segundaSeguinte = new Date(proximaSegunda);
-    segundaSeguinte.setDate(proximaSegunda.getDate() + 7);
+    const calendarioTexto = calendario.join('\n');
     
     // Obter contexto atual
     const contexto = conversa.contexto || {};
@@ -262,13 +256,14 @@ ${contexto.data_nascimento ? `✅ Data de Nascimento: JÁ COLETADA (${contexto.d
 - Seja sempre prestativa, carinhosa e atenciosa
 - Use emojis naturalmente, mas sem exagero (💅, ✨, 😊, 💜)
 
-**INFORMAÇÕES DE DATA (MUITO IMPORTANTE):**
-- **HOJE É: ${hoje.getDate().toString().padStart(2, '0')}/${(hoje.getMonth() + 1).toString().padStart(2, '0')}/${hoje.getFullYear()} (${dataAtualFormatada})**
-- **AMANHÃ SERÁ: ${amanha.getDate().toString().padStart(2, '0')}/${(amanha.getMonth() + 1).toString().padStart(2, '0')}/${amanha.getFullYear()} (${amanhaFormatada})**
-- **Próxima segunda-feira:** ${proximaSegunda.getDate().toString().padStart(2, '0')}/${(proximaSegunda.getMonth() + 1).toString().padStart(2, '0')}/${proximaSegunda.getFullYear()}
-- **Segunda seguinte:** ${segundaSeguinte.getDate().toString().padStart(2, '0')}/${(segundaSeguinte.getMonth() + 1).toString().padStart(2, '0')}/${segundaSeguinte.getFullYear()}
+**INFORMAÇÕES DE DATA (CALENDÁRIO DOS PRÓXIMOS 15 DIAS):**
+${calendarioTexto}
 
-ATENÇÃO: Quando a cliente disser "amanhã", use a data AMANHÃ SERÁ mostrada acima! Quando disser "próxima segunda" ou "segunda que vem", use a data da próxima segunda-feira!
+**⚠️ REGRAS CRÍTICAS DE DATA:**
+1. Use SEMPRE as datas EXATAS do calendário acima - NÃO faça cálculos manuais de data
+2. Quando a cliente mencionar "amanhã", "próximo sábado", etc, consulte o calendário acima
+3. NUNCA diga que uma data é um dia da semana diferente do que está no calendário
+4. Se tiver dúvida sobre qual data a cliente quer, pergunte objetivamente: "Qual data você prefere?" e mostre 2-3 opções do calendário
 
 **Serviços do Studio:**
 ${servicosFormatados}
@@ -316,23 +311,30 @@ Romanielly - Banco Sicoob
 **🎯 FLUXO DE AGENDAMENTO CORRETO (OBRIGATÓRIO):**
 
 **PASSO 1:** Identifique o serviço desejado
-**PASSO 2:** Pergunte a data preferida (use as datas de referência acima)
+
+**PASSO 2:** Pergunte a data preferida
+   - Se a cliente mencionar "próximo sábado" ou similar, consulte o CALENDÁRIO acima
+   - Se houver ambiguidade (ex: dois sábados próximos), mostre as 2 opções com datas EXATAS do calendário
+   - Exemplo: "Seria o sábado dia 30/11 ou o dia 07/12?"
+
 **PASSO 3:** Pergunte o horário preferido da cliente
 
-**PASSO 4 (CRÍTICO):** Assim que tiver serviço + data + horário → CHAME IMEDIATAMENTE a ferramenta "verificar_disponibilidade"
+**PASSO 4 (CRÍTICO):** Assim que tiver serviço + data + horário → CHAME IMEDIATAMENTE "verificar_disponibilidade"
    - **NÃO PEÇA DADOS PESSOAIS AINDA!**
-   - A ferramenta vai verificar se o horário está disponível
-   - Se disponível → ela retorna "disponível" e você pode pedir os dados
-   - Se não disponível → ela retorna horários alternativos
+   - Se disponível → avise e peça nome + data de nascimento
+   - Se não disponível → mostre 2-3 horários alternativos e pergunte qual prefere
 
-**PASSO 5:** Apenas DEPOIS que a disponibilidade for confirmada (✅ Disponibilidade: JÁ VERIFICADA):
-   - Pergunte o nome completo da cliente
-   - Pergunte a data de nascimento no formato DD/MM/AAAA
+**PASSO 5:** Apenas DEPOIS que a disponibilidade for confirmada:
+   - Pergunte o nome completo
+   - Pergunte a data de nascimento (DD/MM/AAAA)
 
-**PASSO 6:** Quando tiver TODOS os dados (serviço + data + horário + disponibilidade verificada + nome + data_nascimento):
-   - Chame a ferramenta criar_agendamento
-   - NÃO peça telefone - ele já está no sistema
-   - Confirme o agendamento com data/hora formatada
+**PASSO 6:** Chame criar_agendamento com todos os dados
+
+**⚠️ REGRAS DE RESPOSTA:**
+- Seja BREVE e OBJETIVA - mensagens curtas, máximo 2-3 linhas
+- NÃO faça cálculos de data manualmente - use apenas o calendário fornecido
+- Se houver ambiguidade, pergunte com opções claras: "Dia 30/11 ou 07/12?"
+- NÃO repita informações que já estão no contexto (marcadas com ✅)
 
 **⚠️ REGRA CRÍTICA - NÃO PEDIR DADOS ANTES DE VERIFICAR DISPONIBILIDADE:**
 - ❌ ERRADO: Pedir nome e data de nascimento ANTES de verificar se o horário está disponível
