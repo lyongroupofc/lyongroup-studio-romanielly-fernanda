@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckCircle, Calendar, Clock, Home } from "lucide-react";
 import Footer from "@/components/Footer";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 
 const Obrigado = () => {
   const location = useLocation();
@@ -10,7 +11,8 @@ const Obrigado = () => {
   const { data, horario } = location.state || {};
 
   return (
-    <div className="min-h-screen gradient-soft flex flex-col">
+    <div className="min-h-screen gradient-soft flex flex-col relative">
+      <AnimatedBackground />
       <div className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-lg p-8 text-center shadow-card">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-success/10 mb-6">

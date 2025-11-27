@@ -3,16 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Sparkles, TrendingUp, Palette, Zap, MessageCircle } from "lucide-react";
 import Footer from "@/components/Footer";
 import lyonLogo from "@/assets/lyon-group-logo.jpeg";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 
 const Index = () => {
   const navigate = useNavigate();
   
   return (
-    <div className="min-h-screen gradient-soft flex flex-col">
+    <div className="min-h-screen gradient-soft flex flex-col relative">
+      <AnimatedBackground />
       {/* Header com Logo e Texto no Topo Direito */}
       <header className="w-full py-6">
         <div className="container mx-auto px-4 flex justify-end">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <div className="text-left">
               <h3 className="text-xl md:text-2xl font-bold">Grupo Lyon</h3>
               <p className="text-sm md:text-base text-muted-foreground">Sua Agência De Marketing e Automação completa</p>
