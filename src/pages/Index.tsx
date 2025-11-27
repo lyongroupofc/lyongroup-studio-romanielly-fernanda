@@ -4,29 +4,23 @@ import { Calendar, Sparkles, TrendingUp, Palette, Zap, MessageCircle } from "luc
 import Footer from "@/components/Footer";
 import lyonLogo from "@/assets/lyon-group-logo.jpeg";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
-
 const Index = () => {
   const navigate = useNavigate();
-  
-  return (
-    <div className="min-h-screen gradient-soft flex flex-col relative">
+  return <div className="min-h-screen gradient-soft flex flex-col relative">
       <AnimatedBackground />
       {/* Header com Logo e Texto no Topo Direito */}
       <header className="w-full py-6">
         <div className="container mx-auto px-4 flex justify-end">
           <div className="flex items-center gap-1.5">
             <div className="text-left">
-              <h3 className="text-xl md:text-2xl font-bold">Grupo Lyon</h3>
+              <h3 className="text-xl md:text-2xl font-bold">                                                 Lyon Group
+            </h3>
               <p className="text-sm md:text-base text-muted-foreground">Sua Agência De Marketing e Automação completa</p>
             </div>
             <div className="relative">
               <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 blur-sm"></div>
               <div className="relative p-1 rounded-full bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-                <img 
-                  src={lyonLogo} 
-                  alt="Lyon Group" 
-                  className="h-14 w-14 object-cover rounded-full"
-                />
+                <img src={lyonLogo} alt="Lyon Group" className="h-14 w-14 object-cover rounded-full" />
               </div>
             </div>
           </div>
@@ -68,28 +62,15 @@ const Index = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Button 
-              size="lg" 
-              className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
-              onClick={() => navigate("/agendar")}
-            >
+            <Button size="lg" className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300" onClick={() => navigate("/agendar")}>
               <Calendar className="w-5 h-5 mr-2" />
               Agendar Horário
             </Button>
-            <Button 
-              size="lg" 
-              variant="secondary" 
-              className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
-              onClick={() => window.open("https://api.whatsapp.com/send/?phone=5531991625182", "_blank")}
-            >
+            <Button size="lg" variant="secondary" className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300" onClick={() => window.open("https://api.whatsapp.com/send/?phone=5531991625182", "_blank")}>
               <MessageCircle className="w-5 h-5 mr-2" />
               Falar com a Lyon Group
             </Button>
-            <Button 
-              size="lg" 
-              className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
-              onClick={() => navigate("/login")}
-            >
+            <Button size="lg" className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300" onClick={() => navigate("/login")}>
               Área Administrativa
             </Button>
           </div>
@@ -130,8 +111,6 @@ const Index = () => {
       </div>
       
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
