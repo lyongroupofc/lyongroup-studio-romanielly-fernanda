@@ -18,7 +18,6 @@ import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { useAgendaConfig } from "@/hooks/useAgendaConfig";
 import { isFeriado } from "@/lib/feriados";
 import Footer from "@/components/Footer";
-import lyonLogo from "@/assets/lyon-group-logo.jpeg";
 
 const Agendar = () => {
   const navigate = useNavigate();
@@ -361,14 +360,12 @@ const Agendar = () => {
 
   return (
     <div className="min-h-screen gradient-soft flex flex-col">
-      {/* Header com Logo */}
+      {/* Header com Ícone */}
       <header className="w-full py-6">
         <div className="container mx-auto px-4 flex justify-center">
-          <img 
-            src={lyonLogo} 
-            alt="Lyon Group" 
-            className="h-20 md:h-24 w-auto object-contain"
-          />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full gradient-primary shadow-lg">
+            <Sparkles className="w-10 h-10 text-white" />
+          </div>
         </div>
       </header>
       

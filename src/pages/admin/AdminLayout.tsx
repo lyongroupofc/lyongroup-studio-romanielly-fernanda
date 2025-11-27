@@ -172,12 +172,12 @@ const AdminLayout = () => {
             <div className="flex h-14 items-center justify-between px-4">
               <SidebarTrigger className="mr-2" />
               <div className="flex items-center gap-3">
+                <NotificationBell />
                 <img 
                   src={lyonLogo} 
                   alt="Lyon Group" 
                   className="h-10 w-10 object-cover rounded-full shadow-lg"
                 />
-                <NotificationBell />
               </div>
             </div>
           </header>
