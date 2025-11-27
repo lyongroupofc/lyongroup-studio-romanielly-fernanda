@@ -245,6 +245,7 @@ serve(async (req) => {
 ${contexto.servico_nome ? `✅ Serviço: JÁ ESCOLHIDO (${contexto.servico_nome})` : '❌ Serviço: ainda não escolhido'}
 ${contexto.data ? `✅ Data: JÁ INFORMADA (${contexto.data})` : '❌ Data: ainda não informada'}
 ${contexto.horario ? `✅ Horário: JÁ ESCOLHIDO (${contexto.horario})` : '❌ Horário: ainda não escolhido'}
+${contexto.disponibilidade_verificada ? `✅ Disponibilidade: JÁ VERIFICADA (horário confirmado disponível)` : '❌ Disponibilidade: ainda não verificada'}
 ${contexto.nome_completo ? `✅ Nome: JÁ COLETADO (${contexto.nome_completo})` : '❌ Nome: ainda não coletado'}
 ${contexto.data_nascimento ? `✅ Data de Nascimento: JÁ COLETADA (${contexto.data_nascimento})` : '❌ Data de Nascimento: ainda não coletada'}
 
@@ -253,7 +254,6 @@ ${contexto.data_nascimento ? `✅ Data de Nascimento: JÁ COLETADA (${contexto.d
 - SEMPRE revise o CONTEXTO DA CONVERSA ATUAL acima ANTES de fazer qualquer pergunta!
 - Se a cliente perguntar "que horários tem disponível?", você deve APENAS mostrar os horários e perguntar qual ela prefere
 - NÃO repita perguntas sobre informações que já têm ✅
-- Quando tiver TODOS os ✅ (serviço + data + horário + nome + data_nascimento) = CHAME criar_agendamento IMEDIATAMENTE
 
 **SOBRE VOCÊ:**
 - Seu nome é Thaty e você é a recepcionista do studio
@@ -313,38 +313,42 @@ Romanielly - Banco Sicoob
 - Cancelamento: permitido até 24 horas antes
 - Reagendamento: permitido até 24 horas antes
 
-**Fluxo de Agendamento:**
-1. Identifique o serviço desejado
-2. Pergunte a data preferida (use as datas de referência acima)
-3. Pergunte o horário preferido  
-4. Pergunte o nome da cliente
-5. Pergunte a data de nascimento no formato DD/MM/AAAA
-6. Assim que tiver TODAS essas 5 informações, chame a ferramenta criar_agendamento
-7. NÃO peça telefone - ele já está no sistema
-8. Confirme o agendamento com data/hora formatada
+**🎯 FLUXO DE AGENDAMENTO CORRETO (OBRIGATÓRIO):**
 
-**REGRAS CRÍTICAS DE CONTEXTO:**
-- **NUNCA repita perguntas** sobre informações que a cliente já forneceu no histórico da conversa
-- **SEMPRE revise o histórico** antes de perguntar algo - a cliente pode já ter informado
-- Se a cliente perguntar "que horários tem disponível?", você deve:
-  1. VERIFICAR quais informações você JÁ TEM (serviço, data)
-  2. CONFIRMAR brevemente: "Ok, deixa eu verificar os horários disponíveis para [serviço] no dia [data]. Pode me confirmar seu nome completo e data de nascimento?"
-  3. NÃO repita perguntas sobre serviço ou data que ela já informou
-- Quando tiver serviço + data + horário + nome + data_nascimento = CHAME a ferramenta criar_agendamento IMEDIATAMENTE
+**PASSO 1:** Identifique o serviço desejado
+**PASSO 2:** Pergunte a data preferida (use as datas de referência acima)
+**PASSO 3:** Pergunte o horário preferido da cliente
+
+**PASSO 4 (CRÍTICO):** Assim que tiver serviço + data + horário → CHAME IMEDIATAMENTE a ferramenta "verificar_disponibilidade"
+   - **NÃO PEÇA DADOS PESSOAIS AINDA!**
+   - A ferramenta vai verificar se o horário está disponível
+   - Se disponível → ela retorna "disponível" e você pode pedir os dados
+   - Se não disponível → ela retorna horários alternativos
+
+**PASSO 5:** Apenas DEPOIS que a disponibilidade for confirmada (✅ Disponibilidade: JÁ VERIFICADA):
+   - Pergunte o nome completo da cliente
+   - Pergunte a data de nascimento no formato DD/MM/AAAA
+
+**PASSO 6:** Quando tiver TODOS os dados (serviço + data + horário + disponibilidade verificada + nome + data_nascimento):
+   - Chame a ferramenta criar_agendamento
+   - NÃO peça telefone - ele já está no sistema
+   - Confirme o agendamento com data/hora formatada
+
+**⚠️ REGRA CRÍTICA - NÃO PEDIR DADOS ANTES DE VERIFICAR DISPONIBILIDADE:**
+- ❌ ERRADO: Pedir nome e data de nascimento ANTES de verificar se o horário está disponível
+- ✅ CORRETO: Verificar disponibilidade PRIMEIRO, só depois pedir dados pessoais
 
 **Exemplo CORRETO de conversa:**
-Cliente: "Quero agendar para amanhã"
-Você: "Que legal! Qual serviço você gostaria?"
-Cliente: "Manicure. Que horários tem?"
-Você: "Perfeito! Deixa eu verificar os horários disponíveis para Manicure amanhã (22/11). Pode me confirmar seu nome completo e data de nascimento?"
+Cliente: "Quero agendar Manicure para amanhã às 14:00"
+Você: "Perfeito! Deixa eu verificar se esse horário está disponível..." [CHAMA verificar_disponibilidade]
+Sistema: "Horário disponível"
+Você: "Ótima notícia! O horário de 14:00 está disponível para Manicure amanhã! Agora preciso do seu nome completo e data de nascimento para confirmar, pode me passar?"
 Cliente: "Maria Silva, 15/03/1990"
-Você: "Qual horário prefere? Temos: 09:00, 10:00, 14:00..." [aqui você já tem todas infos para agendar]
+Você: [CHAMA criar_agendamento] "Agendamento confirmado! Maria Silva, Manicure amanhã às 14:00..."
 
 **Exemplo ERRADO (NÃO FAÇA ISSO):**
-Cliente: "Quero agendar para amanhã"
-Você: "Qual serviço?"
-Cliente: "Manicure. Que horários tem?"
-Você: ❌ "Para qual dia você gostaria?" [ERRO: ela já disse "amanhã"]
+Cliente: "Quero agendar Manicure para amanhã às 14:00"
+Você: ❌ "Perfeito! Qual seu nome completo e data de nascimento?" [ERRO: NÃO verificou disponibilidade antes de pedir dados]
 
 **Importante:**
 - Se a cliente mencionar "alisamento" ou "cabelo afro", ajude a identificar o serviço correto
@@ -357,8 +361,33 @@ Você: ❌ "Para qual dia você gostaria?" [ERRO: ela já disse "amanhã"]
       {
         type: "function",
         function: {
+          name: "verificar_disponibilidade",
+          description: "Verifica se um horário está disponível ANTES de pedir os dados pessoais da cliente. Use esta ferramenta logo após coletar serviço + data + horário. Retorna se o horário está disponível ou sugere alternativas. CHAME ESTA FERRAMENTA ANTES de pedir nome e data de nascimento!",
+          parameters: {
+            type: "object",
+            properties: {
+              servico_nome: {
+                type: "string",
+                description: "Nome do serviço para verificar disponibilidade"
+              },
+              data: {
+                type: "string",
+                description: "Data desejada no formato YYYY-MM-DD"
+              },
+              horario: {
+                type: "string",
+                description: "Horário desejado no formato HH:MM (ex: 14:00)"
+              }
+            },
+            required: ["servico_nome", "data", "horario"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
           name: "criar_agendamento",
-          description: "Cria um agendamento no sistema. IMPORTANTE: Esta ferramenta valida automaticamente a disponibilidade considerando a duração do serviço. Use apenas quando tiver TODOS os dados: servico_nome, data (YYYY-MM-DD), horario (HH:MM), cliente_nome e data_nascimento (DD/MM/AAAA). O telefone já está disponível no contexto da conversa.",
+          description: "Cria um agendamento no sistema. Use APENAS DEPOIS de verificar disponibilidade (verificar_disponibilidade) e coletar TODOS os dados pessoais: servico_nome, data (YYYY-MM-DD), horario (HH:MM), cliente_nome e data_nascimento (DD/MM/AAAA). O telefone já está disponível no contexto da conversa.",
           parameters: {
             type: "object",
             properties: {
@@ -483,6 +512,193 @@ Você: ❌ "Para qual dia você gostaria?" [ERRO: ela já disse "amanhã"]
     // Processar tool calls
     if (toolCalls && toolCalls.length > 0) {
       for (const toolCall of toolCalls) {
+        if (toolCall.function.name === 'verificar_disponibilidade') {
+          const args = JSON.parse(toolCall.function.arguments);
+          console.log('🔍 Verificando disponibilidade:', args);
+
+          // Resolver serviço
+          const normalize = (s: string) => s
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          const alvo = normalize(args.servico_nome);
+          const servico = servicos?.find(s => normalize(s.nome) === alvo)
+            ?? servicos?.find(s => normalize(s.nome).includes(alvo) || alvo.includes(normalize(s.nome)));
+
+          if (!servico) {
+            resposta = 'Ops, não encontrei esse serviço. Pode escolher um nome exatamente como na lista acima?';
+            continue;
+          }
+
+          // Verificar dia da semana
+          const dataAgendamento = new Date(args.data + 'T12:00:00');
+          const dayOfWeek = dataAgendamento.getDay();
+          
+          if (dayOfWeek === 0) {
+            resposta = 'Desculpa amor, não funcionamos aos domingos. Pode escolher outra data? 💜';
+            continue;
+          }
+          
+          if (dayOfWeek === 1) {
+            resposta = 'Desculpa amor, não funcionamos às segundas-feiras. Pode escolher outra data? 💜';
+            continue;
+          }
+
+          // Buscar config do dia
+          const { data: config } = await supabase
+            .from('agenda_config')
+            .select('*')
+            .eq('data', args.data)
+            .maybeSingle();
+
+          if (config?.fechado) {
+            resposta = 'Esse dia está fechado. Quer tentar outra data, querida? 💜';
+            continue;
+          }
+
+          // Gerar slots ocupados
+          const { data: agendamentosExistentes } = await supabase
+            .from('agendamentos')
+            .select('horario, servico_id')
+            .eq('data', args.data)
+            .neq('status', 'Cancelado');
+
+          const slotsOcupados = new Set<string>();
+          
+          (agendamentosExistentes || []).forEach((ag: any) => {
+            const servicoAg = servicos?.find(s => s.id === ag.servico_id);
+            if (servicoAg?.duracao) {
+              const [h, m] = ag.horario.split(':').map(Number);
+              const inicioMin = h * 60 + m;
+              const fimMin = inicioMin + servicoAg.duracao;
+              
+              for (let t = inicioMin; t < fimMin; t += 30) {
+                const hh = String(Math.floor(t / 60)).padStart(2, '0');
+                const mm = String(t % 60).padStart(2, '0');
+                slotsOcupados.add(`${hh}:${mm}`);
+              }
+            }
+          });
+
+          (config?.horarios_bloqueados || []).forEach((h: string) => slotsOcupados.add(h));
+
+          // Verificar horário de funcionamento
+          const [h, m] = args.horario.split(':').map(Number);
+          const inicioMin = h * 60 + m;
+          const fimMin = inicioMin + servico.duracao;
+          
+          let startHour = 8;
+          let endHour = 13;
+          
+          if (dayOfWeek === 2 || dayOfWeek === 3) {
+            startHour = 13;
+            endHour = 20;
+          } else if (dayOfWeek === 4 || dayOfWeek === 5) {
+            startHour = 9;
+            endHour = 19;
+          } else if (dayOfWeek === 6) {
+            startHour = 8;
+            endHour = 13;
+          }
+          
+          const startMin = startHour * 60;
+          const endMin = endHour * 60;
+          
+          if (inicioMin < startMin || fimMin > endMin) {
+            resposta = `Desculpa amor, esse horário está fora do nosso funcionamento. Funcionamos das ${String(startHour).padStart(2, '0')}:00 às ${String(endHour).padStart(2, '0')}:00 nesse dia. Pode escolher outro horário? 💜`;
+            continue;
+          }
+
+          // Verificar disponibilidade
+          let disponivel = true;
+          for (let t = inicioMin; t < fimMin; t += 30) {
+            const slot = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+            if (slotsOcupados.has(slot)) {
+              disponivel = false;
+              break;
+            }
+          }
+
+          if (disponivel) {
+            // Marcar disponibilidade verificada no contexto
+            await supabase
+              .from('bot_conversas')
+              .update({ 
+                contexto: { 
+                  ...novoContexto, 
+                  disponibilidade_verificada: true,
+                  servico_nome: args.servico_nome,
+                  data: args.data,
+                  horario: args.horario
+                }
+              })
+              .eq('id', conversa.id);
+
+            const [yyyy, mm, dd] = args.data.split('-');
+            resposta = `Ótima notícia! O horário de ${args.horario} está disponível para ${args.servico_nome} no dia ${dd}/${mm}! 🎉 Agora só preciso do seu nome completo e data de nascimento (DD/MM/AAAA) para confirmar o agendamento, pode me passar? 💜`;
+          } else {
+            // Gerar horários alternativos
+            const horariosDisponiveis: string[] = [];
+            
+            for (let h = startHour; h < endHour; h++) {
+              for (let m = 0; m < 60; m += 30) {
+                const horario = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                const [hh, mm] = horario.split(':').map(Number);
+                const inicio = hh * 60 + mm;
+                const fim = inicio + servico.duracao;
+                
+                if (fim > endHour * 60) continue;
+                
+                let isDisponivel = true;
+                for (let t = inicio; t < fim; t += 30) {
+                  const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+                  if (slotsOcupados.has(slotCheck)) {
+                    isDisponivel = false;
+                    break;
+                  }
+                }
+                
+                if (isDisponivel) {
+                  horariosDisponiveis.push(horario);
+                }
+              }
+            }
+
+            (config?.horarios_extras || []).forEach((horarioExtra: string) => {
+              const [hh, mm] = horarioExtra.split(':').map(Number);
+              const inicio = hh * 60 + mm;
+              const fim = inicio + servico.duracao;
+              
+              let isDisponivel = true;
+              for (let t = inicio; t < fim; t += 30) {
+                const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+                if (slotsOcupados.has(slotCheck)) {
+                  isDisponivel = false;
+                  break;
+                }
+              }
+              
+              if (isDisponivel && !horariosDisponiveis.includes(horarioExtra)) {
+                horariosDisponiveis.push(horarioExtra);
+              }
+            });
+            
+            horariosDisponiveis.sort();
+
+            if (horariosDisponiveis.length > 0) {
+              const [yyyy, mm, dd] = args.data.split('-');
+              const sugestoes = horariosDisponiveis.slice(0, 5).join(', ');
+              resposta = `Desculpa amor, ${args.horario} não está disponível para ${args.servico_nome} (${servico.duracao}min de duração). Mas temos outros horários disponíveis em ${dd}/${mm}: ${sugestoes}... Qual desses prefere? 💜`;
+            } else {
+              resposta = `Infelizmente esse dia não tem horários disponíveis para ${args.servico_nome}. Quer tentar outro dia, querida? 💜`;
+            }
+          }
+          continue;
+        }
+
         if (toolCall.function.name === 'consultar_agendamento') {
           console.log('🔍 Consultando agendamento...');
           
