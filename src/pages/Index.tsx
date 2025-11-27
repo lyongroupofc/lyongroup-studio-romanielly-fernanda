@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Calendar, Sparkles, Clock, Users } from "lucide-react";
+import { Calendar, Sparkles, TrendingUp, Palette, Zap } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -12,7 +12,7 @@ const Index = () => {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Studio Romanielly Fernanda</span>
+            <span className="text-sm font-medium text-primary">Full Beauty System by Studio Romanielly Fernanda</span>
           </div>
 
           {/* Main Heading */}
@@ -20,19 +20,19 @@ const Index = () => {
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
               Seja Bem-Vinda,{" "}
               <span className="bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
-                Romanielly
+                Romanielly Fernanda
               </span>
             </h1>
             
             <p className="text-lg md:text-xl text-foreground/80 max-w-3xl mx-auto leading-relaxed">
-              Este é o <span className="font-semibold text-primary">Studio Romanielly Fernanda</span> — o painel completo que vai{" "}
+              Este é o <span className="font-semibold text-primary">Full Beauty System</span> — o painel completo que vai{" "}
               <span className="font-semibold text-primary">revolucionar a gestão do seu negócio</span>{" "}
               com tecnologia, organização e automação estratégica.
             </p>
 
             <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-              💡 <span className="font-medium text-primary">Mas tem mais:</span> além do painel, você oferece serviços que transformam vidas — 
-              beleza profissional, cuidados personalizados, bem-estar completo e muito mais.
+              💡 <span className="font-medium text-primary">Mas tem mais:</span> além do painel, você pode integrar serviços que aceleram resultados reais — 
+              gestão de tráfego pago, identidade visual premium, social media profissional e muito mais.
             </p>
           </div>
 
@@ -61,31 +61,31 @@ const Index = () => {
         <div className="grid md:grid-cols-3 gap-6 mt-20 max-w-5xl mx-auto">
           <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:border-primary/30 transition-all">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
-              <Clock className="w-8 h-8 text-primary" />
+              <TrendingUp className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-xl font-bold">Horários Flexíveis</h3>
+            <h3 className="text-xl font-bold">Tráfego Pago</h3>
             <p className="text-muted-foreground leading-relaxed">
-              Escolha o melhor horário para você, com disponibilidade em tempo real
+              Estratégias avançadas para atrair clientes qualificados todos os dias e maximizar seu ROI
             </p>
           </div>
 
           <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:border-primary/30 transition-all">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
-              <Users className="w-8 h-8 text-primary" />
+              <Palette className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-xl font-bold">Atendimento Premium</h3>
+            <h3 className="text-xl font-bold">Design Premium</h3>
             <p className="text-muted-foreground leading-relaxed">
-              Profissional qualificada e dedicada ao seu cuidado e bem-estar
+              Identidade visual sofisticada que eleva sua marca e conquista a confiança dos seus clientes
             </p>
           </div>
 
           <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:border-primary/30 transition-all">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
-              <Sparkles className="w-8 h-8 text-primary" />
+              <Zap className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-xl font-bold">Serviços Completos</h3>
+            <h3 className="text-xl font-bold">Automação Inteligente</h3>
             <p className="text-muted-foreground leading-relaxed">
-              Desde cortes até tratamentos especiais para realçar sua beleza
+              Sistemas personalizados que otimizam seu atendimento e escalam seu negócio com eficiência
             </p>
           </div>
         </div>
