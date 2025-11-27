@@ -14,16 +14,21 @@ const Index = () => {
       {/* Header com Logo e Texto no Topo Direito */}
       <header className="w-full py-6">
         <div className="container mx-auto px-4 flex justify-end">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="text-left">
               <h3 className="text-xl md:text-2xl font-bold">Grupo Lyon</h3>
               <p className="text-sm md:text-base text-muted-foreground">Sua Agência De Marketing e Automação completa</p>
             </div>
-            <img 
-              src={lyonLogo} 
-              alt="Lyon Group" 
-              className="h-16 w-16 object-cover rounded-full shadow-lg"
-            />
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 blur-sm"></div>
+              <div className="relative p-1 rounded-full bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+                <img 
+                  src={lyonLogo} 
+                  alt="Lyon Group" 
+                  className="h-14 w-14 object-cover rounded-full"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </header>
