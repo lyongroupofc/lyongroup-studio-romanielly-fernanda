@@ -32,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/NotificationBell";
 import Footer from "@/components/Footer";
+import lyonLogo from "@/assets/lyon-group-logo.jpeg";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
@@ -170,7 +171,14 @@ const AdminLayout = () => {
           <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center justify-between px-4">
               <SidebarTrigger className="mr-2" />
-              <NotificationBell />
+              <div className="flex items-center gap-3">
+                <img 
+                  src={lyonLogo} 
+                  alt="Lyon Group" 
+                  className="h-10 w-10 object-cover rounded-full shadow-lg"
+                />
+                <NotificationBell />
+              </div>
             </div>
           </header>
 

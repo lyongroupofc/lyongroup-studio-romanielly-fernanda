@@ -80,10 +80,23 @@ const Index = () => {
               Área Administrativa
             </Button>
           </div>
+
+          {/* Logo e Texto no Canto Esquerdo */}
+          <div className="flex items-center gap-4 mt-20">
+            <img 
+              src={lyonLogo} 
+              alt="Lyon Group" 
+              className="h-16 w-16 object-cover rounded-full shadow-lg"
+            />
+            <div>
+              <h3 className="text-2xl font-bold">Grupo Lyon</h3>
+              <p className="text-muted-foreground">Sua Agência De Marketing e Automação completa</p>
+            </div>
+          </div>
         </div>
 
         {/* Features */}
-        <div className="grid md:grid-cols-3 gap-6 mt-20 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 mt-12 max-w-5xl mx-auto">
           <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:shadow-primary/50 hover:border-primary/50 transition-all duration-300">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
               <TrendingUp className="w-8 h-8 text-primary" />

@@ -69,7 +69,7 @@ const Login = () => {
           <img 
             src={lyonLogo} 
             alt="Lyon Group" 
-            className="h-20 md:h-24 w-auto object-contain"
+            className="h-20 md:h-24 w-20 md:w-24 object-cover rounded-full shadow-lg"
           />
         </div>
       </header>
