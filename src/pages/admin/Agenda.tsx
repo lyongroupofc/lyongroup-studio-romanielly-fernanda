@@ -56,7 +56,7 @@ const Agenda = () => {
         
         const { data: agendamentosDia, error } = await supabase
           .from('agendamentos')
-          .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes')
+          .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem')
           .eq('data', dateStr)
           .neq('status', 'Cancelado')
           .order('horario', { ascending: true });
@@ -422,7 +422,7 @@ const Agenda = () => {
       // VALIDAÇÃO CRÍTICA: Verificar conflitos de horário considerando duração dos serviços
       const { data: agendamentosDia, error: checkError } = await supabase
         .from('agendamentos')
-        .select('*, servico_id')
+        .select('*, servico_id, origem')
         .eq('data', fmtKey(selectedDate))
         .neq('status', 'Cancelado');
 
@@ -470,6 +470,7 @@ const Agenda = () => {
         profissional_nome: profissional?.nome || null,
         status: "Confirmado",
         observacoes: formData.observacoes || null,
+        origem: "manual",
       });
 
       // Limpar cache para forçar atualização em outras abas
