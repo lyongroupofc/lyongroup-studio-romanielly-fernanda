@@ -1,4 +1,4 @@
-import { Bell, X } from "lucide-react";
+import { Bell, X, Bot, Link2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -34,6 +34,28 @@ export const NotificationBell = () => {
     if (diffHours < 24) return `${diffHours}h atrás`;
     
     return format(timestamp, "dd/MM 'às' HH:mm", { locale: ptBR });
+  };
+
+  const getOrigemInfo = (origem: string | null) => {
+    if (origem === 'bot') {
+      return {
+        icon: Bot,
+        label: 'WhatsApp Bot',
+        className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+      };
+    }
+    if (origem === 'link_externo') {
+      return {
+        icon: Link2,
+        label: 'Link Externo',
+        className: 'bg-green-500/10 text-green-600 dark:text-green-400'
+      };
+    }
+    return {
+      icon: UserPlus,
+      label: 'Manual',
+      className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+    };
   };
 
   return (
@@ -85,6 +107,9 @@ export const NotificationBell = () => {
             <div className="divide-y">
               {notifications.map((notification) => {
                 const [yyyy, mm, dd] = notification.agendamento.data.split('-');
+                const origemInfo = getOrigemInfo(notification.agendamento.origem);
+                const OrigemIcon = origemInfo.icon;
+                
                 return (
                   <div
                     key={notification.id}
@@ -113,9 +138,15 @@ export const NotificationBell = () => {
                         <div className="w-2 h-2 rounded-full bg-primary mt-1 flex-shrink-0" />
                       )}
                       <div className="flex-1 space-y-1">
-                        <p className="text-sm font-medium">
-                          Novo Agendamento
-                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium">
+                            Novo Agendamento
+                          </p>
+                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${origemInfo.className}`}>
+                            <OrigemIcon className="w-3 h-3" />
+                            <span>{origemInfo.label}</span>
+                          </div>
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {notification.agendamento.cliente_nome} - {notification.agendamento.servico_nome}
                         </p>
