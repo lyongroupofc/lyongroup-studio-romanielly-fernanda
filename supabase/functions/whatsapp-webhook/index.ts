@@ -562,24 +562,36 @@ Você: ❌ "Perfeito! Qual seu nome completo e data de nascimento?" [ERRO: NÃO 
           // Gerar slots ocupados
           const { data: agendamentosExistentes } = await supabase
             .from('agendamentos')
-            .select('horario, servico_id')
+            .select('horario, servico_id, servico_nome')
             .eq('data', args.data)
             .neq('status', 'Cancelado');
 
           const slotsOcupados = new Set<string>();
           
           (agendamentosExistentes || []).forEach((ag: any) => {
-            const servicoAg = servicos?.find(s => s.id === ag.servico_id);
-            if (servicoAg?.duracao) {
-              const [h, m] = ag.horario.split(':').map(Number);
-              const inicioMin = h * 60 + m;
-              const fimMin = inicioMin + servicoAg.duracao;
-              
-              for (let t = inicioMin; t < fimMin; t += 30) {
-                const hh = String(Math.floor(t / 60)).padStart(2, '0');
-                const mm = String(t % 60).padStart(2, '0');
-                slotsOcupados.add(`${hh}:${mm}`);
-              }
+            // Tentar encontrar serviço pelo ID primeiro
+            let servicoAg = servicos?.find(s => s.id === ag.servico_id);
+            
+            // Fallback: buscar pelo nome se não encontrou pelo ID
+            if (!servicoAg && ag.servico_nome) {
+              const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+              const nomeAlvo = normalize(ag.servico_nome.split(',')[0]); // Pegar primeiro serviço se houver múltiplos
+              servicoAg = servicos?.find(s => normalize(s.nome).includes(nomeAlvo) || nomeAlvo.includes(normalize(s.nome)));
+            }
+            
+            // Usar duração do serviço encontrado OU duração padrão de 60min
+            const duracao = servicoAg?.duracao || 60;
+            
+            const [h, m] = ag.horario.split(':').map(Number);
+            const inicioMin = h * 60 + m;
+            const fimMin = inicioMin + duracao;
+            
+            console.log(`🔒 Bloqueando slot: ${ag.horario} (serviço: ${ag.servico_nome || 'sem nome'}, duração: ${duracao}min)`);
+            
+            for (let t = inicioMin; t < fimMin; t += 30) {
+              const hh = String(Math.floor(t / 60)).padStart(2, '0');
+              const mm = String(t % 60).padStart(2, '0');
+              slotsOcupados.add(`${hh}:${mm}`);
             }
           });
 
@@ -837,7 +849,7 @@ Você: ❌ "Perfeito! Qual seu nome completo e data de nascimento?" [ERRO: NÃO 
           // Gerar todos os slots ocupados (excluindo agendamentos da própria pessoa)
           const { data: agendamentosExistentes } = await supabase
             .from('agendamentos')
-            .select('horario, servico_id')
+            .select('horario, servico_id, servico_nome')
             .eq('data', args.data)
             .neq('status', 'Cancelado')
             .neq('cliente_telefone', telefone); // Ignorar agendamentos da própria pessoa ao verificar disponibilidade
@@ -846,17 +858,29 @@ Você: ❌ "Perfeito! Qual seu nome completo e data de nascimento?" [ERRO: NÃO 
           
           // Adicionar slots bloqueados por agendamentos existentes
           (agendamentosExistentes || []).forEach((ag: any) => {
-            const servicoAg = servicos?.find(s => s.id === ag.servico_id);
-            if (servicoAg?.duracao) {
-              const [h, m] = ag.horario.split(':').map(Number);
-              const inicioMin = h * 60 + m;
-              const fimMin = inicioMin + servicoAg.duracao;
-              
-              for (let t = inicioMin; t < fimMin; t += 30) {
-                const hh = String(Math.floor(t / 60)).padStart(2, '0');
-                const mm = String(t % 60).padStart(2, '0');
-                slotsOcupados.add(`${hh}:${mm}`);
-              }
+            // Tentar encontrar serviço pelo ID primeiro
+            let servicoAg = servicos?.find(s => s.id === ag.servico_id);
+            
+            // Fallback: buscar pelo nome se não encontrou pelo ID
+            if (!servicoAg && ag.servico_nome) {
+              const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+              const nomeAlvo = normalize(ag.servico_nome.split(',')[0]); // Pegar primeiro serviço se houver múltiplos
+              servicoAg = servicos?.find(s => normalize(s.nome).includes(nomeAlvo) || nomeAlvo.includes(normalize(s.nome)));
+            }
+            
+            // Usar duração do serviço encontrado OU duração padrão de 60min
+            const duracao = servicoAg?.duracao || 60;
+            
+            const [h, m] = ag.horario.split(':').map(Number);
+            const inicioMin = h * 60 + m;
+            const fimMin = inicioMin + duracao;
+            
+            console.log(`🔒 Bloqueando slot ao criar: ${ag.horario} (serviço: ${ag.servico_nome || 'sem nome'}, duração: ${duracao}min)`);
+            
+            for (let t = inicioMin; t < fimMin; t += 30) {
+              const hh = String(Math.floor(t / 60)).padStart(2, '0');
+              const mm = String(t % 60).padStart(2, '0');
+              slotsOcupados.add(`${hh}:${mm}`);
             }
           });
 
