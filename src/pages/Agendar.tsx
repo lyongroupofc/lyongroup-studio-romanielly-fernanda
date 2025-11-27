@@ -163,11 +163,14 @@ const Agendar = () => {
       agendamentosDay.forEach(ag => {
         const servico = servicos.find(s => s.id === ag.servico_id);
         if (servico) {
-          const horariosBloqueados = calcularHorariosBloqueados(ag.horario, servico.duracao);
+          // NORMALIZAR: Remover segundos do horário do banco (HH:MM:SS -> HH:MM)
+          const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
+          const horariosBloqueados = calcularHorariosBloqueados(horarioNormalizado, servico.duracao);
           horariosBloqueados.forEach(h => todosBloqueados.add(h));
         } else {
           // Se não encontrar o serviço, bloqueia apenas o horário inicial
-          todosBloqueados.add(ag.horario);
+          const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
+          todosBloqueados.add(horarioNormalizado);
         }
       });
       
@@ -300,7 +303,9 @@ const Agendar = () => {
       for (const ag of agendamentosDia || []) {
         const servicoExistente = servicos.find(s => s.id === ag.servico_id);
         if (servicoExistente) {
-          const slotsExistentes = calcularHorariosBloqueados(ag.horario, servicoExistente.duracao);
+          // NORMALIZAR: Remover segundos do horário do banco (HH:MM:SS -> HH:MM)
+          const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
+          const slotsExistentes = calcularHorariosBloqueados(horarioNormalizado, servicoExistente.duracao);
           // Verificar se há interseção entre os slots
           const haIntersecao = slotsNovoAgendamento.some(slot => slotsExistentes.includes(slot));
           if (haIntersecao) {

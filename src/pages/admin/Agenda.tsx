@@ -237,7 +237,7 @@ const Agenda = () => {
       console.log(`[getAvailableSlots] Processando ${agendamentosDay.length} agendamentos para ${dateStr}`);
       agendamentosDay.forEach(ag => {
         // Normalizar horário removendo segundos (ex: "15:00:00" -> "15:00")
-        const horarioNormalizado = ag.horario.substring(0, 5);
+        const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
         
         const servico = servicos.find(s => s.id === ag.servico_id);
         if (servico) {
@@ -441,7 +441,7 @@ const Agenda = () => {
         const servicoExistente = servicos.find(s => s.id === ag.servico_id);
         if (servicoExistente) {
           // NORMALIZAR: Remover segundos do horário do banco (HH:MM:SS -> HH:MM)
-          const horarioNormalizado = ag.horario.substring(0, 5);
+          const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
           const slotsExistentes = calcularHorariosBloqueados(horarioNormalizado, servicoExistente.duracao);
           // Verificar se há interseção entre os slots
           const haIntersecao = slotsNovoAgendamento.some(slot => slotsExistentes.includes(slot));
