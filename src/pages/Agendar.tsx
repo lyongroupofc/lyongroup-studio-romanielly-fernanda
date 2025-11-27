@@ -18,6 +18,7 @@ import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { useAgendaConfig } from "@/hooks/useAgendaConfig";
 import { isFeriado } from "@/lib/feriados";
 import Footer from "@/components/Footer";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 
 const Agendar = () => {
   const navigate = useNavigate();
@@ -359,7 +360,8 @@ const Agendar = () => {
   const isLoading = loadingServicos || loadingProfissionais || loadingAgendamentos || loadingDisponibilidade;
 
   return (
-    <div className="min-h-screen gradient-soft flex flex-col">
+    <div className="min-h-screen gradient-soft flex flex-col relative">
+      <AnimatedBackground />
       {/* Header com Ícone */}
       <header className="w-full py-6">
         <div className="container mx-auto px-4 flex justify-center">
