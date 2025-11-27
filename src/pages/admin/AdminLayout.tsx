@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/NotificationBell";
+import Footer from "@/components/Footer";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
@@ -177,6 +178,8 @@ const AdminLayout = () => {
           <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8">
             <Outlet />
           </main>
+          
+          <Footer />
         </div>
       </div>
     </SidebarProvider>

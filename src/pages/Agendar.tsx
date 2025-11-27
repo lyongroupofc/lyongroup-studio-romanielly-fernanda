@@ -17,6 +17,8 @@ import { useProfissionais } from "@/hooks/useProfissionais";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { useAgendaConfig } from "@/hooks/useAgendaConfig";
 import { isFeriado } from "@/lib/feriados";
+import Footer from "@/components/Footer";
+import lyonLogo from "@/assets/lyon-group-logo.jpeg";
 
 const Agendar = () => {
   const navigate = useNavigate();
@@ -358,17 +360,26 @@ const Agendar = () => {
   const isLoading = loadingServicos || loadingProfissionais || loadingAgendamentos || loadingDisponibilidade;
 
   return (
-    <div className="min-h-screen gradient-soft py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-primary mb-4">
-            <Sparkles className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-4xl font-bold mb-2">Studio Romanielly Fernanda</h1>
-          <p className="text-lg text-muted-foreground">
-            Escolha o melhor dia e horário para você ✨
-          </p>
+    <div className="min-h-screen gradient-soft flex flex-col">
+      {/* Header com Logo */}
+      <header className="w-full py-6">
+        <div className="container mx-auto px-4 flex justify-center">
+          <img 
+            src={lyonLogo} 
+            alt="Lyon Group" 
+            className="h-20 md:h-24 w-auto object-contain"
+          />
         </div>
+      </header>
+      
+      <div className="flex-1 py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-2">Studio Romanielly Fernanda</h1>
+            <p className="text-lg text-muted-foreground">
+              Escolha o melhor dia e horário para você ✨
+            </p>
+          </div>
 
         <Card className="p-6 md:p-8 shadow-card">
           <form onSubmit={handleSubmit} className="space-y-8">
@@ -530,7 +541,7 @@ const Agendar = () => {
             <Button 
               type="submit" 
               size="lg" 
-              className="w-full"
+              className="w-full shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -544,7 +555,10 @@ const Agendar = () => {
             </Button>
           </form>
         </Card>
+        </div>
       </div>
+      
+      <Footer />
     </div>
   );
 };
