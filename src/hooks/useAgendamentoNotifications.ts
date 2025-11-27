@@ -13,6 +13,31 @@ export const useAgendamentoNotifications = () => {
   const [notifications, setNotifications] = useState<AgendamentoNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Carregar o último agendamento ao iniciar (para teste)
+  useEffect(() => {
+    const loadLatestAgendamento = async () => {
+      const { data, error } = await supabase
+        .from('agendamentos')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (data && !error) {
+        const notification: AgendamentoNotification = {
+          id: data.id,
+          agendamento: data as Agendamento,
+          timestamp: new Date(),
+          read: false
+        };
+        setNotifications([notification]);
+        setUnreadCount(1);
+      }
+    };
+
+    loadLatestAgendamento();
+  }, []);
+
   // Função para tocar o som de notificação - som suave e elegante
   const playNotificationSound = useCallback(() => {
     const audio = new Audio('data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAASAAAeMwAUFBQUFCIiIiIiIjAwMDAwPj4+Pj4+TExMTExZWVlZWVlnZ2dnZ3V1dXV1dYODg4ODkZGRkZGRn5+fn5+frKysrKy6urq6urrIyMjIyNbW1tbW1uTk5OTk8vLy8vLy//////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAHjOZTf9/AAAAAAD/+xDEAAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
