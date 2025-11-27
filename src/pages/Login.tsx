@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import Footer from "@/components/Footer";
+import lyonLogo from "@/assets/lyon-group-logo.jpeg";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -48,64 +50,79 @@ const Login = () => {
           navigate('/super-admin');
         } else if (roleData.role === 'admin') {
           navigate('/admin');
-        } else {
+        } else if (roleData.role === 'profissional') {
           navigate('/profissional');
         }
       }
     } catch (error: any) {
-      toast.error(error.message || "E-mail ou senha inválidos");
+      toast.error(error.message || "Erro ao fazer login");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center gradient-soft p-4">
-      <Card className="w-full max-w-md p-8 shadow-card">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-primary mb-4">
-            <Sparkles className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold mb-2">Bem-vinda!</h1>
-          <p className="text-muted-foreground">
-            Acesse o painel administrativo
-          </p>
+    <div className="min-h-screen gradient-soft flex flex-col">
+      {/* Header com Logo */}
+      <header className="w-full py-6">
+        <div className="container mx-auto px-4 flex justify-center">
+          <img 
+            src={lyonLogo} 
+            alt="Lyon Group" 
+            className="h-20 md:h-24 w-auto object-contain"
+          />
         </div>
-
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+      </header>
+      
+      <div className="flex-1 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md p-8 shadow-card">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-primary mb-4">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold mb-2">Bem-vinda!</h1>
+            <p className="text-muted-foreground">
+              Acesse o painel administrativo
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isLoading}
-          >
-            {isLoading ? "Entrando..." : "Entrar"}
-          </Button>
-        </form>
-      </Card>
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? "Entrando..." : "Entrar"}
+            </Button>
+          </form>
+        </Card>
+      </div>
+      
+      <Footer />
     </div>
   );
 };

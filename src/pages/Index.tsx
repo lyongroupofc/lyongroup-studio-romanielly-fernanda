@@ -1,13 +1,26 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Calendar, Sparkles, TrendingUp, Palette, Zap, MessageCircle } from "lucide-react";
+import Footer from "@/components/Footer";
+import lyonLogo from "@/assets/lyon-group-logo.jpeg";
 
 const Index = () => {
   const navigate = useNavigate();
   
   return (
-    <div className="min-h-screen gradient-soft">
-      <div className="container mx-auto px-4 py-12 md:py-20">
+    <div className="min-h-screen gradient-soft flex flex-col">
+      {/* Header com Logo */}
+      <header className="w-full py-6">
+        <div className="container mx-auto px-4 flex justify-center">
+          <img 
+            src={lyonLogo} 
+            alt="Lyon Group" 
+            className="h-20 md:h-24 w-auto object-contain"
+          />
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8 md:py-12 flex-1">
         <div className="max-w-4xl mx-auto text-center space-y-8">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
@@ -31,7 +44,7 @@ const Index = () => {
             </p>
 
             <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-              💡 <span className="font-medium text-primary">Mas tem mais:</span> além do painel, você pode integrar serviços que aceleram resultados reais — 
+              💡 <span className="font-medium text-primary">Mas tem mais:</span> além do painel, você pode integrar serviços que aceleram resultados reais: 
               gestão de tráfego pago, identidade visual premium, social mídia profissional e muito mais.
             </p>
             
@@ -44,7 +57,7 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
             <Button 
               size="lg" 
-              className="text-lg px-8 shadow-lg hover:shadow-xl transition-all"
+              className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
               onClick={() => navigate("/agendar")}
             >
               <Calendar className="w-5 h-5 mr-2" />
@@ -53,7 +66,7 @@ const Index = () => {
             <Button 
               size="lg" 
               variant="secondary" 
-              className="text-lg px-8 shadow-lg hover:shadow-xl transition-all"
+              className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
               onClick={() => window.open("https://api.whatsapp.com/send/?phone=5531991625182", "_blank")}
             >
               <MessageCircle className="w-5 h-5 mr-2" />
@@ -61,8 +74,7 @@ const Index = () => {
             </Button>
             <Button 
               size="lg" 
-              variant="outline" 
-              className="text-lg px-8 border-2 hover:bg-primary/5"
+              className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
               onClick={() => navigate("/login")}
             >
               Área Administrativa
@@ -72,7 +84,7 @@ const Index = () => {
 
         {/* Features */}
         <div className="grid md:grid-cols-3 gap-6 mt-20 max-w-5xl mx-auto">
-          <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:border-primary/30 transition-all">
+          <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:shadow-primary/50 hover:border-primary/50 transition-all duration-300">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
               <TrendingUp className="w-8 h-8 text-primary" />
             </div>
@@ -82,7 +94,7 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:border-primary/30 transition-all">
+          <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:shadow-primary/50 hover:border-primary/50 transition-all duration-300">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
               <Palette className="w-8 h-8 text-primary" />
             </div>
@@ -92,7 +104,7 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:border-primary/30 transition-all">
+          <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:shadow-primary/50 hover:border-primary/50 transition-all duration-300">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
               <Zap className="w-8 h-8 text-primary" />
             </div>
@@ -103,6 +115,8 @@ const Index = () => {
           </div>
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 };

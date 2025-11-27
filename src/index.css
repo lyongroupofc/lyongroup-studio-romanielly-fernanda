@@ -164,6 +164,11 @@ All colors MUST be HSL.
   .hover-lift {
     @apply transition-smooth hover:scale-[1.02] hover:shadow-soft;
   }
+  
+  /* Efeito de brilho dourado para botões */
+  .btn-glow-hover {
+    @apply hover:shadow-xl hover:shadow-primary/50 transition-all duration-300;
+  }
 
   @keyframes float {
     0%, 100% {
