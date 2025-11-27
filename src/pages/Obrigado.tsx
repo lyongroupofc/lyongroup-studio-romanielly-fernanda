@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckCircle, Calendar, Clock, Home } from "lucide-react";
 import Footer from "@/components/Footer";
-import lyonLogo from "@/assets/lyon-group-logo.jpeg";
 
 const Obrigado = () => {
   const location = useLocation();
@@ -12,17 +11,6 @@ const Obrigado = () => {
 
   return (
     <div className="min-h-screen gradient-soft flex flex-col">
-      {/* Header com Logo */}
-      <header className="w-full py-6">
-        <div className="container mx-auto px-4 flex justify-center">
-          <img 
-            src={lyonLogo} 
-            alt="Lyon Group" 
-            className="h-20 md:h-24 w-auto object-contain"
-          />
-        </div>
-      </header>
-      
       <div className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-lg p-8 text-center shadow-card">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-success/10 mb-6">
