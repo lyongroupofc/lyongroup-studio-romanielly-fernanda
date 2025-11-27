@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Calendar, Sparkles, TrendingUp, Palette, Zap } from "lucide-react";
+import { Calendar, Sparkles, TrendingUp, Palette, Zap, MessageCircle } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -12,7 +12,7 @@ const Index = () => {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Full Beauty System by Studio Romanielly Fernanda</span>
+            <span className="text-sm font-medium text-primary">Full Beauty System by Lyon Group</span>
           </div>
 
           {/* Main Heading */}
@@ -32,7 +32,11 @@ const Index = () => {
 
             <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
               💡 <span className="font-medium text-primary">Mas tem mais:</span> além do painel, você pode integrar serviços que aceleram resultados reais — 
-              gestão de tráfego pago, identidade visual premium, social media profissional e muito mais.
+              gestão de tráfego pago, identidade visual premium, social mídia profissional e muito mais.
+            </p>
+            
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
+              👇 Clique abaixo e fale com nossa equipe agora mesmo!
             </p>
           </div>
 
@@ -45,6 +49,15 @@ const Index = () => {
             >
               <Calendar className="w-5 h-5 mr-2" />
               Agendar Horário
+            </Button>
+            <Button 
+              size="lg" 
+              variant="secondary" 
+              className="text-lg px-8 shadow-lg hover:shadow-xl transition-all"
+              onClick={() => window.open("https://api.whatsapp.com/send/?phone=5531991625182", "_blank")}
+            >
+              <MessageCircle className="w-5 h-5 mr-2" />
+              Falar com a Lyon Group
             </Button>
             <Button 
               size="lg" 
