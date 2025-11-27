@@ -207,9 +207,14 @@ serve(async (req) => {
       content: mensagem
     });
 
-    // Data atual para contexto da IA - calendário dos próximos 15 dias
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
+    // Data atual para contexto da IA - calendário dos próximos 15 dias (timezone Brasil)
+    const agora = new Date();
+    
+    // Ajustar para timezone do Brasil (UTC-3)
+    const brasilOffset = -3 * 60; // -3 horas em minutos
+    const utcOffset = agora.getTimezoneOffset();
+    const diff = brasilOffset - utcOffset;
+    const hoje = new Date(agora.getTime() + diff * 60 * 1000);
     
     const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
     
@@ -224,10 +229,17 @@ serve(async (req) => {
       const diaSemanaTexto = diasSemana[data.getDay()];
       
       const prefixo = i === 0 ? '**HOJE**' : i === 1 ? '**AMANHÃ**' : '';
-      calendario.push(`${prefixo} ${dia}/${mes}/${ano} (${diaSemanaTexto})`.trim());
+      const linha = `${prefixo} ${dia}/${mes}/${ano} (${diaSemanaTexto})`.trim();
+      calendario.push(linha);
+      
+      // Debug: logar as primeiras 5 datas
+      if (i < 5) {
+        console.log(`📅 Data ${i}: ${linha}`);
+      }
     }
     
     const calendarioTexto = calendario.join('\n');
+    console.log(`📅 Calendário gerado (primeiras linhas):\n${calendario.slice(0, 5).join('\n')}`);
     
     // Obter contexto atual
     const contexto = conversa.contexto || {};
