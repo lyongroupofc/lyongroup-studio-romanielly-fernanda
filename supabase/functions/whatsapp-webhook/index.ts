@@ -1167,7 +1167,7 @@ Você: ❌ "Perfeito! Qual seu nome completo e data de nascimento?" [ERRO: NÃO 
               cliente_telefone: telefone,
               cliente_id: clienteId,
               status: 'Confirmado',
-              origem: 'whatsapp',
+              origem: 'bot',
               bot_conversa_id: conversa.id,
               instancia: instancia || 'default',
               observacoes: observacoesReagendamento,

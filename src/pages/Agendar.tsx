@@ -51,7 +51,7 @@ const Agendar = () => {
       try {
         const { data: agendamentosDia, error } = await supabase
           .from('agendamentos')
-          .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes')
+          .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem')
           .eq('data', fmtKey(date))
           .neq('status', 'Cancelado');
 
@@ -283,14 +283,14 @@ const Agendar = () => {
       }
 
       // VALIDAÇÃO CRÍTICA: Verificar conflitos de horário considerando duração dos serviços
-      const { data: agendamentosDia, error: checkError } = await supabase
+      const { data: agendamentosDia, error } = await supabase
         .from('agendamentos')
-        .select('*, servico_id')
+        .select('*, servico_id, origem')
         .eq('data', fmtKey(date))
         .neq('status', 'Cancelado');
 
-      if (checkError) {
-        console.error("Erro ao verificar disponibilidade:", checkError);
+      if (error) {
+        console.error("Erro ao verificar disponibilidade:", error);
         toast.error("Erro ao verificar disponibilidade do horário");
         return;
       }
@@ -332,6 +332,7 @@ const Agendar = () => {
         profissional_nome: profissional?.nome || null,
         status: "Confirmado",
         observacoes: null,
+        origem: "link_externo",
       });
 
       toast.success("Agendamento confirmado! Você receberá uma confirmação no WhatsApp.");

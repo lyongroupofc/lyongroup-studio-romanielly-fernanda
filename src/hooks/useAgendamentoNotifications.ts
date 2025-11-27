@@ -15,51 +15,47 @@ export const useAgendamentoNotifications = () => {
 
   // Função para tocar o som de notificação - som suave e elegante
   const playNotificationSound = useCallback(() => {
-    // Som de sino delicado e feminino
     const audio = new Audio('data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAASAAAeMwAUFBQUFCIiIiIiIjAwMDAwPj4+Pj4+TExMTExZWVlZWVlnZ2dnZ3V1dXV1dYODg4ODkZGRkZGRn5+fn5+frKysrKy6urq6urrIyMjIyNbW1tbW1uTk5OTk8vLy8vLy//////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAHjOZTf9/AAAAAAD/+xDEAAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
-    audio.volume = 0.25; // Volume mais baixo e suave
+    audio.volume = 0.25;
     audio.play().catch(err => console.log('Não foi possível tocar o som:', err));
   }, []);
 
-  // Desabilitado polling de notificações para evitar sobrecarga
-  // useEffect(() => {
-  //   let lastCheckTime = new Date();
-  //   let isChecking = false;
-  //   const checkNewAppointments = async () => {
-  //     if (isChecking || document.hidden) return;
-  //     isChecking = true;
-  //     try {
-  //       const { data, error } = await supabase
-  //         .from("agendamentos")
-  //         .select("*")
-  //         .gte("created_at", lastCheckTime.toISOString())
-  //         .order("created_at", { ascending: false })
-  //         .limit(10);
-  //       if (error) {
-  //         console.error("Erro ao verificar novos agendamentos:", error);
-  //         return;
-  //       }
-  //       if (data && data.length > 0) {
-  //         const newNotifications = data.map(agendamento => ({
-  //           id: agendamento.id,
-  //           agendamento: agendamento as Agendamento,
-  //           timestamp: new Date(),
-  //           read: false
-  //         }));
-  //         setNotifications(prev => [...newNotifications, ...prev]);
-  //         setUnreadCount(prev => prev + newNotifications.length);
-  //         playNotificationSound();
-  //         lastCheckTime = new Date();
-  //       }
-  //     } catch (error) {
-  //       console.error("Erro ao verificar novos agendamentos:", error);
-  //     } finally {
-  //       isChecking = false;
-  //     }
-  //   };
-  //   const interval = setInterval(checkNewAppointments, 60000);
-  //   return () => clearInterval(interval);
-  // }, []);
+  // Notificações em tempo real via Supabase Realtime
+  useEffect(() => {
+    const channel = supabase
+      .channel('agendamentos-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'agendamentos'
+        },
+        (payload) => {
+          console.log('📬 Nova notificação de agendamento:', payload);
+          
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const agendamento = payload.new as Agendamento;
+            
+            const newNotification: AgendamentoNotification = {
+              id: agendamento.id,
+              agendamento: agendamento,
+              timestamp: new Date(),
+              read: false
+            };
+            
+            setNotifications(prev => [newNotification, ...prev]);
+            setUnreadCount(prev => prev + 1);
+            playNotificationSound();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [playNotificationSound]);
 
   const markAsRead = useCallback((notificationId: string) => {
     setNotifications(prev =>
