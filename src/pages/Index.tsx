@@ -14,7 +14,7 @@ const Index = () => {
       {/* Header com Logo e Texto no Topo Direito */}
       <header className="w-full py-6">
         <div className="container mx-auto px-4 flex justify-end">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
             <div className="text-left">
               <h3 className="text-xl md:text-2xl font-bold">Grupo Lyon</h3>
               <p className="text-sm md:text-base text-muted-foreground">Sua Agência De Marketing e Automação completa</p>
