@@ -353,6 +353,48 @@ const Agenda = () => {
     setOpenGerenciarDialog(true);
   }, [selectedDate, configs]);
 
+  const handleToggleFechado = () => {
+    if (!selectedDate) return;
+    
+    const novoStatusFechado = !gerenciarData.fechado;
+    
+    // Se está REABRINDO o dia (fechado -> aberto), adicionar automaticamente todos os horários de funcionamento
+    if (!novoStatusFechado) {
+      const horariosDisponiveis = generateSlots(selectedDate);
+      
+      // Se o dia não tem horários naturais (domingo/segunda), usar horários de um dia padrão
+      let horariosParaAdicionar = horariosDisponiveis;
+      if (horariosDisponiveis.length === 0) {
+        // Para dias naturalmente fechados, usar horários de terça-feira como padrão (13:00-20:00)
+        horariosParaAdicionar = [];
+        for (let h = 13; h <= 20; h++) {
+          for (let m = 0; m < 60; m += 30) {
+            if (h === 20 && m === 30) continue;
+            const hh = String(h).padStart(2, "0");
+            const mm = String(m).padStart(2, "0");
+            horariosParaAdicionar.push(`${hh}:${mm}`);
+          }
+        }
+      }
+      
+      // Adicionar horários ao campo horariosExtras (evitando duplicados)
+      const horariosAtuais = new Set(gerenciarData.horariosExtras);
+      horariosParaAdicionar.forEach(h => horariosAtuais.add(h));
+      
+      setGerenciarData({
+        ...gerenciarData,
+        fechado: novoStatusFechado,
+        horariosExtras: Array.from(horariosAtuais).sort(),
+      });
+    } else {
+      // Se está FECHANDO o dia, apenas atualiza o status
+      setGerenciarData({
+        ...gerenciarData,
+        fechado: novoStatusFechado,
+      });
+    }
+  };
+
   const handleSubmitReservar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDate || !formData.nome || !formData.telefone || !formData.servico || !formData.horario || !formData.dataNascimento) {
@@ -1060,9 +1102,9 @@ const Agenda = () => {
               <Label>Fechar este dia</Label>
               <Button
                 variant={gerenciarData.fechado ? "destructive" : "outline"}
-                onClick={() => setGerenciarData({ ...gerenciarData, fechado: !gerenciarData.fechado })}
+                onClick={handleToggleFechado}
               >
-                {gerenciarData.fechado ? "Reabrir" : "Fechar"}
+                {gerenciarData.fechado ? "Reabrir Dia" : "Fechar"}
               </Button>
             </div>
 
