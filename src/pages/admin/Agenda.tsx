@@ -28,6 +28,7 @@ const Agenda = () => {
   const [openReservarDialog, setOpenReservarDialog] = useState(false);
   const [openGerenciarDialog, setOpenGerenciarDialog] = useState(false);
   const [openDetalhesDialog, setOpenDetalhesDialog] = useState(false);
+  const [openEditarDialog, setOpenEditarDialog] = useState(false);
   const [openSideSheet, setOpenSideSheet] = useState(false);
   const [selectedAgendamento, setSelectedAgendamento] = useState<Agendamento | null>(null);
   const [highlightedAgendamento, setHighlightedAgendamento] = useState<string | null>(null);
@@ -1214,13 +1215,34 @@ const Agenda = () => {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setOpenDetalhesDialog(false)}>Fechar</Button>
                 {!isBefore(new Date(selectedAgendamento.data), startOfToday()) && selectedAgendamento.status !== "Cancelado" && (
-                  <Button variant="destructive" onClick={async () => {
-                    await cancelAgendamento(selectedAgendamento.id);
-                    setOpenDetalhesDialog(false);
-                    setSelectedAgendamento(null);
-                  }}>
-                    Cancelar Agendamento
-                  </Button>
+                  <>
+                    <Button 
+                      variant="secondary"
+                      onClick={() => {
+                        // Preencher formulário com dados do agendamento atual
+                        setFormData({
+                          nome: selectedAgendamento.cliente_nome,
+                          telefone: selectedAgendamento.cliente_telefone,
+                          dataNascimento: '',
+                          servico: selectedAgendamento.servico_id || '',
+                          profissional: selectedAgendamento.profissional_id || '',
+                          horario: selectedAgendamento.horario,
+                          observacoes: selectedAgendamento.observacoes || '',
+                        });
+                        setOpenDetalhesDialog(false);
+                        setOpenEditarDialog(true);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                    <Button variant="destructive" onClick={async () => {
+                      await cancelAgendamento(selectedAgendamento.id);
+                      setOpenDetalhesDialog(false);
+                      setSelectedAgendamento(null);
+                    }}>
+                      Cancelar Agendamento
+                    </Button>
+                  </>
                 )}
                 {(selectedAgendamento.status === "Cancelado" || isBefore(new Date(selectedAgendamento.data), startOfToday())) && (
                   <Button variant="destructive" onClick={async () => {
@@ -1233,6 +1255,122 @@ const Agenda = () => {
                 )}
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Editar Agendamento */}
+      <Dialog open={openEditarDialog} onOpenChange={setOpenEditarDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Editar Agendamento - {selectedDate && format(selectedDate, "dd/MM/yyyy")}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedAgendamento && (
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!formData.nome || !formData.telefone || !formData.servico || !formData.horario) {
+                toast.error("Preencha todos os campos obrigatórios");
+                return;
+              }
+
+              try {
+                const servico = servicos.find((s) => s.id === formData.servico);
+                if (!servico) {
+                  toast.error("Serviço não encontrado");
+                  return;
+                }
+                
+                const profissional = formData.profissional ? profissionais.find((p) => p.id === formData.profissional) : null;
+
+                await updateAgendamento(selectedAgendamento.id, {
+                  servico_id: servico.id,
+                  servico_nome: servico.nome,
+                  horario: formData.horario,
+                  cliente_nome: formData.nome,
+                  cliente_telefone: formData.telefone,
+                  profissional_id: profissional?.id || null,
+                  profissional_nome: profissional?.nome || null,
+                  observacoes: formData.observacoes,
+                });
+
+                setOpenEditarDialog(false);
+                setSelectedAgendamento(null);
+                toast.success("Agendamento atualizado com sucesso!");
+              } catch (error) {
+                console.error("Erro ao atualizar agendamento:", error);
+                toast.error("Erro ao atualizar agendamento");
+              }
+            }} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nome do Cliente *</Label>
+                  <Input value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefone *</Label>
+                  <Input value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} required />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Serviço *</Label>
+                  <Select value={formData.servico} onValueChange={(value) => setFormData({ ...formData, servico: value, horario: '' })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {servicos.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Profissional</Label>
+                  <Select value={formData.profissional} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sem preferência" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profissionais.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Horário *</Label>
+                <Select
+                  value={formData.horario}
+                  onValueChange={(value) => setFormData({ ...formData, horario: value })}
+                  disabled={!formData.servico}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={formData.servico ? "Selecione um horário" : "Selecione um serviço primeiro"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {loadingDisponibilidade ? (
+                      <div className="p-2 text-center text-sm text-muted-foreground">Carregando horários...</div>
+                    ) : (
+                      getServiceStartSlots(selectedDate, formData.servico, true).map((h) => (
+                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea value={formData.observacoes} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setOpenEditarDialog(false)}>Cancelar</Button>
+                <Button type="submit">Salvar Alterações</Button>
+              </div>
+            </form>
           )}
         </DialogContent>
       </Dialog>

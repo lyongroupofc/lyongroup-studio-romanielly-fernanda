@@ -37,6 +37,7 @@ import lyonLogo from "@/assets/lyon-group-logo.jpeg";
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
   { icon: Calendar, label: "Agenda", path: "/admin/agenda" },
+  { icon: Users, label: "Clientes", path: "/admin/clientes" },
   { icon: Scissors, label: "Serviços", path: "/admin/servicos" },
   { icon: Users, label: "Profissionais", path: "/admin/profissionais" },
   { icon: DollarSign, label: "Faturamento", path: "/admin/faturamento" },

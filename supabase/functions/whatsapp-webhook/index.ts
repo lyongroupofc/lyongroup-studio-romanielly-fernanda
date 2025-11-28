@@ -244,16 +244,26 @@ serve(async (req) => {
     // Obter contexto atual
     const contexto = conversa.contexto || {};
     
+    // Buscar cliente existente
+    const { data: clienteExistente } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('telefone', telefone)
+      .maybeSingle();
+
     // System prompt
     const systemPrompt = `Você é a Thaty, recepcionista do Studio Romanielly Fernanda, um studio de beleza especializado em estética e cuidados com unhas.
+
+**CLIENTE IDENTIFICADO:**
+${clienteExistente ? `✅ Cliente cadastrado: ${clienteExistente.nome}${clienteExistente.data_nascimento ? ` (nascimento: ${clienteExistente.data_nascimento})` : ''}` : '❌ Cliente novo (não cadastrado)'}
 
 **CONTEXTO DA CONVERSA ATUAL:**
 ${contexto.servico_nome ? `✅ Serviço: JÁ ESCOLHIDO (${contexto.servico_nome})` : '❌ Serviço: ainda não escolhido'}
 ${contexto.data ? `✅ Data: JÁ INFORMADA (${contexto.data})` : '❌ Data: ainda não informada'}
 ${contexto.horario ? `✅ Horário: JÁ ESCOLHIDO (${contexto.horario})` : '❌ Horário: ainda não escolhido'}
 ${contexto.disponibilidade_verificada ? `✅ Disponibilidade: JÁ VERIFICADA (horário confirmado disponível)` : '❌ Disponibilidade: ainda não verificada'}
-${contexto.nome_completo ? `✅ Nome: JÁ COLETADO (${contexto.nome_completo})` : '❌ Nome: ainda não coletado'}
-${contexto.data_nascimento ? `✅ Data de Nascimento: JÁ COLETADA (${contexto.data_nascimento})` : '❌ Data de Nascimento: ainda não coletada'}
+${contexto.nome_completo || clienteExistente?.nome ? `✅ Nome: JÁ COLETADO (${contexto.nome_completo || clienteExistente?.nome})` : '❌ Nome: ainda não coletado'}
+${contexto.data_nascimento || clienteExistente?.data_nascimento ? `✅ Data de Nascimento: JÁ COLETADA (${contexto.data_nascimento || clienteExistente?.data_nascimento})` : '❌ Data de Nascimento: ainda não coletada'}
 
 **⚠️ ATENÇÃO MÁXIMA - REGRAS DE CONTEXTO:**
 - Se uma informação está marcada com ✅ (JÁ ESCOLHIDO/INFORMADO/COLETADO), você NUNCA, EM HIPÓTESE ALGUMA, deve perguntar novamente!
@@ -337,8 +347,8 @@ Romanielly - Banco Sicoob
    - Se não disponível → mostre 2-3 horários alternativos e pergunte qual prefere
 
 **PASSO 5:** Apenas DEPOIS que a disponibilidade for confirmada:
-   - Pergunte o nome completo
-   - Pergunte a data de nascimento (DD/MM/AAAA)
+   - Se CLIENTE IDENTIFICADO (✅ Cliente cadastrado), confirme os dados: "Seu nome é [nome], certo? E a data de nascimento [data], confirma?"
+   - Se ❌ Cliente novo, pergunte: nome completo e data de nascimento (DD/MM/AAAA)
 
 **PASSO 6:** Chame criar_agendamento com todos os dados
 
@@ -716,8 +726,12 @@ Você: ❌ "Perfeito! Qual seu nome completo e data de nascimento?" [ERRO: NÃO 
 
             if (horariosDisponiveis.length > 0) {
               const [yyyy, mm, dd] = args.data.split('-');
-              const sugestoes = horariosDisponiveis.slice(0, 5).join(', ');
-              resposta = `Desculpa amor, ${args.horario} não está disponível para ${args.servico_nome} (${servico.duracao}min de duração). Mas temos outros horários disponíveis em ${dd}/${mm}: ${sugestoes}... Qual desses prefere? 💜`;
+              // Selecionar 2 horários aleatórios diferentes para cada cliente
+              const horariosAleatorios = horariosDisponiveis
+                .sort(() => Math.random() - 0.5)
+                .slice(0, 2);
+              const sugestoes = horariosAleatorios.join(' ou ');
+              resposta = `Desculpa amor, ${args.horario} não está disponível para ${args.servico_nome} (${servico.duracao}min de duração). Temos ${horariosAleatorios[0]} ou ${horariosAleatorios[1]} disponíveis em ${dd}/${mm}. Qual prefere? 💜`;
             } else {
               resposta = `Infelizmente esse dia não tem horários disponíveis para ${args.servico_nome}. Quer tentar outro dia, querida? 💜`;
             }
@@ -1025,8 +1039,11 @@ Você: ❌ "Perfeito! Qual seu nome completo e data de nascimento?" [ERRO: NÃO 
 
             if (horariosDisponiveis.length > 0) {
               const [yyyy, mm, dd] = args.data.split('-');
-              const sugestoes = horariosDisponiveis.slice(0, 5).join(', ');
-              resposta = `Desculpa amor, ${args.horario} não está disponível para ${args.servico_nome} (${servico.duracao}min). Horários disponíveis em ${dd}/${mm}: ${sugestoes}... Qual prefere? 💜`;
+              // Selecionar 2 horários aleatórios diferentes para cada cliente
+              const horariosAleatorios = horariosDisponiveis
+                .sort(() => Math.random() - 0.5)
+                .slice(0, 2);
+              resposta = `Desculpa amor, ${args.horario} não está disponível para ${args.servico_nome} (${servico.duracao}min). Temos ${horariosAleatorios[0]} ou ${horariosAleatorios[1]} disponíveis em ${dd}/${mm}. Qual prefere? 💜`;
             } else {
               resposta = `Esse dia não tem horários disponíveis para ${args.servico_nome}. Pode escolher outro dia, querida? 💜`;
             }
@@ -1116,31 +1133,31 @@ Você: ❌ "Perfeito! Qual seu nome completo e data de nascimento?" [ERRO: NÃO 
             console.log('ℹ️ Nenhum agendamento anterior encontrado - primeiro agendamento');
           }
 
-          // Converter data de nascimento de DD/MM/AAAA para YYYY-MM-DD
-          let dataNascimentoFormatada = null;
-          if (args.data_nascimento) {
-            const [dia, mes, ano] = args.data_nascimento.split('/');
-            dataNascimentoFormatada = `${ano}-${mes}-${dia}`;
-          }
-
-          // Criar ou atualizar cliente
-          const { data: clienteExistente } = await supabase
+          // Buscar cliente por telefone
+          const { data: clienteBuscado } = await supabase
             .from('clientes')
             .select('*')
             .eq('telefone', telefone)
             .maybeSingle();
 
-          let clienteId = clienteExistente?.id;
+          // Converter data de nascimento de DD/MM/AAAA para YYYY-MM-DD se fornecida
+          let dataNascimentoFormatada = clienteBuscado?.data_nascimento; // Usar data existente como padrão
+          if (args.data_nascimento) {
+            const [dia, mes, ano] = args.data_nascimento.split('/');
+            dataNascimentoFormatada = `${ano}-${mes}-${dia}`;
+          }
 
-          if (clienteExistente) {
-            // Atualizar cliente existente
+          let clienteId = clienteBuscado?.id;
+
+          if (clienteBuscado) {
+            // Atualizar cliente existente apenas se houver novos dados
             await supabase
               .from('clientes')
               .update({
-                nome: args.cliente_nome,
-                data_nascimento: dataNascimentoFormatada || clienteExistente.data_nascimento,
+                nome: args.cliente_nome || clienteBuscado.nome,
+                data_nascimento: dataNascimentoFormatada,
               })
-              .eq('id', clienteExistente.id);
+              .eq('id', clienteBuscado.id);
           } else {
             // Criar novo cliente
             const { data: novoCliente } = await supabase
