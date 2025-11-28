@@ -42,6 +42,28 @@ export const useClientes = () => {
     }
   };
 
+  const refetch = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('clientes')
+        .select('*')
+        .order('nome', { ascending: true });
+
+      if (error) throw error;
+      setClientes(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar clientes:', error);
+      toast({
+        title: 'Erro ao carregar clientes',
+        description: 'Não foi possível carregar a lista de clientes.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const buscarAniversariantesMes = async (mes: number) => {
     try {
       const { data, error } = await supabase
@@ -162,6 +184,6 @@ export const useClientes = () => {
     buscarAniversariantesMes,
     buscarAniversariantesPorDia,
     criarOuAtualizarCliente,
-    refetch: fetchClientes,
+    refetch,
   };
 };
