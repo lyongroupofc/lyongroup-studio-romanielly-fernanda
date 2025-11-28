@@ -632,7 +632,8 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
             .eq('data', args.data)
             .maybeSingle();
 
-          if (config?.fechado) {
+          // Dia está fechado APENAS se config.fechado E NÃO tem horários extras
+          if (config?.fechado && (!config.horarios_extras || config.horarios_extras.length === 0)) {
             resposta = 'Esse dia está fechado. Quer tentar outra data, querida? 💜';
             continue;
           }
@@ -683,19 +684,60 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
           let startHour = 8;
           let endHour = 13;
           
-          if (dayOfWeek === 2 || dayOfWeek === 3) {
-            startHour = 13;
-            endHour = 20;
-          } else if (dayOfWeek === 4 || dayOfWeek === 5) {
-            startHour = 9;
-            endHour = 19;
-          } else if (dayOfWeek === 6) {
-            startHour = 8;
-            endHour = 13;
+          // Se dia está fechado, considerar APENAS horários extras
+          const diaEstaFechado = config?.fechado || false;
+          
+          if (!diaEstaFechado) {
+            // Dia aberto: verificar horários de funcionamento normais
+            if (dayOfWeek === 2 || dayOfWeek === 3) {
+              startHour = 13;
+              endHour = 20;
+            } else if (dayOfWeek === 4 || dayOfWeek === 5) {
+              startHour = 9;
+              endHour = 19;
+            } else if (dayOfWeek === 6) {
+              startHour = 8;
+              endHour = 13;
+            }
+          } else {
+            // Dia fechado: considerar APENAS horários extras (não validar contra horários padrão)
+            startHour = 0;
+            endHour = 24;
           }
           
           const startMin = startHour * 60;
           const endMin = endHour * 60;
+          
+          // Se dia está fechado, verificar se o horário solicitado está nos horários extras
+          if (diaEstaFechado) {
+            const horarioEstaEmExtras = (config?.horarios_extras || []).includes(args.horario);
+            if (!horarioEstaEmExtras) {
+              // Sugerir apenas horários extras disponíveis
+              const horariosExtrasDisponiveis = (config?.horarios_extras || []).filter((horarioExtra: string) => {
+                const [hh, mm] = horarioExtra.split(':').map(Number);
+                const inicio = hh * 60 + mm;
+                const fim = inicio + servico.duracao;
+                
+                for (let t = inicio; t < fim; t += 30) {
+                  const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+                  if (slotsOcupados.has(slotCheck)) {
+                    return false;
+                  }
+                }
+                return true;
+              });
+              
+              if (horariosExtrasDisponiveis.length > 0) {
+                const horariosAleatorios = horariosExtrasDisponiveis
+                  .sort(() => Math.random() - 0.5)
+                  .slice(0, 2);
+                resposta = `Nesse dia temos horários especiais! Funcionamos apenas nos seguintes horários: ${horariosAleatorios[0]}${horariosAleatorios[1] ? ' ou ' + horariosAleatorios[1] : ''}. Qual prefere? 💜`;
+              } else {
+                resposta = `Desculpa amor, esse horário não está disponível nesse dia. Quer tentar outro dia? 💜`;
+              }
+              continue;
+            }
+          }
           
           if (inicioMin < startMin || fimMin > endMin) {
             // Gerar horários alternativos dentro do horário de funcionamento
