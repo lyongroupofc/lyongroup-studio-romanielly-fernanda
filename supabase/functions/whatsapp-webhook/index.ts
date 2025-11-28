@@ -178,12 +178,21 @@ serve(async (req) => {
         }
       }
       
-      // Detectar data mencionada (DD/MM/YYYY)
-      const regexData = /(\d{2})\/(\d{2})\/(\d{4})/g;
-      const matchData = respostaIA.match(regexData);
-      if (matchData && matchData.length > 0 && !novoContexto.data) {
-        const [dia, mes, ano] = matchData[0].split('/');
+      // Detectar data mencionada (DD/MM/YYYY ou DD/MM)
+      const regexDataCompleta = /(\d{2})\/(\d{2})\/(\d{4})/g;
+      const matchDataCompleta = respostaIA.match(regexDataCompleta);
+      if (matchDataCompleta && matchDataCompleta.length > 0 && !novoContexto.data) {
+        const [dia, mes, ano] = matchDataCompleta[0].split('/');
         novoContexto.data = `${ano}-${mes}-${dia}`; // Formato YYYY-MM-DD
+      } else {
+        // Se não encontrou data completa, tentar DD/MM
+        const regexDataCurta = /(\d{2})\/(\d{2})(?!\/)/g;
+        const matchDataCurta = respostaIA.match(regexDataCurta);
+        if (matchDataCurta && matchDataCurta.length > 0 && !novoContexto.data) {
+          const [dia, mes] = matchDataCurta[0].split('/');
+          const anoAtual = hoje.getFullYear();
+          novoContexto.data = `${anoAtual}-${mes}-${dia}`; // Assumir ano atual
+        }
       }
       
       // Detectar horário mencionado (HH:MM)
@@ -268,8 +277,12 @@ ${contexto.data_nascimento || clienteExistente?.data_nascimento ? `✅ Data de N
 **⚠️ ATENÇÃO MÁXIMA - REGRAS DE CONTEXTO:**
 - Se uma informação está marcada com ✅ (JÁ ESCOLHIDO/INFORMADO/COLETADO), você NUNCA, EM HIPÓTESE ALGUMA, deve perguntar novamente!
 - SEMPRE revise o CONTEXTO DA CONVERSA ATUAL acima ANTES de fazer qualquer pergunta!
-- Se a cliente perguntar "que horários tem disponível?", você deve APENAS mostrar os horários e perguntar qual ela prefere
+- Quando a cliente perguntar sobre disponibilidade (ex: "tem vaga de manhã?"), você DEVE:
+  1. Confirmar que já sabe a data (se tiver ✅ na data)
+  2. Perguntar diretamente qual horário específico ela prefere OU chamar verificar_disponibilidade para checar
+  3. NUNCA pedir a data novamente se já está com ✅
 - NÃO repita perguntas sobre informações que já têm ✅
+- SEMPRE mencione datas no formato DD/MM/YYYY para que fiquem salvas no contexto
 
 **SOBRE VOCÊ:**
 - Seu nome é Thaty e você é a recepcionista do studio
@@ -336,12 +349,17 @@ Romanielly - Banco Sicoob
 
 **PASSO 2:** Pergunte a data preferida
    - Se a cliente mencionar "próximo sábado" ou similar, consulte o CALENDÁRIO acima
+   - SEMPRE confirme a data no formato completo DD/MM/YYYY
+   - Exemplo: "Certo! Quarta-feira que vem será dia 03/12/2025. Qual serviço você gostaria?"
    - Se houver ambiguidade (ex: dois sábados próximos), mostre as 2 opções com datas EXATAS do calendário
-   - Exemplo: "Seria o sábado dia 30/11 ou o dia 07/12?"
 
-**PASSO 3:** Pergunte o horário preferido da cliente
+**PASSO 3:** Pergunte qual período do dia prefere (manhã/tarde) ou horário específico
+   - Ao invés de pedir horário exato de cara, pergunte se prefere manhã ou tarde
+   - Isso ajuda a filtrar melhor as opções disponíveis
+   - Quando a cliente mencionar "parte da manhã" ou "parte da tarde", você JÁ TEM A DATA (se estiver com ✅)
+   - Neste caso, sugira 2 horários aleatórios do período solicitado usando os horários de funcionamento do dia
 
-**PASSO 4 (CRÍTICO):** Assim que tiver serviço + data + horário → CHAME IMEDIATAMENTE "verificar_disponibilidade"
+**PASSO 4 (CRÍTICO):** Assim que tiver serviço + data + horário ESPECÍFICO → CHAME IMEDIATAMENTE "verificar_disponibilidade"
    - **NÃO PEÇA DADOS PESSOAIS AINDA!**
    - Se disponível → avise e peça nome + data de nascimento
    - Se não disponível → mostre 2-3 horários alternativos e pergunte qual prefere
