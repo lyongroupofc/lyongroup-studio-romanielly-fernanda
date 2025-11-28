@@ -297,6 +297,39 @@ export type Database = {
         }
         Relationships: []
       }
+      despesas: {
+        Row: {
+          categoria: string | null
+          comprovante_url: string | null
+          created_at: string | null
+          data: string
+          descricao: string
+          id: string
+          metodo_pagamento: string | null
+          valor: number
+        }
+        Insert: {
+          categoria?: string | null
+          comprovante_url?: string | null
+          created_at?: string | null
+          data: string
+          descricao: string
+          id?: string
+          metodo_pagamento?: string | null
+          valor: number
+        }
+        Update: {
+          categoria?: string | null
+          comprovante_url?: string | null
+          created_at?: string | null
+          data?: string
+          descricao?: string
+          id?: string
+          metodo_pagamento?: string | null
+          valor?: number
+        }
+        Relationships: []
+      }
       lembretes_enviados: {
         Row: {
           agendamento_id: string | null

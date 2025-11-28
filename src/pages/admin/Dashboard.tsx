@@ -135,9 +135,14 @@ const Dashboard = () => {
 
   const todayStats = [
     { label: "Atendimentos Hoje", value: stats.agendamentosHoje.toString() },
-    { label: "Faturamento do Dia", value: `R$ ${stats.faturamentoHoje.toFixed(2).replace(".", ",")}` },
     { label: "Total de Agendamentos", value: agendamentos.length.toString() },
   ];
+
+  // Agendamentos de amanhã
+  const amanha = format(new Date(new Date().setDate(new Date().getDate() + 1)), "yyyy-MM-dd");
+  const agendamentosAmanha = agendamentos
+    .filter(ag => ag.data === amanha && ag.status !== 'Cancelado' && ag.status !== 'Reagendado')
+    .sort((a, b) => a.horario.localeCompare(b.horario));
 
   return (
     <div className="space-y-8 relative">
@@ -204,7 +209,7 @@ const Dashboard = () => {
         
         {/* Lista de Clientes Agendados Hoje */}
         {stats.agendamentosHoje > 0 && (
-          <div className="border-t pt-4">
+          <div className="border-t pt-4 mb-4">
             <h3 className="text-sm font-semibold text-muted-foreground mb-3">Agendamentos de Hoje</h3>
             <div className="space-y-2">
               {agendamentos
@@ -222,6 +227,27 @@ const Dashboard = () => {
                     <span className="text-sm text-muted-foreground">{ag.horario.substring(0, 5)}</span>
                   </div>
                 ))}
+            </div>
+          </div>
+        )}
+
+        {/* Lista de Agendamentos de Amanhã */}
+        {agendamentosAmanha.length > 0 && (
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Agendamentos de Amanhã</h3>
+            <div className="space-y-2">
+              {agendamentosAmanha.map((ag) => (
+                <div 
+                  key={ag.id} 
+                  className="flex items-center justify-between p-2 rounded-lg bg-accent/50 hover:bg-accent/70 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-accent-foreground" />
+                    <span className="text-sm font-medium">{ag.cliente_nome}</span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">{ag.horario.substring(0, 5)}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
