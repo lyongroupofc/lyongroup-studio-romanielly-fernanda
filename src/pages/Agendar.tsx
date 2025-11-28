@@ -199,16 +199,25 @@ const Agendar = () => {
 
       const steps = Math.ceil(serv.duracao / 30); // número de slots de 30min necessários
       
-      // Determina horário de fechamento baseado no dia da semana
+      // Determina horário de fechamento baseado no dia da semana OU horários extras
+      const dayData = getDayData(d);
       const dayOfWeek = d.getDay();
       let limiteMinutos = 13 * 60; // Padrão sábado
       
-      if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
-        limiteMinutos = 20 * 60;
-      } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
-        limiteMinutos = 19 * 60;
-      } else if (dayOfWeek === 6) { // Sábado
-        limiteMinutos = 13 * 60;
+      // Se o dia tem horários extras, calcular limite baseado no maior horário extra
+      if (dayData.horariosExtras.length > 0) {
+        const ultimoHorarioExtra = dayData.horariosExtras[dayData.horariosExtras.length - 1];
+        const [h, m] = ultimoHorarioExtra.split(':').map(Number);
+        limiteMinutos = h * 60 + m + 30; // +30 para permitir agendamentos até o último slot
+      } else {
+        // Se não tem horários extras, usar horários padrão do dia da semana
+        if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
+          limiteMinutos = 20 * 60;
+        } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
+          limiteMinutos = 19 * 60;
+        } else if (dayOfWeek === 6) { // Sábado
+          limiteMinutos = 13 * 60;
+        }
       }
 
       const toMin = (t: string) => {

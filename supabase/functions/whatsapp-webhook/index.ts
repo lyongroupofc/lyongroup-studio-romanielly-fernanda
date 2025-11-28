@@ -700,9 +700,16 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
               endHour = 13;
             }
           } else {
-            // Dia fechado: considerar APENAS horários extras (não validar contra horários padrão)
-            startHour = 0;
-            endHour = 24;
+            // Dia fechado: calcular limite baseado no maior horário extra
+            if (config?.horarios_extras && config.horarios_extras.length > 0) {
+              const ultimoHorarioExtra = config.horarios_extras[config.horarios_extras.length - 1];
+              const [he, me] = ultimoHorarioExtra.split(':').map(Number);
+              startHour = 0;
+              endHour = he + (me > 0 ? 1 : 0);
+            } else {
+              startHour = 0;
+              endHour = 24;
+            }
           }
           
           const startMin = startHour * 60;
