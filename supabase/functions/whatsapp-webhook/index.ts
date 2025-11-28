@@ -1237,11 +1237,12 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
           
           resposta = `Perfeito! ${args.servico_nome} agendado para ${dd}/${mm} (${diaSemana}) às ${args.horario}. Te aguardo, ${args.cliente_nome.split(' ')[0]}! 💜✨`;
 
-          // Limpar contexto
+          // Limpar contexto e salvar nome do cliente
           await supabase
             .from('bot_conversas')
             .update({ 
-              contexto: {}, 
+              contexto: {},
+              cliente_nome: args.cliente_nome, 
               ultimo_contato: new Date().toISOString() 
             })
             .eq('id', conversa.id);

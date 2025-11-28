@@ -154,6 +154,7 @@ export type Database = {
       bot_conversas: {
         Row: {
           bot_ativo: boolean
+          cliente_nome: string | null
           contexto: Json | null
           created_at: string | null
           id: string
@@ -163,6 +164,7 @@ export type Database = {
         }
         Insert: {
           bot_ativo?: boolean
+          cliente_nome?: string | null
           contexto?: Json | null
           created_at?: string | null
           id?: string
@@ -172,6 +174,7 @@ export type Database = {
         }
         Update: {
           bot_ativo?: boolean
+          cliente_nome?: string | null
           contexto?: Json | null
           created_at?: string | null
           id?: string
