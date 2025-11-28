@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, User, Phone, Calendar, Mail, Pencil, Trash2 } from "lucide-react";
+import { Search, User, Phone, Calendar, Mail, Pencil, Trash2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,11 +14,18 @@ import { toast } from "sonner";
 import type { Cliente } from "@/hooks/useClientes";
 
 const Clientes = () => {
-  const { clientes, loading, refetch } = useClientes();
+  const { clientes, loading, refetch, criarOuAtualizarCliente } = useClientes();
   const [searchTerm, setSearchTerm] = useState("");
   const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openNewDialog, setOpenNewDialog] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [editForm, setEditForm] = useState({
+    nome: "",
+    telefone: "",
+    email: "",
+    data_nascimento: "",
+  });
+  const [newForm, setNewForm] = useState({
     nome: "",
     telefone: "",
     email: "",
@@ -89,6 +96,46 @@ const Clientes = () => {
     }
   };
 
+  const handleNewClienteClick = () => {
+    setNewForm({
+      nome: "",
+      telefone: "",
+      email: "",
+      data_nascimento: "",
+    });
+    setOpenNewDialog(true);
+  };
+
+  const handleSaveNewCliente = async () => {
+    if (!newForm.nome || !newForm.telefone) {
+      toast.error("Nome e telefone são obrigatórios");
+      return;
+    }
+
+    // Verificar se telefone já existe
+    const clienteExistente = clientes.find(c => c.telefone === newForm.telefone);
+    if (clienteExistente) {
+      toast.error("Já existe um cliente com este telefone");
+      return;
+    }
+
+    try {
+      await criarOuAtualizarCliente({
+        nome: newForm.nome,
+        telefone: newForm.telefone,
+        email: newForm.email || undefined,
+        data_nascimento: newForm.data_nascimento || undefined,
+      });
+
+      toast.success("Cliente criado com sucesso!");
+      setOpenNewDialog(false);
+      refetch();
+    } catch (error) {
+      console.error("Erro ao criar cliente:", error);
+      toast.error("Erro ao criar cliente");
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
@@ -113,15 +160,21 @@ const Clientes = () => {
         </p>
       </div>
 
-      {/* Busca */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome, telefone ou email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      {/* Busca e Botão Novo */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, telefone ou email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button onClick={handleNewClienteClick}>
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Cliente
+        </Button>
       </div>
 
       {/* Cards de Clientes */}
@@ -249,6 +302,61 @@ const Clientes = () => {
               </Button>
               <Button onClick={handleSaveEdit}>
                 Salvar Alterações
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Novo Cliente */}
+      <Dialog open={openNewDialog} onOpenChange={setOpenNewDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input
+                value={newForm.nome}
+                onChange={(e) => setNewForm({ ...newForm, nome: e.target.value })}
+                placeholder="Nome completo"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Telefone *</Label>
+              <Input
+                value={newForm.telefone}
+                onChange={(e) => setNewForm({ ...newForm, telefone: e.target.value })}
+                placeholder="(31) 98765-4321"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={newForm.email}
+                onChange={(e) => setNewForm({ ...newForm, email: e.target.value })}
+                placeholder="cliente@email.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Data de Nascimento</Label>
+              <Input
+                type="date"
+                value={newForm.data_nascimento}
+                onChange={(e) => setNewForm({ ...newForm, data_nascimento: e.target.value })}
+                max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpenNewDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveNewCliente}>
+                Criar Cliente
               </Button>
             </div>
           </div>

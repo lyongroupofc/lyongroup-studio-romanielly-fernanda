@@ -8,13 +8,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBotWhatsApp } from "@/hooks/useBotWhatsApp";
 import { useBotConversas } from "@/hooks/useBotConversas";
 import { useNumerosBloqueados } from "@/hooks/useNumerosBloqueados";
-import { MessageCircle, TrendingUp, Calendar, RefreshCw, Phone, MessageSquare, Ban, Plus, X, Eraser } from "lucide-react";
+import { MessageCircle, TrendingUp, Calendar, RefreshCw, Phone, MessageSquare, Ban, Plus, X, Eraser, FileText, Lock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const BotWhatsApp = () => {
   const {
@@ -44,6 +46,62 @@ const BotWhatsApp = () => {
   } = useNumerosBloqueados();
 
   const [openBloquearNumero, setOpenBloquearNumero] = useState(false);
+  const [openInformacoes, setOpenInformacoes] = useState(false);
+  const [authenticatedInfo, setAuthenticatedInfo] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [informacoesAdicionais, setInformacoesAdicionais] = useState("");
+
+  useEffect(() => {
+    if (openInformacoes && authenticatedInfo) {
+      fetchInformacoes();
+    }
+  }, [openInformacoes, authenticatedInfo]);
+
+  const fetchInformacoes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bot_config')
+        .select('valor')
+        .eq('chave', 'informacoes_adicionais')
+        .maybeSingle();
+
+      if (error) throw error;
+      const valorData = data?.valor as { texto?: string } | null;
+      setInformacoesAdicionais(valorData?.texto || "");
+    } catch (error) {
+      console.error('Erro ao buscar informações:', error);
+    }
+  };
+
+  const handlePasswordSubmitInfo = () => {
+    if (passwordInput === "RF9646") {
+      setAuthenticatedInfo(true);
+      setPasswordInput("");
+      toast.success("Acesso liberado!");
+    } else {
+      toast.error("Senha incorreta!");
+      setPasswordInput("");
+    }
+  };
+
+  const handleSaveInformacoes = async () => {
+    try {
+      const { error } = await supabase
+        .from('bot_config')
+        .upsert({
+          chave: 'informacoes_adicionais',
+          valor: { texto: informacoesAdicionais }
+        }, { onConflict: 'chave' });
+
+      if (error) throw error;
+      toast.success("Informações salvas com sucesso!");
+      setOpenInformacoes(false);
+      setAuthenticatedInfo(false);
+    } catch (error) {
+      console.error('Erro ao salvar informações:', error);
+      toast.error("Erro ao salvar informações");
+    }
+  };
 
   const handleBloquearNumero = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -81,9 +139,15 @@ const BotWhatsApp = () => {
             Configure e gerencie o assistente virtual
           </p>
         </div>
-        <Button onClick={refetch} variant="outline" size="icon">
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setOpenInformacoes(true)} variant="outline">
+            <FileText className="h-4 w-4 mr-2" />
+            Adicionar Informação
+          </Button>
+          <Button onClick={refetch} variant="outline" size="icon">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Estatísticas */}
@@ -375,6 +439,70 @@ const BotWhatsApp = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog Informações Adicionais */}
+      <Dialog open={openInformacoes} onOpenChange={(open) => {
+        setOpenInformacoes(open);
+        if (!open) {
+          setAuthenticatedInfo(false);
+          setPasswordInput("");
+        }
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Informações Adicionais para o Bot</DialogTitle>
+          </DialogHeader>
+          {!authenticatedInfo ? (
+            <div className="text-center space-y-6 py-8">
+              <Lock className="w-16 h-16 mx-auto text-primary" />
+              <div>
+                <h3 className="text-lg font-semibold">Área Protegida</h3>
+                <p className="text-muted-foreground mt-2">
+                  Insira a senha para gerenciar as informações do bot
+                </p>
+              </div>
+              <div className="space-y-4 max-w-sm mx-auto">
+                <Input
+                  type="password"
+                  placeholder="Digite a senha"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") handlePasswordSubmitInfo();
+                  }}
+                />
+                <Button onClick={handlePasswordSubmitInfo} className="w-full">
+                  Acessar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Adicione informações importantes que o bot deve saber, como horários especiais, 
+                promoções, novos serviços ou qualquer informação adicional relevante.
+              </p>
+              <Textarea
+                value={informacoesAdicionais}
+                onChange={(e) => setInformacoesAdicionais(e.target.value)}
+                placeholder="Ex: Promoção de Natal: 20% de desconto em todos os serviços de unhas até 31/12"
+                rows={10}
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => {
+                  setOpenInformacoes(false);
+                  setAuthenticatedInfo(false);
+                }}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveInformacoes}>
+                  Salvar Informações
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

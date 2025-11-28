@@ -127,6 +127,15 @@ serve(async (req) => {
       .select('*')
       .eq('ativo', true);
 
+    // Buscar informações adicionais do bot
+    const { data: infoAdicionais } = await supabase
+      .from('bot_config')
+      .select('valor')
+      .eq('chave', 'informacoes_adicionais')
+      .maybeSingle();
+
+    const infoTexto = (infoAdicionais?.valor as { texto?: string })?.texto || "";
+
     // Formatar serviços para o prompt
     const servicosFormatados = (servicos || []).map(s => {
       const duracaoTexto = s.duracao >= 60 
@@ -428,7 +437,9 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
 - Se a cliente mencionar "alisamento" ou "cabelo afro", ajude a identificar o serviço correto
 - Seja específica sobre qual serviço está sendo agendado
 - Sempre confirme os dados antes de chamar a ferramenta
-- LEMBRE-SE: o histórico da conversa está disponível - USE-O!`;
+- LEMBRE-SE: o histórico da conversa está disponível - USE-O!
+
+${infoTexto ? `\n**INFORMAÇÕES ADICIONAIS IMPORTANTES:**\n${infoTexto}\n` : ''}`;
 
     // Definir ferramentas disponíveis
     const tools = [

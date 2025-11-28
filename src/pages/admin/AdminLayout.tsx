@@ -40,7 +40,7 @@ const menuItems = [
   { icon: Users, label: "Clientes", path: "/admin/clientes" },
   { icon: Scissors, label: "Serviços", path: "/admin/servicos" },
   { icon: Users, label: "Profissionais", path: "/admin/profissionais" },
-  { icon: DollarSign, label: "Faturamento", path: "/admin/faturamento" },
+  { icon: DollarSign, label: "Fluxo de Caixa", path: "/admin/faturamento" },
   { icon: MessageCircle, label: "Bot WhatsApp", path: "/admin/bot-whatsapp" },
   { icon: Bell, label: "Lembretes", path: "/admin/lembretes" },
   { icon: Cake, label: "Aniversariantes", path: "/admin/aniversariantes" },
