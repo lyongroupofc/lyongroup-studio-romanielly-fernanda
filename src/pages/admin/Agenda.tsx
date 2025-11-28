@@ -1214,43 +1214,40 @@ const Agenda = () => {
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setOpenDetalhesDialog(false)}>Fechar</Button>
-                {!isBefore(new Date(selectedAgendamento.data), startOfToday()) && selectedAgendamento.status !== "Cancelado" && (
-                  <>
-                    <Button 
-                      variant="secondary"
-                      onClick={() => {
-                        // Preencher formulário com dados do agendamento atual
-                        setFormData({
-                          nome: selectedAgendamento.cliente_nome,
-                          telefone: selectedAgendamento.cliente_telefone,
-                          dataNascimento: '',
-                          servico: selectedAgendamento.servico_id || '',
-                          profissional: selectedAgendamento.profissional_id || '',
-                          horario: selectedAgendamento.horario,
-                          observacoes: selectedAgendamento.observacoes || '',
-                        });
-                        setOpenDetalhesDialog(false);
-                        setOpenEditarDialog(true);
-                      }}
-                    >
-                      Editar
-                    </Button>
-                    <Button variant="destructive" onClick={async () => {
-                      await cancelAgendamento(selectedAgendamento.id);
-                      setOpenDetalhesDialog(false);
-                      setSelectedAgendamento(null);
-                    }}>
-                      Cancelar Agendamento
-                    </Button>
-                  </>
-                )}
-                {(selectedAgendamento.status === "Cancelado" || isBefore(new Date(selectedAgendamento.data), startOfToday())) && (
+                <Button 
+                  variant="secondary"
+                  onClick={() => {
+                    // Preencher formulário com dados do agendamento atual
+                    setFormData({
+                      nome: selectedAgendamento.cliente_nome,
+                      telefone: selectedAgendamento.cliente_telefone,
+                      dataNascimento: '',
+                      servico: selectedAgendamento.servico_id || '',
+                      profissional: selectedAgendamento.profissional_id || '',
+                      horario: selectedAgendamento.horario,
+                      observacoes: selectedAgendamento.observacoes || '',
+                    });
+                    setOpenDetalhesDialog(false);
+                    setOpenEditarDialog(true);
+                  }}
+                >
+                  Editar Agendamento
+                </Button>
+                {selectedAgendamento.status === "Cancelado" || isBefore(new Date(selectedAgendamento.data), startOfToday()) ? (
                   <Button variant="destructive" onClick={async () => {
                     await deleteAgendamento(selectedAgendamento.id);
                     setOpenDetalhesDialog(false);
                     setSelectedAgendamento(null);
                   }}>
                     Excluir Agendamento
+                  </Button>
+                ) : (
+                  <Button variant="destructive" onClick={async () => {
+                    await cancelAgendamento(selectedAgendamento.id);
+                    setOpenDetalhesDialog(false);
+                    setSelectedAgendamento(null);
+                  }}>
+                    Cancelar Agendamento
                   </Button>
                 )}
               </div>

@@ -1,15 +1,29 @@
 import { useState } from "react";
 import { useClientes } from "@/hooks/useClientes";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, User, Phone, Calendar, Mail } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Search, User, Phone, Calendar, Mail, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import type { Cliente } from "@/hooks/useClientes";
 
 const Clientes = () => {
-  const { clientes, loading } = useClientes();
+  const { clientes, loading, refetch } = useClientes();
   const [searchTerm, setSearchTerm] = useState("");
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
+  const [editForm, setEditForm] = useState({
+    nome: "",
+    telefone: "",
+    email: "",
+    data_nascimento: "",
+  });
 
   const clientesFiltrados = clientes.filter(cliente => {
     const search = searchTerm.toLowerCase();
@@ -19,6 +33,61 @@ const Clientes = () => {
       (cliente.email && cliente.email.toLowerCase().includes(search))
     );
   });
+
+  const handleEditClick = (cliente: Cliente) => {
+    setSelectedCliente(cliente);
+    setEditForm({
+      nome: cliente.nome,
+      telefone: cliente.telefone,
+      email: cliente.email || "",
+      data_nascimento: cliente.data_nascimento || "",
+    });
+    setOpenEditDialog(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedCliente) return;
+
+    try {
+      const { error } = await supabase
+        .from("clientes")
+        .update({
+          nome: editForm.nome,
+          telefone: editForm.telefone,
+          email: editForm.email || null,
+          data_nascimento: editForm.data_nascimento || null,
+        })
+        .eq("id", selectedCliente.id);
+
+      if (error) throw error;
+
+      toast.success("Cliente atualizado com sucesso!");
+      setOpenEditDialog(false);
+      refetch();
+    } catch (error) {
+      console.error("Erro ao atualizar cliente:", error);
+      toast.error("Erro ao atualizar cliente");
+    }
+  };
+
+  const handleDeleteClick = async (cliente: Cliente) => {
+    if (!confirm(`Tem certeza que deseja apagar o cliente ${cliente.nome}?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from("clientes")
+        .delete()
+        .eq("id", cliente.id);
+
+      if (error) throw error;
+
+      toast.success("Cliente removido com sucesso!");
+      refetch();
+    } catch (error) {
+      console.error("Erro ao remover cliente:", error);
+      toast.error("Erro ao remover cliente");
+    }
+  };
 
   if (loading) {
     return (
@@ -98,6 +167,26 @@ const Clientes = () => {
                 </span>
               </div>
             </CardContent>
+            <CardFooter className="flex gap-2 pt-0">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 hover:bg-primary/10 hover:text-primary hover:shadow-md hover:shadow-primary/30"
+                onClick={() => handleEditClick(cliente)}
+              >
+                <Pencil className="w-4 h-4 mr-1" />
+                Editar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 hover:bg-destructive/10 hover:text-destructive hover:shadow-md hover:shadow-destructive/30"
+                onClick={() => handleDeleteClick(cliente)}
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Apagar
+              </Button>
+            </CardFooter>
           </Card>
         ))}
       </div>
@@ -113,6 +202,58 @@ const Clientes = () => {
           </p>
         </Card>
       )}
+
+      {/* Dialog Editar Cliente */}
+      <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input
+                value={editForm.nome}
+                onChange={(e) => setEditForm({ ...editForm, nome: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Telefone *</Label>
+              <Input
+                value={editForm.telefone}
+                onChange={(e) => setEditForm({ ...editForm, telefone: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Data de Nascimento</Label>
+              <Input
+                type="date"
+                value={editForm.data_nascimento}
+                onChange={(e) => setEditForm({ ...editForm, data_nascimento: e.target.value })}
+                max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpenEditDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveEdit}>
+                Salvar Alterações
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
