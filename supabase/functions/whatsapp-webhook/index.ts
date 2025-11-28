@@ -227,8 +227,10 @@ serve(async (req) => {
     
     const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
     
-    // Criar calendário dos próximos 15 dias
+    // Criar calendário dos próximos 15 dias com referências explícitas
     const calendario: string[] = [];
+    const referenciasRapidas: string[] = [];
+    
     for (let i = 0; i < 15; i++) {
       const data = new Date(hoje);
       data.setDate(hoje.getDate() + i);
@@ -236,19 +238,27 @@ serve(async (req) => {
       const mes = (data.getMonth() + 1).toString().padStart(2, '0');
       const ano = data.getFullYear();
       const diaSemanaTexto = diasSemana[data.getDay()];
+      const diaSemanaIndex = data.getDay();
       
       const prefixo = i === 0 ? '**HOJE**' : i === 1 ? '**AMANHÃ**' : '';
       const linha = `${prefixo} ${dia}/${mes}/${ano} (${diaSemanaTexto})`.trim();
       calendario.push(linha);
       
-      // Debug: logar as primeiras 5 datas
-      if (i < 5) {
-        console.log(`📅 Data ${i}: ${linha}`);
+      // Criar referências rápidas explícitas para cada dia da semana
+      if (i > 0) { // Pular hoje
+        const diaSemanaUpper = diaSemanaTexto.toUpperCase();
+        referenciasRapidas.push(`**PRÓXIM${diaSemanaIndex === 6 ? 'O' : 'A'} ${diaSemanaUpper}:** ${dia}/${mes}/${ano}`);
       }
+      
+      // Logar todos os 15 dias para debug
+      console.log(`📅 Data ${i}: ${linha}`);
     }
     
     const calendarioTexto = calendario.join('\n');
-    console.log(`📅 Calendário gerado (primeiras linhas):\n${calendario.slice(0, 5).join('\n')}`);
+    const referenciasTexto = referenciasRapidas.join('\n');
+    
+    console.log(`📅 Calendário completo gerado com ${calendario.length} datas`);
+    console.log(`📌 Referências rápidas criadas: ${referenciasRapidas.length} entradas`);
     
     // Obter contexto atual
     const contexto = conversa.contexto || {};
@@ -291,14 +301,18 @@ ${contexto.data_nascimento || clienteExistente?.data_nascimento ? `✅ Data de N
 - Seja sempre prestativa, carinhosa e atenciosa
 - Use emojis naturalmente, mas sem exagero (💅, ✨, 😊, 💜)
 
-**INFORMAÇÕES DE DATA (CALENDÁRIO DOS PRÓXIMOS 15 DIAS):**
+**📅 CALENDÁRIO DOS PRÓXIMOS 15 DIAS:**
 ${calendarioTexto}
 
-**⚠️ REGRAS CRÍTICAS DE DATA:**
-1. Use SEMPRE as datas EXATAS do calendário acima - NÃO faça cálculos manuais de data
-2. Quando a cliente mencionar "amanhã", "próximo sábado", etc, consulte o calendário acima
-3. NUNCA diga que uma data é um dia da semana diferente do que está no calendário
-4. Se tiver dúvida sobre qual data a cliente quer, pergunte objetivamente: "Qual data você prefere?" e mostre 2-3 opções do calendário
+**📌 REFERÊNCIA RÁPIDA POR DIA DA SEMANA:**
+${referenciasTexto}
+
+**⛔ REGRA ABSOLUTA - NUNCA CALCULE DATAS MANUALMENTE:**
+1. ❌ PROIBIDO calcular qual dia da semana é uma data
+2. ✅ SEMPRE copie as datas EXATAMENTE do calendário ou da REFERÊNCIA RÁPIDA acima
+3. ✅ Quando a cliente falar "próxima quarta", "sábado que vem", etc → CONSULTE a "REFERÊNCIA RÁPIDA POR DIA DA SEMANA"
+4. ✅ Se tiver dúvida, mostre 2-3 opções do calendário com datas EXATAS
+5. ⚠️ Se você errar o dia da semana, a cliente vai perder confiança no atendimento
 
 **Serviços do Studio:**
 ${servicosFormatados}
@@ -348,10 +362,10 @@ Romanielly - Banco Sicoob
 **PASSO 1:** Identifique o serviço desejado
 
 **PASSO 2:** Pergunte a data preferida
-   - Se a cliente mencionar "próximo sábado" ou similar, consulte o CALENDÁRIO acima
-   - SEMPRE confirme a data no formato completo DD/MM/YYYY
-   - Exemplo: "Certo! Quarta-feira que vem será dia 03/12/2025. Qual serviço você gostaria?"
-   - Se houver ambiguidade (ex: dois sábados próximos), mostre as 2 opções com datas EXATAS do calendário
+   - Se a cliente mencionar "próximo sábado", "quarta que vem", etc → CONSULTE a "REFERÊNCIA RÁPIDA POR DIA DA SEMANA" acima
+   - SEMPRE confirme a data no formato completo DD/MM/YYYY copiada EXATAMENTE da referência
+   - Exemplo correto: "Certo! [CONSULTE A REFERÊNCIA e use a data EXATA]. Qual horário você prefere?"
+   - Se houver ambiguidade (ex: dois sábados próximos), mostre as 2 opções com datas EXATAS da REFERÊNCIA RÁPIDA
 
 **PASSO 3:** Pergunte o horário específico que a cliente prefere
    - Pergunte diretamente: "Que horário você prefere?" ou "Tem algum horário em mente?"
@@ -371,14 +385,19 @@ Romanielly - Banco Sicoob
 
 **PASSO 6:** Chame criar_agendamento com todos os dados
 
-**⚠️ REGRAS DE RESPOSTA:**
+**⛔ REGRAS ABSOLUTAS DE RESPOSTA:**
 - Seja BREVE e OBJETIVA - mensagens curtas, máximo 2-3 linhas
-- NÃO faça cálculos de data manualmente - use apenas o calendário fornecido
-- Se houver ambiguidade, pergunte com opções claras: "Dia 30/11 ou 07/12?"
+- **⛔ NUNCA CALCULE DATAS** - use APENAS o "CALENDÁRIO" e a "REFERÊNCIA RÁPIDA POR DIA DA SEMANA"
+- **⛔ NUNCA sugira horários** sem antes chamar verificar_disponibilidade
+- **⛔ Dias fechados/feriados** - sempre verifique disponibilidade antes de sugerir
+- Se houver ambiguidade de data, pergunte com opções claras do CALENDÁRIO: "Dia 30/11 ou 07/12?"
 - NÃO repita informações que já estão no contexto (marcadas com ✅)
-- **⚠️ NUNCA, EM HIPÓTESE ALGUMA, sugira horários específicos sem antes chamar verificar_disponibilidade**
-- **⚠️ Dias fechados, feriados ou sem disponibilidade NÃO devem ter horários sugeridos - sempre verifique primeiro!**
 - Quando a cliente perguntar "tem vaga de manhã/tarde?", responda: "Me diz um horário que você prefere e eu verifico! 😊"
+
+**⚠️ EXEMPLO DE USO CORRETO DA REFERÊNCIA RÁPIDA:**
+Cliente: "Quero agendar na próxima quarta"
+Você: [CONSULTA "REFERÊNCIA RÁPIDA POR DIA DA SEMANA" → encontra "PRÓXIMA QUARTA-FEIRA: 04/12/2025"]
+Você: "Perfeito! Quarta-feira dia 04/12. Que horário você prefere?" ✅ CORRETO
 
 **⚠️ REGRA CRÍTICA - NÃO PEDIR DADOS ANTES DE VERIFICAR DISPONIBILIDADE:**
 - ❌ ERRADO: Pedir nome e data de nascimento ANTES de verificar se o horário está disponível
