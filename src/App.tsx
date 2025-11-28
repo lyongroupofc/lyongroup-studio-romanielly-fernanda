@@ -18,6 +18,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 // Lazy load admin pages
 const Dashboard = lazy(() => import("./pages/admin/Dashboard"));
 const Agenda = lazy(() => import("./pages/admin/Agenda"));
+const Clientes = lazy(() => import("./pages/admin/Clientes"));
 const Servicos = lazy(() => import("./pages/admin/Servicos"));
 const Profissionais = lazy(() => import("./pages/admin/Profissionais"));
 const Faturamento = lazy(() => import("./pages/admin/Faturamento"));
@@ -72,12 +73,17 @@ const App = () => (
                   <Dashboard />
                 </Suspense>
               } />
-              <Route path="agenda" element={
-                <Suspense fallback={<PageLoader />}>
-                  <Agenda />
-                </Suspense>
-              } />
-              <Route path="servicos" element={
+            <Route path="agenda" element={
+              <Suspense fallback={<PageLoader />}>
+                <Agenda />
+              </Suspense>
+            } />
+            <Route path="clientes" element={
+              <Suspense fallback={<PageLoader />}>
+                <Clientes />
+              </Suspense>
+            } />
+            <Route path="servicos" element={
                 <Suspense fallback={<PageLoader />}>
                   <Servicos />
                 </Suspense>
