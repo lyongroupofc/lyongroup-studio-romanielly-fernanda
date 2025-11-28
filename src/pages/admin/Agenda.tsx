@@ -240,14 +240,26 @@ const Agenda = () => {
         // Normalizar horário removendo segundos (ex: "15:00:00" -> "15:00")
         const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
         
-        const servico = servicos.find(s => s.id === ag.servico_id);
+        // Tentar encontrar serviço pelo ID primeiro
+        let servico = servicos.find(s => s.id === ag.servico_id);
+        
+        // Fallback: buscar pelo nome se não encontrou pelo ID (agendamentos legados/manuais)
+        if (!servico && ag.servico_nome) {
+          const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          const nomeAlvo = normalize(ag.servico_nome.split(',')[0]); // Pegar primeiro serviço se houver múltiplos
+          servico = servicos.find(s => normalize(s.nome).includes(nomeAlvo) || nomeAlvo.includes(normalize(s.nome)));
+        }
+        
         if (servico) {
           const horariosBloqueados = calcularHorariosBloqueados(horarioNormalizado, servico.duracao);
           console.log(`[getAvailableSlots] Bloqueando ${horariosBloqueados.join(', ')} (${ag.cliente_nome} - ${servico.nome}, ${servico.duracao}min)`);
           horariosBloqueados.forEach(h => todosBloqueados.add(h));
         } else {
-          console.log(`[getAvailableSlots] AVISO: servico_id null para agendamento ${ag.id} (${ag.cliente_nome}), bloqueando apenas ${horarioNormalizado}`);
-          todosBloqueados.add(horarioNormalizado);
+          // Se não encontrou serviço, usar duração padrão de 60min
+          const duracaoPadrao = 60;
+          const horariosBloqueados = calcularHorariosBloqueados(horarioNormalizado, duracaoPadrao);
+          console.log(`[getAvailableSlots] AVISO: Serviço não encontrado para agendamento ${ag.id} (${ag.cliente_nome} - ${ag.servico_nome}), usando duração padrão 60min, bloqueando ${horariosBloqueados.join(', ')}`);
+          horariosBloqueados.forEach(h => todosBloqueados.add(h));
         }
       });
       
@@ -346,9 +358,26 @@ const Agenda = () => {
     feriado: { backgroundColor: "hsl(var(--holiday) / 0.25)", color: "hsl(var(--holiday))", fontWeight: "700", border: "2px solid hsl(var(--holiday))" },
   }), []);
 
-  const handleDayClick = useCallback((day: Date | undefined) => {
+  const handleDayClick = useCallback(async (day: Date | undefined) => {
     if (!day) return;
     setSelectedDate(day);
+    
+    // Buscar agendamentos em tempo real para este dia
+    const dateStr = fmtKey(day);
+    const { data: agendamentosRealTime, error } = await supabase
+      .from('agendamentos')
+      .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem')
+      .eq('data', dateStr)
+      .neq('status', 'Cancelado')
+      .order('horario', { ascending: true });
+
+    if (!error && agendamentosRealTime) {
+      setAgendamentosDataAtual(agendamentosRealTime);
+      console.log(`[handleDayClick] Agendamentos carregados em tempo real para ${dateStr}:`, agendamentosRealTime);
+    } else {
+      console.error('[handleDayClick] Erro ao carregar agendamentos:', error);
+    }
+    
     setOpenSideSheet(true);
   }, []);
 

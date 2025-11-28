@@ -163,16 +163,27 @@ const Agendar = () => {
       const todosBloqueados = new Set<string>();
       
       agendamentosDay.forEach(ag => {
-        const servico = servicos.find(s => s.id === ag.servico_id);
+        // Normalizar horário removendo segundos (ex: "15:00:00" -> "15:00")
+        const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
+        
+        // Tentar encontrar serviço pelo ID primeiro
+        let servico = servicos.find(s => s.id === ag.servico_id);
+        
+        // Fallback: buscar pelo nome se não encontrou pelo ID (agendamentos legados/manuais)
+        if (!servico && ag.servico_nome) {
+          const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          const nomeAlvo = normalize(ag.servico_nome.split(',')[0]); // Pegar primeiro serviço se houver múltiplos
+          servico = servicos.find(s => normalize(s.nome).includes(nomeAlvo) || nomeAlvo.includes(normalize(s.nome)));
+        }
+        
         if (servico) {
-          // NORMALIZAR: Remover segundos do horário do banco (HH:MM:SS -> HH:MM)
-          const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
           const horariosBloqueados = calcularHorariosBloqueados(horarioNormalizado, servico.duracao);
           horariosBloqueados.forEach(h => todosBloqueados.add(h));
         } else {
-          // Se não encontrar o serviço, bloqueia apenas o horário inicial
-          const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
-          todosBloqueados.add(horarioNormalizado);
+          // Se não encontrou serviço, usar duração padrão de 60min
+          const duracaoPadrao = 60;
+          const horariosBloqueados = calcularHorariosBloqueados(horarioNormalizado, duracaoPadrao);
+          horariosBloqueados.forEach(h => todosBloqueados.add(h));
         }
       });
       
