@@ -33,6 +33,7 @@ const BotWhatsApp = () => {
     selecionarConversa,
     toggleBotConversa,
     clearContext,
+    clearMessages,
   } = useBotConversas();
 
   const {
@@ -265,7 +266,9 @@ const BotWhatsApp = () => {
                             <Phone className="h-4 w-4 text-white" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{conversa.contexto?.cliente_nome || conversa.telefone.replace('@s.whatsapp.net','')}</p>
+                            <p className="font-medium truncate">
+                              {conversa.cliente_nome || conversa.contexto?.cliente_nome || conversa.telefone.replace('@s.whatsapp.net','').replace('@lid','')}
+                            </p>
                             <p className="text-xs text-muted-foreground">
                               {formatDistanceToNow(new Date(conversa.ultimo_contato), {
                                 addSuffix: true,
@@ -286,19 +289,32 @@ const BotWhatsApp = () => {
                             {conversa.bot_ativo ? 'Bot ativo' : 'Bot desativado'}
                           </Label>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            clearContext(conversa.id);
-                          }}
-                          title="Limpar memória da conversa"
-                          className="h-8"
-                        >
-                          <Eraser className="h-3 w-3 mr-1" />
-                          <span className="text-xs">Limpar</span>
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              clearContext(conversa.id);
+                            }}
+                            title="Limpar memória"
+                            className="h-8"
+                          >
+                            <Eraser className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              clearMessages(conversa.id);
+                            }}
+                            title="Limpar histórico de mensagens"
+                            className="h-8"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -312,8 +328,9 @@ const BotWhatsApp = () => {
                     <div className="bg-[#008069] p-3 text-white flex items-center gap-3">
                       <Phone className="h-5 w-5" />
                       <span className="font-medium">
-                        {conversas.find(c => c.id === conversaSelecionada)?.contexto?.cliente_nome || 
-                         conversas.find(c => c.id === conversaSelecionada)?.telefone.replace('@s.whatsapp.net', '')}
+                        {conversas.find(c => c.id === conversaSelecionada)?.cliente_nome || 
+                         conversas.find(c => c.id === conversaSelecionada)?.contexto?.cliente_nome || 
+                         conversas.find(c => c.id === conversaSelecionada)?.telefone.replace('@s.whatsapp.net', '').replace('@lid', '')}
                       </span>
                     </div>
                     <ScrollArea className="h-[452px] p-4">

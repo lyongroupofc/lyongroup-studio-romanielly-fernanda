@@ -9,6 +9,7 @@ export type BotConversa = {
   ultimo_contato: string;
   created_at: string;
   bot_ativo: boolean;
+  cliente_nome?: string;
 };
 
 export type BotMensagem = {
@@ -29,14 +30,32 @@ export const useBotConversas = () => {
 
   const fetchConversas = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: conversasData, error } = await supabase
         .from('bot_conversas')
         .select('*')
         .order('ultimo_contato', { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      setConversas(data || []);
+      
+      // Buscar nomes dos clientes baseado no telefone
+      const conversasComNomes = await Promise.all(
+        (conversasData || []).map(async (conversa) => {
+          const telefone = conversa.telefone.replace('@lid', '').replace(/\D/g, '');
+          const { data: cliente } = await supabase
+            .from('clientes')
+            .select('nome')
+            .eq('telefone', telefone)
+            .maybeSingle();
+          
+          return {
+            ...conversa,
+            cliente_nome: cliente?.nome
+          };
+        })
+      );
+      
+      setConversas(conversasComNomes);
     } catch (error) {
       console.error('Erro ao buscar conversas:', error);
     } finally {
@@ -160,6 +179,29 @@ export const useBotConversas = () => {
     }
   };
 
+  const clearMessages = async (conversaId: string) => {
+    try {
+      const { error } = await supabase
+        .from('bot_mensagens')
+        .delete()
+        .eq('conversa_id', conversaId);
+
+      if (error) throw error;
+      
+      // Atualizar localmente
+      setMensagens(prev => ({
+        ...prev,
+        [conversaId]: []
+      }));
+      
+      toast.success("Histórico de mensagens limpo!");
+    } catch (error) {
+      console.error('Erro ao limpar mensagens:', error);
+      toast.error("Erro ao limpar histórico de mensagens");
+      throw error;
+    }
+  };
+
   return {
     conversas,
     mensagens,
@@ -168,6 +210,7 @@ export const useBotConversas = () => {
     selecionarConversa,
     toggleBotConversa,
     clearContext,
+    clearMessages,
     refetch: fetchConversas,
   };
 };
