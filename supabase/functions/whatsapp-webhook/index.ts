@@ -136,6 +136,27 @@ serve(async (req) => {
 
     const infoTexto = (infoAdicionais?.valor as { texto?: string })?.texto || "";
 
+    // Buscar promoções ativas
+    const dataAtual = new Date().toISOString().split('T')[0];
+    const { data: promocoes } = await supabase
+      .from('promocoes')
+      .select('*')
+      .eq('ativa', true)
+      .lte('data_inicio', dataAtual)
+      .gte('data_fim', dataAtual);
+
+    let promocoesTexto = '';
+    if (promocoes && promocoes.length > 0) {
+      promocoesTexto = '\n\n🎉 PROMOÇÕES ATIVAS:\n';
+      promocoes.forEach(promo => {
+        promocoesTexto += `\n✨ ${promo.nome}`;
+        if (promo.descricao) promocoesTexto += `\n   ${promo.descricao}`;
+        if (promo.desconto_porcentagem) promocoesTexto += `\n   💰 ${promo.desconto_porcentagem}% de desconto`;
+        if (promo.desconto_valor) promocoesTexto += `\n   💰 R$ ${promo.desconto_valor} de desconto`;
+        promocoesTexto += '\n';
+      });
+    }
+
     // Formatar serviços para o prompt
     const servicosFormatados = (servicos || []).map(s => {
       const duracaoTexto = s.duracao >= 60 

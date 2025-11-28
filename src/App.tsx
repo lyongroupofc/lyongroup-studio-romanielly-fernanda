@@ -23,6 +23,10 @@ const Servicos = lazy(() => import("./pages/admin/Servicos"));
 const Profissionais = lazy(() => import("./pages/admin/Profissionais"));
 const Faturamento = lazy(() => import("./pages/admin/Faturamento"));
 const Relatorios = lazy(() => import("./pages/admin/Relatorios"));
+const Marketing = lazy(() => import("./pages/admin/Marketing"));
+const Estoque = lazy(() => import("./pages/admin/Estoque"));
+const Fidelidade = lazy(() => import("./pages/admin/Fidelidade"));
+const MarketingAutomatico = lazy(() => import("./pages/admin/MarketingAutomatico"));
 const BotWhatsApp = lazy(() => import("./pages/admin/BotWhatsApp"));
 const Lembretes = lazy(() => import("./pages/admin/Lembretes"));
 const Aniversariantes = lazy(() => import("./pages/admin/Aniversariantes"));
@@ -102,6 +106,26 @@ const App = () => (
               <Route path="relatorios" element={
                 <Suspense fallback={<PageLoader />}>
                   <Relatorios />
+                </Suspense>
+              } />
+              <Route path="marketing" element={
+                <Suspense fallback={<PageLoader />}>
+                  <Marketing />
+                </Suspense>
+              } />
+              <Route path="estoque" element={
+                <Suspense fallback={<PageLoader />}>
+                  <Estoque />
+                </Suspense>
+              } />
+              <Route path="fidelidade" element={
+                <Suspense fallback={<PageLoader />}>
+                  <Fidelidade />
+                </Suspense>
+              } />
+              <Route path="marketing-automatico" element={
+                <Suspense fallback={<PageLoader />}>
+                  <MarketingAutomatico />
                 </Suspense>
               } />
               <Route path="bot-whatsapp" element={

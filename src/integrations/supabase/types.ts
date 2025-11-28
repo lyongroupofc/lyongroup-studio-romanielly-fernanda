@@ -267,6 +267,47 @@ export type Database = {
         }
         Relationships: []
       }
+      cliente_fidelidade: {
+        Row: {
+          cliente_id: string | null
+          created_at: string | null
+          id: string
+          nivel: string | null
+          pontos_acumulados: number | null
+          total_gasto: number | null
+          total_servicos: number | null
+          ultimo_servico: string | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string | null
+          id?: string
+          nivel?: string | null
+          pontos_acumulados?: number | null
+          total_gasto?: number | null
+          total_servicos?: number | null
+          ultimo_servico?: string | null
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string | null
+          id?: string
+          nivel?: string | null
+          pontos_acumulados?: number | null
+          total_gasto?: number | null
+          total_servicos?: number | null
+          ultimo_servico?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_fidelidade_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: true
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           created_at: string | null
@@ -330,6 +371,36 @@ export type Database = {
         }
         Relationships: []
       }
+      fluxos_automaticos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          dias_apos_evento: number | null
+          hora_envio: string | null
+          id: string
+          mensagem_template: string
+          tipo: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          dias_apos_evento?: number | null
+          hora_envio?: string | null
+          id?: string
+          mensagem_template: string
+          tipo: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          dias_apos_evento?: number | null
+          hora_envio?: string | null
+          id?: string
+          mensagem_template?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
       lembretes_enviados: {
         Row: {
           agendamento_id: string | null
@@ -367,6 +438,83 @@ export type Database = {
             columns: ["agendamento_id"]
             isOneToOne: false
             referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mensagens_agendadas: {
+        Row: {
+          cliente_id: string | null
+          created_at: string | null
+          data_envio: string
+          fluxo_id: string | null
+          id: string
+          status: string | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string | null
+          data_envio: string
+          fluxo_id?: string | null
+          id?: string
+          status?: string | null
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string | null
+          data_envio?: string
+          fluxo_id?: string | null
+          id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_agendadas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_agendadas_fluxo_id_fkey"
+            columns: ["fluxo_id"]
+            isOneToOne: false
+            referencedRelation: "fluxos_automaticos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      movimentacoes_estoque: {
+        Row: {
+          created_at: string | null
+          id: string
+          motivo: string | null
+          produto_id: string | null
+          quantidade: number
+          tipo: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          motivo?: string | null
+          produto_id?: string | null
+          quantidade: number
+          tipo: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          motivo?: string | null
+          produto_id?: string | null
+          quantidade?: number
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentacoes_estoque_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
             referencedColumns: ["id"]
           },
         ]
@@ -414,6 +562,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      produtos: {
+        Row: {
+          categoria: string | null
+          created_at: string | null
+          descricao: string | null
+          fornecedor: string | null
+          id: string
+          nome: string
+          preco_custo: number | null
+          preco_venda: number | null
+          quantidade_atual: number | null
+          quantidade_minima: number | null
+        }
+        Insert: {
+          categoria?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          fornecedor?: string | null
+          id?: string
+          nome: string
+          preco_custo?: number | null
+          preco_venda?: number | null
+          quantidade_atual?: number | null
+          quantidade_minima?: number | null
+        }
+        Update: {
+          categoria?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          fornecedor?: string | null
+          id?: string
+          nome?: string
+          preco_custo?: number | null
+          preco_venda?: number | null
+          quantidade_atual?: number | null
+          quantidade_minima?: number | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -466,6 +653,69 @@ export type Database = {
           id?: string
           nome?: string
           telefone?: string | null
+        }
+        Relationships: []
+      }
+      promocoes: {
+        Row: {
+          ativa: boolean | null
+          created_at: string | null
+          data_fim: string
+          data_inicio: string
+          desconto_porcentagem: number | null
+          desconto_valor: number | null
+          descricao: string | null
+          id: string
+          motivo: string | null
+          nome: string
+        }
+        Insert: {
+          ativa?: boolean | null
+          created_at?: string | null
+          data_fim: string
+          data_inicio: string
+          desconto_porcentagem?: number | null
+          desconto_valor?: number | null
+          descricao?: string | null
+          id?: string
+          motivo?: string | null
+          nome: string
+        }
+        Update: {
+          ativa?: boolean | null
+          created_at?: string | null
+          data_fim?: string
+          data_inicio?: string
+          desconto_porcentagem?: number | null
+          desconto_valor?: number | null
+          descricao?: string | null
+          id?: string
+          motivo?: string | null
+          nome?: string
+        }
+        Relationships: []
+      }
+      regras_fidelidade: {
+        Row: {
+          created_at: string | null
+          desconto_resgate: number | null
+          id: string
+          pontos_por_real: number | null
+          pontos_resgate: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          desconto_resgate?: number | null
+          id?: string
+          pontos_por_real?: number | null
+          pontos_resgate?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          desconto_resgate?: number | null
+          id?: string
+          pontos_por_real?: number | null
+          pontos_resgate?: number | null
         }
         Relationships: []
       }
