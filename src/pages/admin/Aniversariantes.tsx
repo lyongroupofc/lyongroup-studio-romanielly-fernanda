@@ -11,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { supabase } from '@/integrations/supabase/client';
 
 const Aniversariantes = () => {
   const { buscarAniversariantesPorDia, loading } = useClientes();
@@ -47,9 +48,26 @@ const Aniversariantes = () => {
 
     carregarAniversariantesMes();
     
-    // Recarregar a cada 30 segundos para capturar novos cadastros
-    const interval = setInterval(carregarAniversariantesMes, 30000);
-    return () => clearInterval(interval);
+    // Subscription para recarregar quando novos clientes forem cadastrados
+    const clientesChannel = supabase
+      .channel('clientes_aniversariantes_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'clientes'
+        },
+        () => {
+          console.log('📅 Novo cliente cadastrado, atualizando aniversariantes...');
+          carregarAniversariantesMes();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(clientesChannel);
+    };
   }, [selectedDate, buscarAniversariantesPorDia]);
 
   const calcularIdade = (dataNascimento: string) => {

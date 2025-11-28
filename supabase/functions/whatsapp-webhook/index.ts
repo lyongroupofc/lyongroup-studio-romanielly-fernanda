@@ -675,7 +675,64 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
           const endMin = endHour * 60;
           
           if (inicioMin < startMin || fimMin > endMin) {
-            resposta = `Desculpa amor, esse horário está fora do nosso funcionamento. Funcionamos das ${String(startHour).padStart(2, '0')}:00 às ${String(endHour).padStart(2, '0')}:00 nesse dia. Pode escolher outro horário? 💜`;
+            // Gerar horários alternativos dentro do horário de funcionamento
+            const horariosDisponiveis: string[] = [];
+            
+            for (let h = startHour; h < endHour; h++) {
+              for (let m = 0; m < 60; m += 30) {
+                const horario = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                const [hh, mm] = horario.split(':').map(Number);
+                const inicio = hh * 60 + mm;
+                const fim = inicio + servico.duracao;
+                
+                if (fim > endHour * 60) continue;
+                
+                let isDisponivel = true;
+                for (let t = inicio; t < fim; t += 30) {
+                  const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+                  if (slotsOcupados.has(slotCheck)) {
+                    isDisponivel = false;
+                    break;
+                  }
+                }
+                
+                if (isDisponivel) {
+                  horariosDisponiveis.push(horario);
+                }
+              }
+            }
+
+            (config?.horarios_extras || []).forEach((horarioExtra: string) => {
+              const [hh, mm] = horarioExtra.split(':').map(Number);
+              const inicio = hh * 60 + mm;
+              const fim = inicio + servico.duracao;
+              
+              let isDisponivel = true;
+              for (let t = inicio; t < fim; t += 30) {
+                const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+                if (slotsOcupados.has(slotCheck)) {
+                  isDisponivel = false;
+                  break;
+                }
+              }
+              
+              if (isDisponivel && !horariosDisponiveis.includes(horarioExtra)) {
+                horariosDisponiveis.push(horarioExtra);
+              }
+            });
+            
+            horariosDisponiveis.sort();
+
+            if (horariosDisponiveis.length > 0) {
+              const [yyyy, mm, dd] = args.data.split('-');
+              // Selecionar 2 horários aleatórios
+              const horariosAleatorios = horariosDisponiveis
+                .sort(() => Math.random() - 0.5)
+                .slice(0, 2);
+              resposta = `Desculpa amor, esse horário está fora do nosso funcionamento. Funcionamos das ${String(startHour).padStart(2, '0')}:00 às ${String(endHour).padStart(2, '0')}:00 nesse dia. Nesse dia temos ${horariosAleatorios[0]} ou ${horariosAleatorios[1]} disponíveis. Qual deles seria melhor pra você? Ou prefere outro dia? 💜`;
+            } else {
+              resposta = `Desculpa amor, esse horário está fora do nosso funcionamento. Funcionamos das ${String(startHour).padStart(2, '0')}:00 às ${String(endHour).padStart(2, '0')}:00 nesse dia, mas infelizmente já não temos horários disponíveis. Quer tentar outro dia? 💜`;
+            }
             continue;
           }
 
