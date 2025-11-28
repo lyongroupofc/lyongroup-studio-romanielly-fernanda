@@ -22,6 +22,7 @@ const Clientes = lazy(() => import("./pages/admin/Clientes"));
 const Servicos = lazy(() => import("./pages/admin/Servicos"));
 const Profissionais = lazy(() => import("./pages/admin/Profissionais"));
 const Faturamento = lazy(() => import("./pages/admin/Faturamento"));
+const Relatorios = lazy(() => import("./pages/admin/Relatorios"));
 const BotWhatsApp = lazy(() => import("./pages/admin/BotWhatsApp"));
 const Lembretes = lazy(() => import("./pages/admin/Lembretes"));
 const Aniversariantes = lazy(() => import("./pages/admin/Aniversariantes"));
@@ -96,6 +97,11 @@ const App = () => (
               <Route path="faturamento" element={
                 <Suspense fallback={<PageLoader />}>
                   <Faturamento />
+                </Suspense>
+              } />
+              <Route path="relatorios" element={
+                <Suspense fallback={<PageLoader />}>
+                  <Relatorios />
                 </Suspense>
               } />
               <Route path="bot-whatsapp" element={
