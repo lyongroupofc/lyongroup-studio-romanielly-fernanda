@@ -380,8 +380,8 @@ Romanielly - Banco Sicoob
    - Se não disponível → a ferramenta vai retornar 2 horários alternativos automaticamente, mostre-os e pergunte qual prefere
 
 **PASSO 5:** Apenas DEPOIS que a disponibilidade for confirmada:
-   - Se CLIENTE IDENTIFICADO (✅ Cliente cadastrado), confirme os dados: "Seu nome é [nome], certo? E a data de nascimento [data], confirma?"
-   - Se ❌ Cliente novo, pergunte: nome completo e data de nascimento (DD/MM/AAAA)
+   - Se CLIENTE IDENTIFICADO (✅ Cliente cadastrado), confirme os dados: "Seu nome é [nome], certo? O telefone [telefone] e a data de nascimento [data], confirma?"
+   - Se ❌ Cliente novo, pergunte: nome completo, telefone com DDD (apenas números) e data de nascimento (DD/MM/AAAA)
 
 **PASSO 6:** Chame criar_agendamento com todos os dados
 
@@ -461,7 +461,7 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
         type: "function",
         function: {
           name: "criar_agendamento",
-          description: "Cria um agendamento no sistema. Use APENAS DEPOIS de verificar disponibilidade (verificar_disponibilidade) e coletar TODOS os dados pessoais: servico_nome, data (YYYY-MM-DD), horario (HH:MM), cliente_nome e data_nascimento (DD/MM/AAAA). O telefone já está disponível no contexto da conversa.",
+          description: "Cria um agendamento no sistema. Use APENAS DEPOIS de verificar disponibilidade (verificar_disponibilidade) e coletar TODOS os dados pessoais: servico_nome, data (YYYY-MM-DD), horario (HH:MM), cliente_nome, telefone (com DDD, apenas números) e data_nascimento (DD/MM/AAAA).",
           parameters: {
             type: "object",
             properties: {
@@ -485,12 +485,16 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
                 type: "string",
                 description: "Nome completo da cliente"
               },
+              telefone: {
+                type: "string",
+                description: "Telefone da cliente com DDD (apenas números, ex: 31987654321)"
+              },
               data_nascimento: {
                 type: "string",
                 description: "Data de nascimento no formato DD/MM/AAAA"
               }
             },
-            required: ["servico_nome", "data", "horario", "cliente_nome", "data_nascimento"]
+            required: ["servico_nome", "data", "horario", "cliente_nome", "telefone", "data_nascimento"]
           }
         }
       },
@@ -1240,11 +1244,14 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
             console.log('ℹ️ Nenhum agendamento anterior encontrado - primeiro agendamento');
           }
 
-          // Buscar cliente por telefone
+          // Usar telefone fornecido pelo cliente ou telefone do WhatsApp como fallback
+          const telefoneCliente = args.telefone || telefone;
+          
+          // Buscar cliente pelo telefone fornecido
           const { data: clienteBuscado } = await supabase
             .from('clientes')
             .select('*')
-            .eq('telefone', telefone)
+            .eq('telefone', telefoneCliente)
             .maybeSingle();
 
           // Converter data de nascimento de DD/MM/AAAA para YYYY-MM-DD se fornecida
@@ -1266,12 +1273,12 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
               })
               .eq('id', clienteBuscado.id);
           } else {
-            // Criar novo cliente
+            // Criar novo cliente com telefone fornecido
             const { data: novoCliente } = await supabase
               .from('clientes')
               .insert({
                 nome: args.cliente_nome,
-                telefone: telefone,
+                telefone: telefoneCliente,
                 data_nascimento: dataNascimentoFormatada,
               })
               .select()
@@ -1279,7 +1286,7 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
             clienteId = novoCliente?.id;
           }
 
-          // Criar novo agendamento
+          // Criar novo agendamento com telefone fornecido pelo cliente
           const { data: novoAgendamento, error: erroAgendamento } = await supabase
             .from('agendamentos')
             .insert({
@@ -1288,7 +1295,7 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
               data: args.data,
               horario: args.horario,
               cliente_nome: args.cliente_nome,
-              cliente_telefone: telefone,
+              cliente_telefone: telefoneCliente,
               cliente_id: clienteId,
               status: 'Confirmado',
               origem: 'bot',

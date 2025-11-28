@@ -1,4 +1,4 @@
-import { Bell, X, Bot, Link2, UserPlus } from "lucide-react";
+import { Bell, X, Bot, Link2, UserPlus, Cake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -16,10 +16,16 @@ export const NotificationBell = () => {
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotification, clearAllNotifications } = useAgendamentoNotifications();
   const navigate = useNavigate();
 
-  const handleNotificationClick = (notificationId: string, agendamentoId: string, data: string) => {
-    markAsRead(notificationId);
-    // Navegar para a agenda com o agendamento específico
-    navigate(`/admin/agenda?date=${data}&highlight=${agendamentoId}`);
+  const handleNotificationClick = (notification: any) => {
+    markAsRead(notification.id);
+    
+    if (notification.type === 'agendamento') {
+      // Navegar para a agenda com o agendamento específico
+      navigate(`/admin/agenda?date=${notification.agendamento.data}&highlight=${notification.agendamento.id}`);
+    } else if (notification.type === 'aniversario') {
+      // Navegar para aniversariantes
+      navigate('/admin/aniversariantes');
+    }
   };
 
   const formatNotificationTime = (timestamp: Date) => {
@@ -106,6 +112,53 @@ export const NotificationBell = () => {
           ) : (
             <div className="divide-y">
               {notifications.map((notification) => {
+                if (notification.type === 'aniversario') {
+                  return (
+                    <div
+                      key={notification.id}
+                      className={`p-4 hover:bg-muted/50 cursor-pointer transition-colors relative group ${
+                        !notification.read ? 'bg-primary/5' : ''
+                      }`}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          clearNotification(notification.id);
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                      <div className="flex items-start gap-3">
+                        {!notification.read && (
+                          <div className="w-2 h-2 rounded-full bg-primary mt-1 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium">
+                              🎂 Aniversário Hoje!
+                            </p>
+                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-pink-500/10 text-pink-600 dark:text-pink-400">
+                              <Cake className="w-3 h-3" />
+                              <span>Aniversariante</span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {notification.cliente.nome} está fazendo aniversário hoje!
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatNotificationTime(notification.timestamp)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // Notificação de agendamento
                 const [yyyy, mm, dd] = notification.agendamento.data.split('-');
                 const origemInfo = getOrigemInfo(notification.agendamento.origem);
                 const OrigemIcon = origemInfo.icon;
@@ -116,11 +169,7 @@ export const NotificationBell = () => {
                     className={`p-4 hover:bg-muted/50 cursor-pointer transition-colors relative group ${
                       !notification.read ? 'bg-primary/5' : ''
                     }`}
-                    onClick={() => handleNotificationClick(
-                      notification.id,
-                      notification.agendamento.id,
-                      notification.agendamento.data
-                    )}
+                    onClick={() => handleNotificationClick(notification)}
                   >
                     <Button
                       variant="ghost"

@@ -1,41 +1,62 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Agendamento } from "./useAgendamentos";
+import { Cliente } from "./useClientes";
 
 export type AgendamentoNotification = {
   id: string;
+  type: 'agendamento';
   agendamento: Agendamento;
   timestamp: Date;
   read: boolean;
 };
 
+export type AniversarianteNotification = {
+  id: string;
+  type: 'aniversario';
+  cliente: Cliente;
+  timestamp: Date;
+  read: boolean;
+};
+
+export type Notification = AgendamentoNotification | AniversarianteNotification;
+
 export const useAgendamentoNotifications = () => {
-  const [notifications, setNotifications] = useState<AgendamentoNotification[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Carregar o último agendamento ao iniciar (para teste)
+  // Carregar aniversariantes do dia ao iniciar
   useEffect(() => {
-    const loadLatestAgendamento = async () => {
-      const { data, error } = await supabase
-        .from('agendamentos')
+    const loadAniversariantesDoDia = async () => {
+      const hoje = new Date();
+      const dia = hoje.getDate();
+      const mes = hoje.getMonth();
+      
+      const { data: clientes, error } = await supabase
+        .from('clientes')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (data && !error) {
-        const notification: AgendamentoNotification = {
-          id: data.id,
-          agendamento: data as Agendamento,
+        .not('data_nascimento', 'is', null);
+      
+      if (clientes && !error) {
+        const aniversariantes = clientes.filter((cliente) => {
+          const dataNasc = new Date(cliente.data_nascimento + 'T00:00:00');
+          return dataNasc.getDate() === dia && dataNasc.getMonth() === mes;
+        });
+        
+        const aniversarianteNotifications: AniversarianteNotification[] = aniversariantes.map(cliente => ({
+          id: `aniversario-${cliente.id}`,
+          type: 'aniversario' as const,
+          cliente: cliente as Cliente,
           timestamp: new Date(),
           read: false
-        };
-        setNotifications([notification]);
-        setUnreadCount(1);
+        }));
+        
+        setNotifications(aniversarianteNotifications);
+        setUnreadCount(aniversarianteNotifications.length);
       }
     };
 
-    loadLatestAgendamento();
+    loadAniversariantesDoDia();
   }, []);
 
   // Função para tocar o som de notificação - som suave e elegante
@@ -64,6 +85,7 @@ export const useAgendamentoNotifications = () => {
             
             const newNotification: AgendamentoNotification = {
               id: agendamento.id,
+              type: 'agendamento',
               agendamento: agendamento,
               timestamp: new Date(),
               read: false
@@ -77,8 +99,47 @@ export const useAgendamentoNotifications = () => {
       )
       .subscribe();
 
+    // Subscription para novos clientes (aniversariantes)
+    const clientesChannel = supabase
+      .channel('clientes-aniversariantes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'clientes'
+        },
+        async (payload) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const cliente = payload.new as Cliente;
+            
+            if (cliente.data_nascimento) {
+              const hoje = new Date();
+              const dataNasc = new Date(cliente.data_nascimento + 'T00:00:00');
+              
+              // Se é aniversário hoje
+              if (dataNasc.getDate() === hoje.getDate() && dataNasc.getMonth() === hoje.getMonth()) {
+                const newNotification: AniversarianteNotification = {
+                  id: `aniversario-${cliente.id}`,
+                  type: 'aniversario',
+                  cliente: cliente,
+                  timestamp: new Date(),
+                  read: false
+                };
+                
+                setNotifications(prev => [newNotification, ...prev]);
+                setUnreadCount(prev => prev + 1);
+                playNotificationSound();
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(clientesChannel);
     };
   }, [playNotificationSound]);
 
