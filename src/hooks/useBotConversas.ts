@@ -38,10 +38,16 @@ export const useBotConversas = () => {
 
       if (error) throw error;
       
-      // Buscar nomes dos clientes baseado no telefone
+      // Buscar nomes dos clientes baseado no telefone (se ainda não tiver no banco)
       const conversasComNomes = await Promise.all(
         (conversasData || []).map(async (conversa) => {
-          const telefone = conversa.telefone.replace('@lid', '').replace(/\D/g, '');
+          // Se já tem nome no banco, usar ele
+          if (conversa.cliente_nome) {
+            return conversa;
+          }
+          
+          // Caso contrário, buscar na tabela clientes
+          const telefone = conversa.telefone.replace('@lid', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
           const { data: cliente } = await supabase
             .from('clientes')
             .select('nome')
