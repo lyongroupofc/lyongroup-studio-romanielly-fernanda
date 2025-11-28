@@ -220,7 +220,7 @@ serve(async (req) => {
         const matchDataCurta = respostaIA.match(regexDataCurta);
         if (matchDataCurta && matchDataCurta.length > 0 && !novoContexto.data) {
           const [dia, mes] = matchDataCurta[0].split('/');
-          const anoAtual = hoje.getFullYear();
+          const anoAtual = new Date().getFullYear();
           novoContexto.data = `${anoAtual}-${mes}-${dia}`; // Assumir ano atual
         }
       }
@@ -253,7 +253,7 @@ serve(async (req) => {
     const brasilOffset = -3 * 60; // -3 horas em minutos
     const utcOffset = agora.getTimezoneOffset();
     const diff = brasilOffset - utcOffset;
-    const hoje = new Date(agora.getTime() + diff * 60 * 1000);
+    const hojeBrasil = new Date(agora.getTime() + diff * 60 * 1000);
     
     const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
     
@@ -262,8 +262,8 @@ serve(async (req) => {
     const referenciasRapidas: string[] = [];
     
     for (let i = 0; i < 15; i++) {
-      const data = new Date(hoje);
-      data.setDate(hoje.getDate() + i);
+      const data = new Date(hojeBrasil);
+      data.setDate(hojeBrasil.getDate() + i);
       const dia = data.getDate().toString().padStart(2, '0');
       const mes = (data.getMonth() + 1).toString().padStart(2, '0');
       const ano = data.getFullYear();
@@ -460,7 +460,8 @@ Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu hor�
 - Sempre confirme os dados antes de chamar a ferramenta
 - LEMBRE-SE: o histórico da conversa está disponível - USE-O!
 
-${infoTexto ? `\n**INFORMAÇÕES ADICIONAIS IMPORTANTES:**\n${infoTexto}\n` : ''}`;
+${infoTexto ? `\n**INFORMAÇÕES ADICIONAIS IMPORTANTES:**\n${infoTexto}\n` : ''}
+${promocoesTexto ? `${promocoesTexto}` : ''}`;
 
     // Definir ferramentas disponíveis
     const tools = [
