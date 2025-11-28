@@ -313,8 +313,17 @@ const Agenda = () => {
   };
 
   const modifiers = useMemo(() => ({
-    disponivel: (d: Date) => !getDayData(d).fechado && !isDayFull(d) && !isFeriado(d),
-    fechado: (d: Date) => getDayData(d).fechado && !isFeriado(d),
+    disponivel: (d: Date) => {
+      const dayData = getDayData(d);
+      // Dia disponível se: (não fechado OU tem horários extras) E não está cheio E não é feriado
+      const temHorariosDisponiveis = !dayData.fechado || dayData.horariosExtras.length > 0;
+      return temHorariosDisponiveis && !isDayFull(d) && !isFeriado(d);
+    },
+    fechado: (d: Date) => {
+      const dayData = getDayData(d);
+      // Dia fechado APENAS se está marcado como fechado E NÃO tem horários extras
+      return dayData.fechado && dayData.horariosExtras.length === 0 && !isFeriado(d);
+    },
     cheio: (d: Date) => !getDayData(d).fechado && isDayFull(d) && !isFeriado(d),
     past: (d: Date) => isBefore(d, startOfToday()) && !isFeriado(d),
     feriado: (d: Date) => isFeriado(d),
@@ -358,22 +367,16 @@ const Agenda = () => {
     
     const novoStatusFechado = !gerenciarData.fechado;
     
-    // Se está REABRINDO o dia (fechado -> aberto), adicionar automaticamente todos os horários de funcionamento
+    // Se está REABRINDO o dia (fechado -> aberto), adicionar automaticamente horários de 08:00 às 19:00
     if (!novoStatusFechado) {
-      const horariosDisponiveis = generateSlots(selectedDate);
-      
-      // Se o dia não tem horários naturais (domingo/segunda), usar horários de um dia padrão
-      let horariosParaAdicionar = horariosDisponiveis;
-      if (horariosDisponiveis.length === 0) {
-        // Para dias naturalmente fechados, usar horários de terça-feira como padrão (13:00-20:00)
-        horariosParaAdicionar = [];
-        for (let h = 13; h <= 20; h++) {
-          for (let m = 0; m < 60; m += 30) {
-            if (h === 20 && m === 30) continue;
-            const hh = String(h).padStart(2, "0");
-            const mm = String(m).padStart(2, "0");
-            horariosParaAdicionar.push(`${hh}:${mm}`);
-          }
+      // Gerar horários de 08:00 às 19:00 em intervalos de 30 minutos
+      const horariosParaAdicionar: string[] = [];
+      for (let h = 8; h <= 19; h++) {
+        for (let m = 0; m < 60; m += 30) {
+          if (h === 19 && m === 30) continue; // Não adicionar 19:30
+          const hh = String(h).padStart(2, "0");
+          const mm = String(m).padStart(2, "0");
+          horariosParaAdicionar.push(`${hh}:${mm}`);
         }
       }
       
@@ -386,6 +389,8 @@ const Agenda = () => {
         fechado: novoStatusFechado,
         horariosExtras: Array.from(horariosAtuais).sort(),
       });
+      
+      toast.success("✅ Dia reaberto com horários de 08:00 às 19:00");
     } else {
       // Se está FECHANDO o dia, apenas atualiza o status
       setGerenciarData({

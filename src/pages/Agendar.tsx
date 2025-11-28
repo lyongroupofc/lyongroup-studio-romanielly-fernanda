@@ -483,8 +483,15 @@ const Agendar = () => {
                     onSelect={setDate}
                     locale={ptBR}
                     modifiers={{
-                      disponivel: (d: Date) => !getDayData(d).fechado && !isDayFull(d) && !isFeriado(d),
-                      fechado: (d: Date) => getDayData(d).fechado && !isFeriado(d),
+                      disponivel: (d: Date) => {
+                        const dayData = getDayData(d);
+                        const temHorariosDisponiveis = !dayData.fechado || dayData.horariosExtras.length > 0;
+                        return temHorariosDisponiveis && !isDayFull(d) && !isFeriado(d);
+                      },
+                      fechado: (d: Date) => {
+                        const dayData = getDayData(d);
+                        return dayData.fechado && dayData.horariosExtras.length === 0 && !isFeriado(d);
+                      },
                       cheio: (d: Date) => !getDayData(d).fechado && isDayFull(d) && !isFeriado(d),
                       past: (d: Date) => isBefore(d, startOfToday()) && !isFeriado(d),
                       feriado: (d: Date) => isFeriado(d),
@@ -496,7 +503,11 @@ const Agendar = () => {
                       past: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", opacity: 0.6 },
                       feriado: { backgroundColor: "hsl(var(--holiday) / 0.25)", color: "hsl(var(--holiday))", fontWeight: "700", border: "2px solid hsl(var(--holiday))" },
                     }}
-                    disabled={(d) => getDayData(d).fechado || isFeriado(d)}
+                    disabled={(d) => {
+                      const dayData = getDayData(d);
+                      const diaEstaFechado = dayData.fechado && dayData.horariosExtras.length === 0;
+                      return diaEstaFechado || isFeriado(d);
+                    }}
                     className="rounded-md border shadow-sm pointer-events-auto"
                   />
                 )}
