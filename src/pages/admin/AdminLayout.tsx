@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard,
@@ -22,6 +22,10 @@ import {
   Sun,
   Moon,
   User,
+  Volume2,
+  VolumeX,
+  Info,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
@@ -191,9 +195,26 @@ function AppSidebar() {
 const AdminLayout = () => {
   const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  
+  // Estado para som de notificações
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem("notification-sound-enabled");
+    return saved !== null ? saved === "true" : true;
+  });
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
+  };
+
+  const toggleSound = () => {
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    localStorage.setItem("notification-sound-enabled", String(newValue));
+  };
+
+  const handleWhatsAppSupport = () => {
+    window.open("https://wa.me/5531991625182", "_blank");
   };
 
   return (
@@ -231,8 +252,8 @@ const AdminLayout = () => {
                     </div>
                     <DropdownMenuSeparator />
                     
-                    {/* Aparência */}
-                    <DropdownMenuLabel>Aparência</DropdownMenuLabel>
+                    {/* Preferências */}
+                    <DropdownMenuLabel>Preferências</DropdownMenuLabel>
                     <DropdownMenuItem onClick={toggleTheme}>
                       {theme === "dark" ? (
                         <>
@@ -246,6 +267,32 @@ const AdminLayout = () => {
                         </>
                       )}
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={toggleSound}>
+                      {soundEnabled ? (
+                        <>
+                          <Volume2 className="w-4 h-4 mr-2" />
+                          Som de Notificação
+                        </>
+                      ) : (
+                        <>
+                          <VolumeX className="w-4 h-4 mr-2" />
+                          Som Desativado
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    
+                    {/* Atalhos Rápidos */}
+                    <DropdownMenuLabel>Atalhos Rápidos</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => navigate("/admin/tutoriais")}>
+                      <GraduationCap className="w-4 h-4 mr-2" />
+                      Ver Tutoriais
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleWhatsAppSupport}>
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Suporte WhatsApp
+                      <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     
                     {/* Sair */}
@@ -253,6 +300,14 @@ const AdminLayout = () => {
                       <LogOut className="w-4 h-4 mr-2" />
                       Sair da conta
                     </DropdownMenuItem>
+                    
+                    {/* Rodapé - Versão */}
+                    <div className="px-2 py-2 mt-1 border-t">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Info className="w-3 h-3" />
+                        <span>Versão 1.0.0</span>
+                      </div>
+                    </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
