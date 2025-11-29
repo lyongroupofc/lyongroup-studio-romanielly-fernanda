@@ -1,56 +1,21 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Cake, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useClientes } from '@/hooks/useClientes';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { useClientes } from "@/hooks/useClientes";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Cake, Phone } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Aniversariantes = () => {
-  const { buscarAniversariantesPorDia, loading } = useClientes();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [aniversariantesDoDia, setAniversariantesDoDia] = useState<any[]>([]);
-  const [aniversariantesPorDia, setAniversariantesPorDia] = useState<{ [key: string]: any[] }>({});
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const { clientes } = useClientes();
 
-  const mesesNomes = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
-
-  const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
-  // Carregar aniversariantes do mês atual
+  // Subscribe to real-time changes
   useEffect(() => {
-    const carregarAniversariantesMes = async () => {
-      const ano = selectedDate.getFullYear();
-      const mes = selectedDate.getMonth();
-      const diasDoMes = new Date(ano, mes + 1, 0).getDate();
-      const aniversariantesMap: { [key: string]: any[] } = {};
-
-      for (let dia = 1; dia <= diasDoMes; dia++) {
-        const dataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-        const aniversariantes = await buscarAniversariantesPorDia(dataStr);
-        if (aniversariantes.length > 0) {
-          aniversariantesMap[dia] = aniversariantes;
-        }
-      }
-
-      setAniversariantesPorDia(aniversariantesMap);
-    };
-
-    carregarAniversariantesMes();
-    
-    // Subscription para recarregar quando novos clientes forem cadastrados
-    const clientesChannel = supabase
-      .channel('clientes_aniversariantes_changes')
+    const channel = supabase
+      .channel('clientes-changes')
       .on(
         'postgres_changes',
         {
@@ -59,247 +24,167 @@ const Aniversariantes = () => {
           table: 'clientes'
         },
         () => {
-          console.log('📅 Novo cliente cadastrado, atualizando aniversariantes...');
-          carregarAniversariantesMes();
+          setSelectedDate(new Date(selectedDate));
         }
       )
       .subscribe();
-    
+
     return () => {
-      supabase.removeChannel(clientesChannel);
+      supabase.removeChannel(channel);
     };
-  }, [selectedDate, buscarAniversariantesPorDia]);
+  }, [selectedDate]);
+
+  const mesAtual = selectedDate.getMonth();
+
+  const aniversariantesDoMes = clientes.filter(cliente => {
+    if (!cliente.data_nascimento) return false;
+    const dataNascimento = new Date(cliente.data_nascimento);
+    return dataNascimento.getMonth() === mesAtual;
+  }).sort((a, b) => {
+    const dataA = new Date(a.data_nascimento!);
+    const dataB = new Date(b.data_nascimento!);
+    return dataA.getDate() - dataB.getDate();
+  });
+
+  const getAniversariantesNoDia = (date: Date) => {
+    return clientes.filter(cliente => {
+      if (!cliente.data_nascimento) return false;
+      const dataNascimento = new Date(cliente.data_nascimento);
+      return dataNascimento.getDate() === date.getDate() && 
+             dataNascimento.getMonth() === date.getMonth();
+    });
+  };
+
+  const modifiers = {
+    aniversario: (date: Date) => {
+      return getAniversariantesNoDia(date).length > 0;
+    }
+  };
+
+  const modifiersStyles = {
+    aniversario: {
+      backgroundColor: "hsl(var(--primary))",
+      color: "hsl(var(--primary-foreground))",
+      fontWeight: "bold"
+    }
+  };
+
+  const handleEnviarWhatsApp = (telefone: string, nome: string) => {
+    const mensagem = `Olá ${nome}! 🎉 Feliz aniversário! 🎂 Desejamos um dia maravilhoso cheio de alegrias! 🎈`;
+    const url = `https://wa.me/55${telefone.replace(/\D/g, '')}?text=${encodeURIComponent(mensagem)}`;
+    window.open(url, '_blank');
+  };
 
   const calcularIdade = (dataNascimento: string) => {
     const hoje = new Date();
-    const nascimento = new Date(dataNascimento + 'T00:00:00');
+    const nascimento = new Date(dataNascimento);
     let idade = hoje.getFullYear() - nascimento.getFullYear();
     const mes = hoje.getMonth() - nascimento.getMonth();
     if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
       idade--;
     }
-    return idade + 1; // Idade que fará neste aniversário
+    return idade;
   };
-
-  const formatarData = (dataNascimento: string) => {
-    const data = new Date(dataNascimento + 'T00:00:00');
-    return data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
-  };
-
-  const abrirWhatsApp = (telefone: string, nome: string) => {
-    const mensagem = `Olá ${nome}! 🎂🎉 Feliz aniversário! Que este dia seja repleto de alegrias e momentos especiais. Desejamos muita saúde, felicidade e sucesso! 💖`;
-    const numeroLimpo = telefone.replace(/\D/g, '');
-    window.open(`https://wa.me/55${numeroLimpo}?text=${encodeURIComponent(mensagem)}`, '_blank');
-  };
-
-  const getDiasDoMes = () => {
-    const ano = selectedDate.getFullYear();
-    const mes = selectedDate.getMonth();
-    const primeiroDia = new Date(ano, mes, 1).getDay();
-    const diasDoMes = new Date(ano, mes + 1, 0).getDate();
-    
-    const dias: (number | null)[] = [];
-    
-    // Adicionar dias vazios do início do mês
-    for (let i = 0; i < primeiroDia; i++) {
-      dias.push(null);
-    }
-    
-    // Adicionar dias do mês
-    for (let dia = 1; dia <= diasDoMes; dia++) {
-      dias.push(dia);
-    }
-    
-    return dias;
-  };
-
-  const handleDiaClick = async (dia: number) => {
-    const ano = selectedDate.getFullYear();
-    const mes = selectedDate.getMonth();
-    const dataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-    
-    const aniversariantes = await buscarAniversariantesPorDia(dataStr);
-    setAniversariantesDoDia(aniversariantes);
-    setIsSheetOpen(true);
-  };
-
-  const mesAnterior = () => {
-    setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1));
-  };
-
-  const proximoMes = () => {
-    setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1));
-  };
-
-  const isHoje = (dia: number) => {
-    const hoje = new Date();
-    return (
-      dia === hoje.getDate() &&
-      selectedDate.getMonth() === hoje.getMonth() &&
-      selectedDate.getFullYear() === hoje.getFullYear()
-    );
-  };
-
-  const temAniversariantes = (dia: number) => {
-    return aniversariantesPorDia[dia] && aniversariantesPorDia[dia].length > 0;
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-96 w-full" />
-      </div>
-    );
-  }
-
-  const dias = getDiasDoMes();
-  const totalAniversariantes = Object.values(aniversariantesPorDia).reduce((sum, arr) => sum + arr.length, 0);
 
   return (
-    <div className="space-y-6 p-6">
-      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl">
-            <Cake className="h-6 w-6 text-primary" />
-            🎂 Aniversariantes de {mesesNomes[selectedDate.getMonth()]}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            {totalAniversariantes} {totalAniversariantes === 1 ? 'cliente faz' : 'clientes fazem'} aniversário este mês
-          </p>
-        </CardHeader>
-      </Card>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          Aniversariantes
+        </h1>
+        <p className="text-muted-foreground">
+          Acompanhe os aniversários dos seus clientes
+        </p>
+      </div>
 
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={mesAnterior}
-              className="hover:bg-primary/10"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <h3 className="text-lg font-semibold">
-              {mesesNomes[selectedDate.getMonth()]} {selectedDate.getFullYear()}
-            </h3>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={proximoMes}
-              className="hover:bg-primary/10"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Cabeçalho dos dias da semana */}
-          <div className="grid grid-cols-7 gap-2 mb-2">
-            {diasSemana.map((dia) => (
-              <div key={dia} className="text-center text-sm font-medium text-muted-foreground py-2">
-                {dia}
-              </div>
-            ))}
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Calendário */}
+        <Card className="border-primary/20 shadow-lg hover:shadow-xl transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Cake className="w-5 h-5 text-primary" />
+              Calendário de Aniversários
+            </CardTitle>
+            <CardDescription>
+              {format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => date && setSelectedDate(date)}
+              locale={ptBR}
+              modifiers={modifiers}
+              modifiersStyles={modifiersStyles}
+              className="rounded-md border"
+            />
+          </CardContent>
+        </Card>
 
-          {/* Grid de dias */}
-          <div className="grid grid-cols-7 gap-2">
-            {dias.map((dia, index) => {
-              if (dia === null) {
-                return <div key={`empty-${index}`} className="aspect-square" />;
-              }
-
-              const hasAniversariantes = temAniversariantes(dia);
-              const isToday = isHoje(dia);
-
-              return (
-                <button
-                  key={dia}
-                  onClick={() => hasAniversariantes && handleDiaClick(dia)}
-                  disabled={!hasAniversariantes}
-                  className={`
-                    aspect-square p-2 rounded-lg border-2 transition-all
-                    flex flex-col items-center justify-center gap-1
-                    ${hasAniversariantes 
-                      ? 'border-primary bg-primary/10 hover:bg-primary/20 cursor-pointer shadow-sm' 
-                      : 'border-border bg-background cursor-default'
-                    }
-                    ${isToday ? 'ring-2 ring-primary ring-offset-2' : ''}
-                  `}
-                >
-                  <span className={`text-sm font-medium ${hasAniversariantes ? 'text-primary' : 'text-foreground'}`}>
-                    {dia}
-                  </span>
-                  {hasAniversariantes && (
-                    <>
-                      <Cake className="h-4 w-4 text-primary" />
-                      <Badge variant="secondary" className="text-xs px-1 py-0 h-4 bg-primary text-primary-foreground">
-                        {aniversariantesPorDia[dia].length}
-                      </Badge>
-                    </>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Sheet com aniversariantes do dia */}
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <Cake className="h-5 w-5 text-primary" />
-              Aniversariantes do Dia
-            </SheetTitle>
-          </SheetHeader>
-
-          <div className="mt-6 space-y-4">
-            {aniversariantesDoDia.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhum aniversariante neste dia
-              </p>
-            ) : (
-              aniversariantesDoDia.map((cliente) => (
-                <Card key={cliente.id} className="border-primary/20">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <Cake className="h-5 w-5 text-primary" />
-                        <CardTitle className="text-lg">{cliente.nome}</CardTitle>
-                      </div>
-                      <Badge variant="secondary" className="bg-primary/10 text-primary">
-                        {calcularIdade(cliente.data_nascimento)} anos
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Cake className="h-4 w-4" />
-                      <span>{formatarData(cliente.data_nascimento)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="h-4 w-4" />
-                      <span>{cliente.telefone}</span>
-                    </div>
-                    <Button
-                      onClick={() => abrirWhatsApp(cliente.telefone, cliente.nome)}
-                      className="w-full bg-primary hover:bg-primary/90"
-                      size="sm"
+        {/* Lista de Aniversariantes */}
+        <Card className="border-primary/20 shadow-lg hover:shadow-xl transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Cake className="w-5 h-5 text-primary" />
+              Aniversariantes do Mês
+            </CardTitle>
+            <CardDescription>
+              {aniversariantesDoMes.length} {aniversariantesDoMes.length === 1 ? 'aniversariante' : 'aniversariantes'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 max-h-[500px] overflow-y-auto">
+              {aniversariantesDoMes.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  Nenhum aniversariante este mês
+                </p>
+              ) : (
+                aniversariantesDoMes.map((cliente) => {
+                  const dataNascimento = new Date(cliente.data_nascimento!);
+                  const idade = calcularIdade(cliente.data_nascimento!);
+                  const diaAniversario = dataNascimento.getDate();
+                  
+                  return (
+                    <Card 
+                      key={cliente.id} 
+                      className="border-primary/10 hover:border-primary/30 transition-all hover:shadow-md"
                     >
-                      <Phone className="h-4 w-4 mr-2" />
-                      Enviar Parabéns
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Cake className="w-4 h-4 text-primary" />
+                              <p className="font-semibold">{cliente.nome}</p>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Phone className="w-3 h-3" />
+                              <span>{cliente.telefone}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              <strong>Aniversário:</strong> {diaAniversario} de {format(dataNascimento, "MMMM", { locale: ptBR })}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              <strong>Idade:</strong> {idade} anos
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => handleEnviarWhatsApp(cliente.telefone, cliente.nome)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            🎉 WhatsApp
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
