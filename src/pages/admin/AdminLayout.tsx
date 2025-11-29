@@ -43,22 +43,22 @@ import Footer from "@/components/Footer";
 import lyonLogo from "@/assets/lyon-group-logo.jpeg";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/admin", end: true },
   { icon: Calendar, label: "Agenda", path: "/admin/agenda" },
   { icon: Users, label: "Clientes", path: "/admin/clientes" },
   { icon: Scissors, label: "Serviços", path: "/admin/servicos" },
   { icon: Users, label: "Profissionais", path: "/admin/profissionais" },
   { icon: DollarSign, label: "Fluxo de Caixa", path: "/admin/faturamento" },
   { icon: BarChart3, label: "Relatórios", path: "/admin/relatorios" },
-  { icon: Sparkle, label: "Marketing", path: "/admin/marketing" },
+  { icon: Sparkle, label: "Marketing", path: "/admin/marketing", end: true },
   { icon: Package, label: "Estoque", path: "/admin/estoque" },
   { icon: Award, label: "Clube da Fidelidade", path: "/admin/fidelidade" },
   { icon: Workflow, label: "Lyon Flow", path: "/admin/marketing-automatico" },
   { icon: Bot, label: "Lyon Bot", path: "/admin/bot-whatsapp" },
   { icon: Bell, label: "Avisos", path: "/admin/lembretes" },
   { icon: Cake, label: "Aniversariantes", path: "/admin/aniversariantes" },
-  { icon: Headphones, label: "Suporte", path: "/admin/suporte" },
   { icon: GraduationCap, label: "Tutoriais", path: "/admin/tutoriais" },
+  { icon: Headphones, label: "Suporte", path: "/admin/suporte" },
 ];
 
 function AppSidebar() {
@@ -145,7 +145,7 @@ function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.path}
-                      end={item.path === "/admin"}
+                      end={item.end || item.path === "/admin"}
                       className="hover:bg-muted/50 transition-colors"
                       activeClassName="bg-muted text-primary font-medium"
                       onClick={handleNavClick}

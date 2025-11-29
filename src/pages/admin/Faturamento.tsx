@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, Calendar, CalendarIcon, Plus, Trash2, Lock, Package, BarChart3 } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Calendar, CalendarIcon, Plus, Trash2, Lock, Package, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -331,6 +331,57 @@ const Faturamento = () => {
               <p className="text-sm text-muted-foreground">Saídas do Ano</p>
               <p className="text-2xl font-bold">
                 {showTotal ? `R$ ${despesasAno.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Cards de Promoções */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="p-6 hover-lift border-primary/30">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-primary/10 rounded-xl">
+              <TrendingDown className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Promoções Aplicadas (Mês)</p>
+              <p className="text-2xl font-bold">
+                {agendamentos.filter(a => (a as any).promocao_id && a.data.startsWith(mesAtual)).length}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-6 hover-lift border-primary/30">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-primary/10 rounded-xl">
+              <DollarSign className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Descontos Concedidos (Mês)</p>
+              <p className="text-2xl font-bold text-primary">
+                {showTotal ? `R$ ${agendamentos
+                  .filter(a => a.data.startsWith(mesAtual))
+                  .reduce((sum, a) => sum + ((a as any).desconto_aplicado || 0), 0)
+                  .toFixed(2)
+                  .replace(".", ",")}` : "R$ •••,••"}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-6 hover-lift border-primary/30">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-primary/10 rounded-xl">
+              <TrendingUp className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Receita Potencial Perdida</p>
+              <p className="text-2xl font-bold text-muted-foreground">
+                {showTotal ? `R$ ${agendamentos
+                  .filter(a => a.data.startsWith(mesAtual))
+                  .reduce((sum, a) => sum + ((a as any).desconto_aplicado || 0), 0)
+                  .toFixed(2)
+                  .replace(".", ",")}` : "R$ •••,••"}
               </p>
             </div>
           </div>

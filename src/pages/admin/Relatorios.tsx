@@ -77,6 +77,17 @@ const Relatorios = () => {
       const despesaTotal = Object.values(despesasPorCategoria).reduce((sum, val) => sum + val, 0);
       const lucroLiquido = receitaTotal - despesaTotal;
 
+      // Análise de promoções
+      const agendamentosComPromocao = agendamentosDoMes.filter(a => (a as any).promocao_id);
+      const descontosTotais = agendamentosDoMes.reduce((sum, a) => sum + ((a as any).desconto_aplicado || 0), 0);
+      
+      // Contar uso por promoção
+      const promocoesUsadas = agendamentosComPromocao.reduce((acc, a) => {
+        const key = (a as any).promocao_id || 'sem_promocao';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
       const prompt = `Analise os seguintes dados do negócio de beleza (Studio Romanielly Fernanda) e forneça uma análise detalhada em texto corrido, como se fosse um consultor de negócios falando diretamente com o dono:
 
 DADOS DO MÊS:
@@ -89,13 +100,20 @@ DADOS DO MÊS:
 - Lucro líquido: R$ ${lucroLiquido.toFixed(2)}
 - Despesas por categoria: ${JSON.stringify(despesasPorCategoria)}
 
+PROMOÇÕES:
+- Agendamentos com promoção: ${agendamentosComPromocao.length}
+- Total de descontos concedidos: R$ ${descontosTotais.toFixed(2)}
+- Receita sem descontos: R$ ${(receitaTotal + descontosTotais).toFixed(2)}
+- Uso de promoções: ${Object.keys(promocoesUsadas).length > 0 ? JSON.stringify(promocoesUsadas) : 'Nenhuma promoção utilizada'}
+
 Forneça uma análise completa e profissional apontando:
 1. **O que está indo BEM** no negócio (pontos positivos com base nos números)
 2. **O que precisa de ATENÇÃO** ou melhoria (pontos de alerta)
 3. **Onde está gastando MAIS dinheiro** (categoria de maior despesa)
 4. **Onde está LUCRANDO mais** (relação receita x despesa)
-5. **Tendências de CRESCIMENTO ou DECLÍNIO** (baseado nos dados disponíveis)
-6. **Sugestões PRÁTICAS** de melhoria (ações concretas que podem ser tomadas)
+5. **Análise de PROMOÇÕES** (efetividade, impacto no faturamento, se vale a pena)
+6. **Tendências de CRESCIMENTO ou DECLÍNIO** (baseado nos dados disponíveis)
+7. **Sugestões PRÁTICAS** de melhoria (ações concretas que podem ser tomadas)
 
 Seja direto, profissional e use linguagem acessível. Escreva em TEXTO CORRIDO (não use listas com marcadores). Fale como um consultor conversando com o cliente.`;
 
