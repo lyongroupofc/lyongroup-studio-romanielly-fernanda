@@ -99,8 +99,8 @@ Forneça uma análise completa e profissional apontando:
 
 Seja direto, profissional e use linguagem acessível. Escreva em TEXTO CORRIDO (não use listas com marcadores). Fale como um consultor conversando com o cliente.`;
 
-      const { data, error } = await supabase.functions.invoke('chat-assistente', {
-        body: { messages: [{ role: 'user', content: prompt }] }
+      const { data, error } = await supabase.functions.invoke('gerar-relatorio', {
+        body: { prompt }
       });
 
       if (error) throw error;
