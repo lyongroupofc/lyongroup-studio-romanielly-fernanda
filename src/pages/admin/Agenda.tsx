@@ -128,9 +128,9 @@ const Agenda = () => {
     nome: "",
     telefone: "",
     dataNascimento: "",
-    servico: "",
-    profissional: "",
-    horario: "",
+    servico: undefined as string | undefined,
+    profissional: undefined as string | undefined,
+    horario: undefined as string | undefined,
     observacoes: "",
     promocao: "none",
   });
@@ -175,9 +175,9 @@ const Agenda = () => {
       nome: "",
       telefone: "",
       dataNascimento: "",
-      servico: "",
-      profissional: "",
-      horario: "",
+      servico: undefined,
+      profissional: undefined,
+      horario: undefined,
       observacoes: "",
       promocao: "none",
     });
@@ -1132,7 +1132,7 @@ const Agenda = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Serviço *</Label>
-                <Select value={formData.servico} onValueChange={(value) => setFormData({ ...formData, servico: value, horario: '' })}>
+                <Select value={formData.servico || undefined} onValueChange={(value) => setFormData({ ...formData, servico: value, horario: undefined })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
@@ -1145,7 +1145,7 @@ const Agenda = () => {
               </div>
               <div className="space-y-2">
                 <Label>Profissional</Label>
-                <Select value={formData.profissional} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
+                <Select value={formData.profissional || undefined} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sem preferência" />
                   </SelectTrigger>
@@ -1160,7 +1160,7 @@ const Agenda = () => {
             <div className="space-y-2">
               <Label>Horário *</Label>
               <Select
-                value={formData.horario}
+                value={formData.horario || undefined}
                 onValueChange={(value) => setFormData({ ...formData, horario: value })}
                 disabled={!formData.servico}
               >
@@ -1251,7 +1251,7 @@ const Agenda = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Serviço *</Label>
-                <Select value={formData.servico} onValueChange={(value) => setFormData({ ...formData, servico: value, horario: '' })}>
+                <Select value={formData.servico || undefined} onValueChange={(value) => setFormData({ ...formData, servico: value, horario: undefined })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
@@ -1264,7 +1264,7 @@ const Agenda = () => {
               </div>
               <div className="space-y-2">
                 <Label>Profissional</Label>
-                <Select value={formData.profissional} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
+                <Select value={formData.profissional || undefined} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sem preferência" />
                   </SelectTrigger>
@@ -1279,7 +1279,7 @@ const Agenda = () => {
             <div className="space-y-2">
               <Label>Horário *</Label>
               <Select
-                value={formData.horario}
+                value={formData.horario || undefined}
                 onValueChange={(value) => setFormData({ ...formData, horario: value })}
                 disabled={!formData.servico}
               >
@@ -1500,11 +1500,11 @@ const Agenda = () => {
                       nome: selectedAgendamento.cliente_nome,
                       telefone: selectedAgendamento.cliente_telefone,
                       dataNascimento: '',
-                      servico: selectedAgendamento.servico_id || '',
-                      profissional: selectedAgendamento.profissional_id || '',
+                      servico: selectedAgendamento.servico_id || undefined,
+                      profissional: selectedAgendamento.profissional_id || undefined,
                       horario: selectedAgendamento.horario,
                       observacoes: selectedAgendamento.observacoes || '',
-                      promocao: selectedAgendamento.promocao_id || '',
+                      promocao: selectedAgendamento.promocao_id || 'none',
                     });
                     setOpenDetalhesDialog(false);
                     setOpenEditarDialog(true);
@@ -1592,7 +1592,7 @@ const Agenda = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Serviço *</Label>
-                  <Select value={formData.servico} onValueChange={(value) => setFormData({ ...formData, servico: value, horario: '' })}>
+                  <Select value={formData.servico || undefined} onValueChange={(value) => setFormData({ ...formData, servico: value, horario: undefined })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
@@ -1605,7 +1605,7 @@ const Agenda = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Profissional</Label>
-                  <Select value={formData.profissional} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
+                  <Select value={formData.profissional || undefined} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Sem preferência" />
                     </SelectTrigger>
@@ -1620,7 +1620,7 @@ const Agenda = () => {
               <div className="space-y-2">
                 <Label>Horário *</Label>
                 <Select
-                  value={formData.horario}
+                  value={formData.horario || undefined}
                   onValueChange={(value) => setFormData({ ...formData, horario: value })}
                   disabled={!formData.servico}
                 >

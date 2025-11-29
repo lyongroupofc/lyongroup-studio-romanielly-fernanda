@@ -28,7 +28,7 @@ const Estoque = () => {
     fornecedor: '',
   });
   const [movData, setMovData] = useState({
-    produto_id: '',
+    produto_id: undefined as string | undefined,
     tipo: 'entrada' as 'entrada' | 'saida',
     quantidade: '',
     motivo: '',
@@ -99,7 +99,7 @@ const Estoque = () => {
       );
       setMovDialogOpen(false);
       setMovData({
-        produto_id: '',
+        produto_id: undefined,
         tipo: 'entrada',
         quantidade: '',
         motivo: '',
@@ -171,7 +171,7 @@ const Estoque = () => {
                 <div>
                   <Label htmlFor="mov-produto">Produto *</Label>
                   <Select
-                    value={movData.produto_id}
+                    value={movData.produto_id || undefined}
                     onValueChange={(value) => setMovData({ ...movData, produto_id: value })}
                     required
                   >
