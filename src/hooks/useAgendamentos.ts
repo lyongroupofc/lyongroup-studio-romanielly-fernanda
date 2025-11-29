@@ -16,6 +16,8 @@ export type Agendamento = {
   status: string;
   observacoes: string | null;
   origem: string | null;
+  promocao_id?: string | null;
+  desconto_aplicado?: number | null;
 };
 
 const CACHE_KEY = 'agendamentos_cache';
@@ -135,7 +137,12 @@ export const useAgendamentos = () => {
       
       const { data, error } = await supabase
         .from("agendamentos")
-        .insert([{ ...agendamento, horario: horarioComSegundos }])
+        .insert([{ 
+          ...agendamento, 
+          horario: horarioComSegundos,
+          promocao_id: agendamento.promocao_id || null,
+          desconto_aplicado: agendamento.desconto_aplicado || 0
+        }])
         .select()
         .single();
 

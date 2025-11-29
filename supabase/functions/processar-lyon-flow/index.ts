@@ -133,22 +133,55 @@ serve(async (req) => {
         try {
           const mensagem = fluxo.mensagem_template.replace(/{nome}/g, cliente.nome);
           
-          // Enviar via WhatsApp usando a função whatsapp-send
+          // Enviar via WhatsApp usando a função whatsapp-send (parâmetros corretos)
           const { error: envioError } = await supabase.functions.invoke('whatsapp-send', {
             body: {
-              to: cliente.telefone.replace(/\D/g, ''),
-              message: mensagem
+              telefone: cliente.telefone.replace(/\D/g, ''),
+              mensagem: mensagem
             }
           });
 
           if (envioError) {
             console.error(`Erro ao enviar para ${cliente.nome}:`, envioError);
+            
+            // Registrar erro em mensagens_agendadas
+            await supabase.from('mensagens_agendadas').insert({
+              fluxo_id: fluxo.id,
+              cliente_id: cliente.id,
+              data_envio: dataHoje,
+              status: 'erro'
+            });
           } else {
             console.log(`✉️ Mensagem enviada para ${cliente.nome}`);
             totalEnviados++;
+            
+            // Registrar envio bem-sucedido em lembretes_enviados
+            await supabase.from('lembretes_enviados').insert({
+              cliente_nome: cliente.nome,
+              cliente_telefone: cliente.telefone,
+              tipo_lembrete: fluxo.tipo,
+              servico_nome: null,
+              agendamento_id: null
+            });
+            
+            // Registrar em mensagens_agendadas
+            await supabase.from('mensagens_agendadas').insert({
+              fluxo_id: fluxo.id,
+              cliente_id: cliente.id,
+              data_envio: dataHoje,
+              status: 'enviado'
+            });
           }
         } catch (error) {
           console.error(`Erro ao processar cliente ${cliente.nome}:`, error);
+          
+          // Registrar erro
+          await supabase.from('mensagens_agendadas').insert({
+            fluxo_id: fluxo.id,
+            cliente_id: cliente.id,
+            data_envio: dataHoje,
+            status: 'erro'
+          });
         }
       }
     }
