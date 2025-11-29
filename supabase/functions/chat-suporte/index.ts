@@ -56,6 +56,8 @@ Deno.serve(async (req) => {
 12. Lyon Bot - Configuração do bot WhatsApp
 13. Avisos - Lembretes e notificações
 14. Aniversariantes - Aniversários dos clientes
+15. Suporte - Chat de suporte técnico (você está aqui!)
+16. Tutoriais - Mini aulas de como usar cada funcionalidade
 
 **FUNCIONALIDADES PRINCIPAIS:**
 - Bot WhatsApp para agendamentos automáticos

@@ -18,6 +18,7 @@ import {
   Workflow,
   Bot,
   Headphones,
+  GraduationCap,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
@@ -57,6 +58,7 @@ const menuItems = [
   { icon: Bell, label: "Avisos", path: "/admin/lembretes" },
   { icon: Cake, label: "Aniversariantes", path: "/admin/aniversariantes" },
   { icon: Headphones, label: "Suporte", path: "/admin/suporte" },
+  { icon: GraduationCap, label: "Tutoriais", path: "/admin/tutoriais" },
 ];
 
 function AppSidebar() {

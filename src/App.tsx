@@ -31,6 +31,7 @@ const BotWhatsApp = lazy(() => import("./pages/admin/BotWhatsApp"));
 const Lembretes = lazy(() => import("./pages/admin/Lembretes"));
 const Aniversariantes = lazy(() => import("./pages/admin/Aniversariantes"));
 const Suporte = lazy(() => import("./pages/admin/Suporte"));
+const Tutoriais = lazy(() => import("./pages/admin/Tutoriais"));
 
 // Lazy load setup pages
 const CreateCliente = lazy(() => import("./pages/setup/CreateCliente"));
@@ -147,6 +148,11 @@ const App = () => (
               <Route path="suporte" element={
                 <Suspense fallback={<PageLoader />}>
                   <Suporte />
+                </Suspense>
+              } />
+              <Route path="tutoriais" element={
+                <Suspense fallback={<PageLoader />}>
+                  <Tutoriais />
                 </Suspense>
               } />
             </Route>

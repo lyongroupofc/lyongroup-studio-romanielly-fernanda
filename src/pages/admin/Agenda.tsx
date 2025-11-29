@@ -29,6 +29,7 @@ const Agenda = () => {
   const [openReservarDialog, setOpenReservarDialog] = useState(false);
   const [openEscolhaClienteDialog, setOpenEscolhaClienteDialog] = useState(false);
   const [tipoCliente, setTipoCliente] = useState<'novo' | 'cadastrado' | null>(null);
+  const [buscaClienteTexto, setBuscaClienteTexto] = useState("");
   const [openGerenciarDialog, setOpenGerenciarDialog] = useState(false);
   const [openDetalhesDialog, setOpenDetalhesDialog] = useState(false);
   const [openEditarDialog, setOpenEditarDialog] = useState(false);
