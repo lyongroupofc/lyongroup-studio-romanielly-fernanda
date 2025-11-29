@@ -11,6 +11,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Send, Clock, Edit, Trash2, CheckCircle, AlertCircle, Workflow } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const tipoFluxoOptions = [
   { value: 'pos_primeira_visita', label: 'Pós Primeira Visita', desc: 'Mensagem após primeiro atendimento', template: 'Olá {nome}! 😊 Foi um prazer atendê-la pela primeira vez! Esperamos que tenha adorado o resultado. Volte sempre! 💅✨' },
@@ -120,6 +122,22 @@ const MarketingAutomatico = () => {
     return tipoFluxoOptions.find((opt) => opt.value === tipo)?.desc || '';
   };
 
+  const handleTestarLyonFlow = async () => {
+    const loadingToast = toast.loading("Processando Lyon Flow...");
+    try {
+      const { data, error } = await supabase.functions.invoke("processar-lyon-flow");
+
+      if (error) throw error;
+
+      toast.dismiss(loadingToast);
+      toast.success(`Lyon Flow processado! ${data?.mensagensEnviadas || 0} mensagens enviadas.`);
+    } catch (error) {
+      console.error("Erro ao testar Lyon Flow:", error);
+      toast.dismiss(loadingToast);
+      toast.error("Erro ao processar Lyon Flow");
+    }
+  };
+
   const mensagensPendentes = mensagens.filter((m) => m.status === 'pendente');
   const mensagensEnviadas = mensagens.filter((m) => m.status === 'enviado');
   const mensagensErro = mensagens.filter((m) => m.status === 'erro');
@@ -144,13 +162,22 @@ const MarketingAutomatico = () => {
             Configure mensagens automáticas para engajar clientes
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Novo Fluxo
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleTestarLyonFlow}
+            className="gap-2"
+            variant="outline"
+          >
+            <Send className="w-4 h-4" />
+            Testar Lyon Flow
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="w-4 h-4" />
+                Novo Fluxo
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Novo Fluxo Automático</DialogTitle>
@@ -236,7 +263,8 @@ const MarketingAutomatico = () => {
               </div>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Estatísticas */}
