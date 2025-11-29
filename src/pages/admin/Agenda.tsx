@@ -383,7 +383,7 @@ const Agenda = () => {
 
   const handleReservar = useCallback(() => {
     setOpenSideSheet(false);
-    setOpenNovoDialog(true); // Abre popup de escolha
+    setOpenReservarDialog(true); // Abre popup de escolha entre novo/cadastrado
   }, []);
 
   const handleGerenciar = useCallback(() => {

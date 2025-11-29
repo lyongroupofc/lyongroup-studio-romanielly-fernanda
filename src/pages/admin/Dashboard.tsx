@@ -1,11 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, DollarSign, Plus, Palette, Brush, Sparkle, Gem } from "lucide-react";
+import { Calendar, Users, DollarSign, Plus, Palette, Brush, Sparkle, Gem, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { usePagamentos } from "@/hooks/usePagamentos";
+import { useProdutos } from "@/hooks/useProdutos";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -19,6 +20,7 @@ const Dashboard = () => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { agendamentos, loading: loadingAgendamentos, refetch: refetchAgendamentos } = useAgendamentos();
   const { pagamentos, loading: loadingPagamentos, refetch: refetchPagamentos } = usePagamentos();
+  const { produtos } = useProdutos();
 
   // Timer atualiza a cada segundo
   useEffect(() => {
@@ -246,6 +248,36 @@ const Dashboard = () => {
           <p className="text-center text-muted-foreground py-6">Nenhum agendamento para amanhã</p>
         )}
       </Card>
+
+      {/* Produtos com Estoque Baixo */}
+      {produtos.filter(p => (p.quantidade_atual || 0) < (p.quantidade_minima || 0)).length > 0 && (
+        <Card className="p-6 bg-gradient-to-br from-red-500/10 via-red-500/5 to-orange-500/10 border-red-500/20">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-red-500" />
+            Alertas de Estoque Baixo
+          </h2>
+          <div className="space-y-3">
+            {produtos
+              .filter(p => (p.quantidade_atual || 0) < (p.quantidade_minima || 0))
+              .map((produto) => (
+                <div 
+                  key={produto.id} 
+                  className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-white to-red-500/10 border border-red-500/20 hover:shadow-lg hover:shadow-red-500/20 transition-all duration-300"
+                >
+                  <div>
+                    <p className="font-semibold">{produto.nome}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Estoque: {produto.quantidade_atual || 0} / Mínimo: {produto.quantidade_minima || 0}
+                    </p>
+                  </div>
+                  <Badge variant="destructive" className="text-sm font-semibold px-3 py-1">
+                    Baixo
+                  </Badge>
+                </div>
+              ))}
+          </div>
+        </Card>
+      )}
 
       {/* Atalhos Rápidos */}
       <Card className="p-4 sm:p-6">
