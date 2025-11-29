@@ -466,47 +466,6 @@ const Faturamento = () => {
       
       
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-6">Agendamentos Pendentes de Pagamento</h2>
-        {loadingAgendamentos ? (
-          <p className="text-muted-foreground text-center py-8">Carregando...</p>
-        ) : agendamentosPendentes.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">Nenhum agendamento pendente</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3">Cliente</th>
-                  <th className="text-left p-3">Serviço</th>
-                  <th className="text-left p-3">Data</th>
-                  <th className="text-left p-3">Horário</th>
-                  <th className="text-left p-3">Ação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {agendamentosPendentes.map((ag) => (
-                  <tr key={ag.id} className="border-b hover:bg-muted/50">
-                    <td className="p-3">{ag.cliente_nome}</td>
-                    <td className="p-3">{ag.servico_nome}</td>
-                    <td className="p-3">{format(new Date(ag.data), "dd/MM/yyyy")}</td>
-                    <td className="p-3">{ag.horario}</td>
-                    <td className="p-3">
-                      <Button
-                        size="sm"
-                        onClick={() => abrirDialogPagamento(ag)}
-                      >
-                        Registrar Pagamento
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-
-      <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold">Registrar Saída/Despesa</h2>
           <Button onClick={abrirDialogDespesa}>
@@ -548,6 +507,47 @@ const Faturamento = () => {
                         onClick={() => deleteDespesa(desp.id)}
                       >
                         <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold mb-6">Agendamentos Pendentes de Pagamento</h2>
+        {loadingAgendamentos ? (
+          <p className="text-muted-foreground text-center py-8">Carregando...</p>
+        ) : agendamentosPendentes.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">Nenhum agendamento pendente</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Cliente</th>
+                  <th className="text-left p-3">Serviço</th>
+                  <th className="text-left p-3">Data</th>
+                  <th className="text-left p-3">Horário</th>
+                  <th className="text-left p-3">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agendamentosPendentes.map((ag) => (
+                  <tr key={ag.id} className="border-b hover:bg-muted/50">
+                    <td className="p-3">{ag.cliente_nome}</td>
+                    <td className="p-3">{ag.servico_nome}</td>
+                    <td className="p-3">{format(new Date(ag.data), "dd/MM/yyyy")}</td>
+                    <td className="p-3">{ag.horario}</td>
+                    <td className="p-3">
+                      <Button
+                        size="sm"
+                        onClick={() => abrirDialogPagamento(ag)}
+                      >
+                        Registrar Pagamento
                       </Button>
                     </td>
                   </tr>
