@@ -3,13 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck } from "lucide-react";
+import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { isBefore, startOfToday, isSunday, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -34,6 +34,7 @@ const Agenda = () => {
   const [openGerenciarDialog, setOpenGerenciarDialog] = useState(false);
   const [openDetalhesDialog, setOpenDetalhesDialog] = useState(false);
   const [openEditarDialog, setOpenEditarDialog] = useState(false);
+  const [openSuccessDialog, setOpenSuccessDialog] = useState(false);
   const [openSideSheet, setOpenSideSheet] = useState(false);
   const [selectedAgendamento, setSelectedAgendamento] = useState<Agendamento | null>(null);
   const [highlightedAgendamento, setHighlightedAgendamento] = useState<string | null>(null);
@@ -636,9 +637,7 @@ const Agenda = () => {
       // Limpar cache para forçar atualização em outras abas
       sessionStorage.removeItem('agendamentos_cache');
       
-      setOpenReservarDialog(false);
-      setOpenNovoDialog(false);
-      setClienteCadastradoSelecionado("");
+      setOpenSuccessDialog(true);
       setFormData({ nome: "", telefone: "", dataNascimento: "", servico: "", profissional: "", horario: "", observacoes: "", promocao: "none" });
     } catch (error) {
       console.error("Erro ao criar agendamento:", error);
@@ -1649,6 +1648,42 @@ const Agenda = () => {
               </div>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Sucesso */}
+      <Dialog open={openSuccessDialog} onOpenChange={(open) => {
+        setOpenSuccessDialog(open);
+        if (!open) {
+          setOpenReservarDialog(false);
+          setOpenNovoDialog(false);
+          setClienteCadastradoSelecionado("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex flex-col items-center gap-4 py-6">
+              <div className="rounded-full bg-green-500/10 p-4">
+                <CheckCircle2 className="w-16 h-16 text-green-500" />
+              </div>
+              <DialogTitle className="text-2xl text-center">
+                Agendamento criado com sucesso!
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center">
+            <Button
+              onClick={() => {
+                setOpenSuccessDialog(false);
+                setOpenReservarDialog(false);
+                setOpenNovoDialog(false);
+                setClienteCadastradoSelecionado("");
+              }}
+              className="w-full sm:w-auto"
+            >
+              OK
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
