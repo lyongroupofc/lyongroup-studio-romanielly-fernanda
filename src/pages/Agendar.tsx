@@ -508,14 +508,13 @@ const Agendar = () => {
             <div className="space-y-2">
               <Label htmlFor="promocao">Promoção (Opcional)</Label>
               <Select
-                value={formData.promocao}
+                value={formData.promocao || undefined}
                 onValueChange={(value) => setFormData({ ...formData, promocao: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Sem promoção" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem promoção</SelectItem>
                   {promocoes
                     .filter(p => p.ativa && new Date(p.data_inicio) <= new Date() && new Date(p.data_fim) >= new Date())
                     .map((p) => (
