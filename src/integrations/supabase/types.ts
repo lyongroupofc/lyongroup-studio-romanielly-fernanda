@@ -52,6 +52,7 @@ export type Database = {
           cliente_telefone: string
           created_at: string | null
           data: string
+          desconto_aplicado: number | null
           horario: string
           id: string
           instancia: string | null
@@ -59,6 +60,7 @@ export type Database = {
           origem: string | null
           profissional_id: string | null
           profissional_nome: string | null
+          promocao_id: string | null
           servico_id: string | null
           servico_nome: string
           status: string | null
@@ -70,6 +72,7 @@ export type Database = {
           cliente_telefone: string
           created_at?: string | null
           data: string
+          desconto_aplicado?: number | null
           horario: string
           id?: string
           instancia?: string | null
@@ -77,6 +80,7 @@ export type Database = {
           origem?: string | null
           profissional_id?: string | null
           profissional_nome?: string | null
+          promocao_id?: string | null
           servico_id?: string | null
           servico_nome: string
           status?: string | null
@@ -88,6 +92,7 @@ export type Database = {
           cliente_telefone?: string
           created_at?: string | null
           data?: string
+          desconto_aplicado?: number | null
           horario?: string
           id?: string
           instancia?: string | null
@@ -95,6 +100,7 @@ export type Database = {
           origem?: string | null
           profissional_id?: string | null
           profissional_nome?: string | null
+          promocao_id?: string | null
           servico_id?: string | null
           servico_nome?: string
           status?: string | null
@@ -119,6 +125,13 @@ export type Database = {
             columns: ["profissional_id"]
             isOneToOne: false
             referencedRelation: "profissionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_promocao_id_fkey"
+            columns: ["promocao_id"]
+            isOneToOne: false
+            referencedRelation: "promocoes"
             referencedColumns: ["id"]
           },
           {

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useClientes } from "@/hooks/useClientes";
+import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +16,7 @@ import type { Cliente } from "@/hooks/useClientes";
 
 const Clientes = () => {
   const { clientes, loading, refetch, criarOuAtualizarCliente } = useClientes();
+  const { agendamentos } = useAgendamentos();
   const [searchTerm, setSearchTerm] = useState("");
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openNewDialog, setOpenNewDialog] = useState(false);
@@ -40,6 +42,17 @@ const Clientes = () => {
       (cliente.email && cliente.email.toLowerCase().includes(search))
     );
   });
+
+  // Calcular total de atendimentos por cliente
+  const atendimentosPorCliente = useMemo(() => {
+    const contagem: Record<string, number> = {};
+    agendamentos.forEach(a => {
+      if (a.cliente_id && a.status === 'Concluído') {
+        contagem[a.cliente_id] = (contagem[a.cliente_id] || 0) + 1;
+      }
+    });
+    return contagem;
+  }, [agendamentos]);
 
   const handleEditClick = (cliente: Cliente) => {
     setSelectedCliente(cliente);
@@ -214,10 +227,15 @@ const Clientes = () => {
                 </div>
               )}
               
-              <div className="pt-2 border-t">
-                <span className="text-xs text-muted-foreground">
+              <div className="pt-2 border-t space-y-1">
+                <span className="text-xs text-muted-foreground block">
                   Cliente desde {format(new Date(cliente.created_at!), "MMM/yyyy", { locale: ptBR })}
                 </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-primary">
+                    {atendimentosPorCliente[cliente.id] || 0} {(atendimentosPorCliente[cliente.id] || 0) === 1 ? 'atendimento' : 'atendimentos'}
+                  </span>
+                </div>
               </div>
             </CardContent>
             <CardFooter className="flex gap-2 pt-0">
