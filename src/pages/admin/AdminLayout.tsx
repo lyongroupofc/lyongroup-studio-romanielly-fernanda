@@ -19,6 +19,9 @@ import {
   Bot,
   Headphones,
   GraduationCap,
+  Sun,
+  Moon,
+  User,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
@@ -41,6 +44,15 @@ import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/NotificationBell";
 import Footer from "@/components/Footer";
 import lyonLogo from "@/assets/lyon-group-logo.jpeg";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useTheme } from "next-themes";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin", end: true },
@@ -177,6 +189,13 @@ function AppSidebar() {
 }
 
 const AdminLayout = () => {
+  const { theme, setTheme } = useTheme();
+  const { user, signOut } = useAuth();
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -189,11 +208,53 @@ const AdminLayout = () => {
               <SidebarTrigger className="mr-2" />
               <div className="flex items-center gap-3">
                 <NotificationBell />
-                <img 
-                  src={lyonLogo} 
-                  alt="Lyon Group" 
-                  className="h-10 w-10 object-cover rounded-full shadow-lg"
-                />
+                
+                {/* Menu de Configurações do Administrador */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="focus:outline-none focus:ring-2 focus:ring-primary rounded-full hover:ring-2 hover:ring-primary/50 transition-all">
+                      <img 
+                        src={lyonLogo} 
+                        alt="Lyon Group" 
+                        className="h-10 w-10 object-cover rounded-full shadow-lg cursor-pointer"
+                      />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    {/* Informações da Conta */}
+                    <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        <p className="font-medium truncate">{user?.email}</p>
+                      </div>
+                    </div>
+                    <DropdownMenuSeparator />
+                    
+                    {/* Aparência */}
+                    <DropdownMenuLabel>Aparência</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={toggleTheme}>
+                      {theme === "dark" ? (
+                        <>
+                          <Sun className="w-4 h-4 mr-2" />
+                          Tema Claro
+                        </>
+                      ) : (
+                        <>
+                          <Moon className="w-4 h-4 mr-2" />
+                          Tema Escuro
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    
+                    {/* Sair */}
+                    <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sair da conta
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </header>
