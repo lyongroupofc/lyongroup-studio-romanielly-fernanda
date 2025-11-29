@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus } from "lucide-react";
+import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { isBefore, startOfToday, isSunday, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,6 +17,7 @@ import { useAgendamentos, type Agendamento } from "@/hooks/useAgendamentos";
 import { useAgendaConfig } from "@/hooks/useAgendaConfig";
 import { useServicos } from "@/hooks/useServicos";
 import { useProfissionais } from "@/hooks/useProfissionais";
+import { useClientes } from "@/hooks/useClientes";
 import { useSearchParams } from "react-router-dom";
 import { isFeriado } from "@/lib/feriados";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +27,8 @@ const Agenda = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [openNovoDialog, setOpenNovoDialog] = useState(false);
   const [openReservarDialog, setOpenReservarDialog] = useState(false);
+  const [openEscolhaClienteDialog, setOpenEscolhaClienteDialog] = useState(false);
+  const [tipoCliente, setTipoCliente] = useState<'novo' | 'cadastrado' | null>(null);
   const [openGerenciarDialog, setOpenGerenciarDialog] = useState(false);
   const [openDetalhesDialog, setOpenDetalhesDialog] = useState(false);
   const [openEditarDialog, setOpenEditarDialog] = useState(false);
@@ -38,6 +41,7 @@ const Agenda = () => {
   const { configs, getConfig, updateConfig, refetch: refetchConfig } = useAgendaConfig();
   const { servicos, loading: loadingServicos, refetch: refetchServicos } = useServicos();
   const { profissionais, loading: loadingProfissionais, refetch: refetchProfissionais } = useProfissionais();
+  const { clientes } = useClientes();
 
   // Estado para agendamentos em tempo real da data selecionada
   const [agendamentosDataAtual, setAgendamentosDataAtual] = useState<Agendamento[]>([]);
@@ -125,6 +129,56 @@ const Agenda = () => {
     horario: "",
     observacoes: "",
   });
+
+  const [clienteCadastradoSelecionado, setClienteCadastradoSelecionado] = useState<string>("");
+  const [clientesBusca, setClientesBusca] = useState<typeof clientes>([]);
+
+  // Buscar clientes em tempo real conforme digita
+  const handleBuscarCliente = (termo: string) => {
+    if (!termo.trim()) {
+      setClientesBusca([]);
+      setClienteCadastradoSelecionado("");
+      return;
+    }
+    
+    const termoLower = termo.toLowerCase();
+    const clientesFiltrados = clientes.filter(c => 
+      c.nome.toLowerCase().includes(termoLower) ||
+      c.telefone.includes(termo)
+    ).slice(0, 10); // Limitar a 10 resultados
+    
+    setClientesBusca(clientesFiltrados);
+  };
+
+  const handleSelecionarClienteCadastrado = (clienteId: string) => {
+    const cliente = clientes.find(c => c.id === clienteId);
+    if (cliente) {
+      setFormData({
+        ...formData,
+        nome: cliente.nome,
+        telefone: cliente.telefone,
+        dataNascimento: cliente.data_nascimento || "",
+      });
+      setClienteCadastradoSelecionado(clienteId);
+      setOpenEscolhaClienteDialog(false);
+      setOpenReservarDialog(true);
+    }
+  };
+
+  const handleEscolhaNovoCliente = () => {
+    setFormData({
+      nome: "",
+      telefone: "",
+      dataNascimento: "",
+      servico: "",
+      profissional: "",
+      horario: "",
+      observacoes: "",
+    });
+    setClienteCadastradoSelecionado("");
+    setOpenEscolhaClienteDialog(false);
+    setOpenNovoDialog(true);
+  };
 
   const [gerenciarData, setGerenciarData] = useState({
     fechado: false,
@@ -383,7 +437,7 @@ const Agenda = () => {
 
   const handleReservar = useCallback(() => {
     setOpenSideSheet(false);
-    setOpenReservarDialog(true); // Abre popup de escolha entre novo/cadastrado
+    setOpenEscolhaClienteDialog(true); // Abre popup de escolha entre novo/cadastrado
   }, []);
 
   const handleGerenciar = useCallback(() => {
@@ -563,6 +617,8 @@ const Agenda = () => {
       sessionStorage.removeItem('agendamentos_cache');
       
       setOpenReservarDialog(false);
+      setOpenNovoDialog(false);
+      setClienteCadastradoSelecionado("");
       setFormData({ nome: "", telefone: "", dataNascimento: "", servico: "", profissional: "", horario: "", observacoes: "" });
     } catch (error) {
       console.error("Erro ao criar agendamento:", error);
@@ -711,7 +767,7 @@ const Agenda = () => {
           <h1 className="text-3xl font-bold">Agenda</h1>
           <p className="text-muted-foreground mt-1">Gerencie os agendamentos do salão</p>
         </div>
-        <Button onClick={() => setOpenNovoDialog(true)}>
+        <Button onClick={() => setOpenEscolhaClienteDialog(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Novo Agendamento
         </Button>
@@ -943,6 +999,77 @@ const Agenda = () => {
         </SheetContent>
       </Sheet>
 
+      {/* Dialog Escolha de Cliente (Novo ou Cadastrado) */}
+      <Dialog open={openEscolhaClienteDialog} onOpenChange={setOpenEscolhaClienteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Escolha o Tipo de Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Button
+              className="w-full h-auto py-6 flex flex-col gap-2 hover:shadow-lg hover:shadow-primary/20 transition-all"
+              onClick={handleEscolhaNovoCliente}
+            >
+              <UserPlus className="w-8 h-8" />
+              <span className="text-lg font-semibold">Novo Cliente</span>
+              <span className="text-xs opacity-80">Cadastrar um cliente pela primeira vez</span>
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="w-full h-auto py-6 flex flex-col gap-2 hover:shadow-lg hover:shadow-primary/20 transition-all"
+              onClick={() => {
+                setOpenEscolhaClienteDialog(false);
+                setTipoCliente('cadastrado');
+              }}
+            >
+              <UserCheck className="w-8 h-8" />
+              <span className="text-lg font-semibold">Cliente Já Cadastrado</span>
+              <span className="text-xs opacity-80">Buscar cliente existente no sistema</span>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Cliente Cadastrado com Autocomplete */}
+      <Dialog open={tipoCliente === 'cadastrado'} onOpenChange={(open) => !open && setTipoCliente(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Agendamento - Cliente Cadastrado</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Busca de Cliente */}
+            <div className="space-y-2">
+              <Label>Buscar Cliente *</Label>
+              <Input
+                placeholder="Digite o nome ou telefone do cliente..."
+                onChange={(e) => handleBuscarCliente(e.target.value)}
+                autoFocus
+              />
+              {clientesBusca.length > 0 && (
+                <div className="border rounded-lg max-h-60 overflow-y-auto">
+                  {clientesBusca.map((cliente) => (
+                    <div
+                      key={cliente.id}
+                      className="p-3 hover:bg-accent cursor-pointer border-b last:border-b-0 transition-colors"
+                      onClick={() => handleSelecionarClienteCadastrado(cliente.id)}
+                    >
+                      <p className="font-medium">{cliente.nome}</p>
+                      <p className="text-sm text-muted-foreground">{cliente.telefone}</p>
+                      {cliente.data_nascimento && (
+                        <p className="text-xs text-muted-foreground">
+                          Nascimento: {format(new Date(cliente.data_nascimento), "dd/MM/yyyy")}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Dialog Novo Agendamento */}
       <Dialog open={openNovoDialog} onOpenChange={setOpenNovoDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1044,7 +1171,7 @@ const Agenda = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Reservar Horário */}
+      {/* Dialog Reservar Horário (Cliente Cadastrado preenchido) */}
       <Dialog open={openReservarDialog} onOpenChange={setOpenReservarDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -1056,11 +1183,21 @@ const Agenda = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nome do Cliente *</Label>
-                <Input value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} required />
+                <Input 
+                  value={formData.nome} 
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })} 
+                  required 
+                  disabled={!!clienteCadastradoSelecionado}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Telefone *</Label>
-                <Input value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} required />
+                <Input 
+                  value={formData.telefone} 
+                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} 
+                  required 
+                  disabled={!!clienteCadastradoSelecionado}
+                />
               </div>
             </div>
             <div className="space-y-2">
@@ -1071,6 +1208,7 @@ const Agenda = () => {
                 onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })} 
                 required 
                 max={new Date().toISOString().split('T')[0]}
+                disabled={!!clienteCadastradoSelecionado}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
