@@ -90,23 +90,20 @@ Até amanhã! 💜✨`;
           console.error(`⚠️ Erro ao registrar lembrete para ${agendamento.cliente_nome}:`, erroRegistro);
         }
 
-        // TODO: Enviar via WhatsApp Business API
-        // Por enquanto, apenas registramos no banco
-        // Quando integrar com Evolution API ou WhatsApp Business API:
-        // const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
-        //   method: 'POST',
-        //   headers: {
-        //     'Authorization': `Bearer ${supabaseKey}`,
-        //     'Content-Type': 'application/json',
-        //   },
-        //   body: JSON.stringify({
-        //     telefone: agendamento.cliente_telefone,
-        //     mensagem,
-        //   }),
-        // });
+        // Enviar mensagem via whatsapp-send
+        const { error: sendError } = await supabase.functions.invoke('whatsapp-send', {
+          body: {
+            telefone: agendamento.cliente_telefone.replace(/\D/g, ''),
+            mensagem: mensagem
+          }
+        });
 
-        enviados++;
-        console.log(`✅ Lembrete registrado para ${agendamento.cliente_nome}`);
+        if (sendError) {
+          console.error(`❌ Erro ao enviar WhatsApp para ${agendamento.cliente_nome}:`, sendError);
+        } else {
+          console.log(`✅ Lembrete enviado via WhatsApp para ${agendamento.cliente_nome}`);
+          enviados++;
+        }
 
         // Aguardar 1 segundo entre registros
         await new Promise(resolve => setTimeout(resolve, 1000));
