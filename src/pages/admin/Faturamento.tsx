@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, Calendar, Eye, EyeOff, CalendarIcon, Plus, Trash2, Lock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { DollarSign, TrendingUp, Calendar, CalendarIcon, Plus, Trash2, Lock, Package, BarChart3 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
 const Faturamento = () => {
+  const navigate = useNavigate();
   const [showTotal, setShowTotal] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -33,7 +35,6 @@ const Faturamento = () => {
   const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
   const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
   
-  // Estados para despesa
   const [descricaoDespesa, setDescricaoDespesa] = useState("");
   const [valorDespesa, setValorDespesa] = useState("");
   const [categoriaDespesa, setCategoriaDespesa] = useState("Outros");
@@ -129,7 +130,6 @@ const Faturamento = () => {
     .filter((p) => p.data && p.data.startsWith(anoAtual))
     .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0);
 
-  // Calcular despesas
   const despesasHoje = despesas
     .filter((d) => d.data === hoje)
     .reduce((acc, d) => acc + parseFloat(String(d.valor || 0)), 0);
@@ -142,12 +142,10 @@ const Faturamento = () => {
     .filter((d) => d.data && d.data.startsWith(anoAtual))
     .reduce((acc, d) => acc + parseFloat(String(d.valor || 0)), 0);
 
-  // Calcular saldo
   const saldoHoje = faturamentoHoje - despesasHoje;
   const saldoMes = faturamentoMes - despesasMes;
   const saldoAno = faturamentoAno - despesasAno;
 
-  // Faturamento do período personalizado
   const faturamentoPeriodo = dataInicio && dataFim
     ? pagamentos
         .filter((p) => {
@@ -184,12 +182,10 @@ const Faturamento = () => {
     setOpenDespesaDialog(false);
   };
 
-  // Preparar dados para o gráfico comparativo
   let dadosGrafico;
   let labelGrafico = "Entradas x Saídas (Últimos 7 Dias)";
 
   if (dataInicio && dataFim) {
-    // Gráfico do período personalizado
     labelGrafico = `Faturamento de ${format(dataInicio, "dd/MM/yyyy")} a ${format(dataFim, "dd/MM/yyyy")}`;
     const dias = Math.ceil((dataFim.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const diasPeriodo = Array.from({ length: dias }, (_, i) => {
@@ -212,7 +208,6 @@ const Faturamento = () => {
       };
     });
   } else {
-    // Gráfico padrão (últimos 7 dias)
     const ultimosDias = Array.from({ length: 7 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - (6 - i));
@@ -261,7 +256,6 @@ const Faturamento = () => {
     },
   ];
 
-
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -273,15 +267,55 @@ const Faturamento = () => {
         </div>
         <Button
           variant="outline"
-          onClick={() => setShowTotal(!showTotal)}
+          onClick={() => navigate("/admin/relatorios")}
+          className="gap-2"
         >
-          {showTotal ? (
-            <Eye className="w-4 h-4 mr-2" />
-          ) : (
-            <EyeOff className="w-4 h-4 mr-2" />
-          )}
-          {showTotal ? "Ocultar" : "Mostrar"} Valores
+          <BarChart3 className="w-4 h-4" />
+          Ver Relatórios
         </Button>
+      </div>
+
+      {/* Cards de Saídas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="p-6 hover-lift">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-destructive/10 rounded-xl">
+              <Package className="w-6 h-6 text-destructive" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Saídas Hoje</p>
+              <p className="text-2xl font-bold">
+                {showTotal ? `R$ ${despesasHoje.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-6 hover-lift">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-destructive/10 rounded-xl">
+              <Package className="w-6 h-6 text-destructive" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Saídas do Mês</p>
+              <p className="text-2xl font-bold">
+                {showTotal ? `R$ ${despesasMes.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-6 hover-lift">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-destructive/10 rounded-xl">
+              <Package className="w-6 h-6 text-destructive" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Saídas do Ano</p>
+              <p className="text-2xl font-bold">
+                {showTotal ? `R$ ${despesasAno.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              </p>
+            </div>
+          </div>
+        </Card>
       </div>
 
       <Card className="p-6">
@@ -377,6 +411,8 @@ const Faturamento = () => {
         ))}
       </div>
 
+      
+      
       <Card className="p-6">
         <h2 className="text-xl font-semibold mb-6">Agendamentos Pendentes de Pagamento</h2>
         {loadingAgendamentos ? (
@@ -472,9 +508,9 @@ const Faturamento = () => {
 
       <Card className="p-6">
         <h2 className="text-xl font-semibold mb-6">{labelGrafico}</h2>
-        {pagamentos.length === 0 && despesas.length === 0 ? (
+        {loadingPagamentos || loadingDespesas ? (
           <div className="h-80 flex items-center justify-center bg-muted rounded-lg">
-            <p className="text-muted-foreground">Os dados serão exibidos conforme você registrar entradas e saídas</p>
+            <p className="text-muted-foreground">Carregando dados...</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={320}>
@@ -483,149 +519,91 @@ const Faturamento = () => {
               <XAxis dataKey="dia" className="text-xs" />
               <YAxis className="text-xs" />
               <Tooltip
-                formatter={(value: number, name: string) => [
-                  `R$ ${value.toFixed(2).replace(".", ",")}`, 
-                  name === "entradas" ? "Entradas" : "Saídas"
-                ]}
+                formatter={(value: number) => [`R$ ${value.toFixed(2)}`, '']}
                 contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
               />
-              <Bar dataKey="entradas" fill="hsl(var(--success))" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="saidas" fill="hsl(var(--destructive))" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="entradas" fill="hsl(var(--success))" radius={[8, 8, 0, 0]} name="Entradas" />
+              <Bar dataKey="saidas" fill="hsl(var(--destructive))" radius={[8, 8, 0, 0]} name="Saídas" />
             </BarChart>
           </ResponsiveContainer>
         )}
       </Card>
 
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-6">Pagamentos Recebidos</h2>
-        {loadingPagamentos ? (
-          <p className="text-muted-foreground text-center py-8">Carregando...</p>
-        ) : pagamentos.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">Nenhum pagamento registrado</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3">Cliente</th>
-                  <th className="text-left p-3">Serviço</th>
-                  <th className="text-left p-3">Valor</th>
-                  <th className="text-left p-3">Método</th>
-                  <th className="text-left p-3">Data</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagamentos.map((pag) => (
-                  <tr key={pag.id} className="border-b hover:bg-muted/50">
-                    <td className="p-3">{pag.cliente_nome}</td>
-                    <td className="p-3">{pag.servico}</td>
-                    <td className="p-3 font-semibold">
-                      {showTotal ? `R$ ${Number(pag.valor).toFixed(2).replace(".", ",")}` : "R$ •••,••"}
-                    </td>
-                    <td className="p-3">{pag.metodo_pagamento}</td>
-                    <td className="p-3 text-muted-foreground">{format(new Date(pag.data), "dd/MM/yyyy")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-
+      {/* Dialog Pagamento */}
       <Dialog open={openPagamentoDialog} onOpenChange={setOpenPagamentoDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Registrar Pagamento</DialogTitle>
           </DialogHeader>
-          {agendamentoSelecionado && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Cliente</Label>
-                <p className="font-medium">{agendamentoSelecionado.cliente_nome}</p>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Serviço Original</Label>
-                <p className="text-sm">{agendamentoSelecionado.servico_nome}</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="valor">Valor Recebido</Label>
-                <Input
-                  id="valor"
-                  type="number"
-                  step="0.01"
-                  placeholder="Ex: 50.00"
-                  value={valorEditado}
-                  onChange={(e) => setValorEditado(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="metodo">Método de Pagamento</Label>
-                <Select value={metodoSelecionado} onValueChange={setMetodoSelecionado}>
-                  <SelectTrigger id="metodo">
-                    <SelectValue placeholder="Selecione o método" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PIX">PIX</SelectItem>
-                    <SelectItem value="Cartão de Débito">Cartão de Débito</SelectItem>
-                    <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
-                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="obs">Observações (produtos, serviços extras, etc.)</Label>
-                <Textarea
-                  id="obs"
-                  placeholder="Ex: Corte + Barba, comprou shampoo..."
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  rows={3}
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setOpenPagamentoDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={registrarPagamento} disabled={!valorEditado}>
-                  Registrar
-                </Button>
-              </div>
+          <div className="space-y-4">
+            <div>
+              <Label>Cliente</Label>
+              <Input value={agendamentoSelecionado?.cliente_nome || ""} disabled className="bg-muted" />
             </div>
-          )}
+            <div>
+              <Label>Serviço</Label>
+              <Input value={agendamentoSelecionado?.servico_nome || ""} disabled className="bg-muted" />
+            </div>
+            <div>
+              <Label htmlFor="valor">Valor *</Label>
+              <Input
+                id="valor"
+                type="number"
+                step="0.01"
+                value={valorEditado}
+                onChange={(e) => setValorEditado(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label>Método de Pagamento</Label>
+              <Select value={metodoSelecionado} onValueChange={setMetodoSelecionado}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PIX">PIX</SelectItem>
+                  <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
+                  <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Observações</Label>
+              <Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpenPagamentoDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={registrarPagamento}>Registrar</Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
+      {/* Dialog Despesa */}
       <Dialog open={openDespesaDialog} onOpenChange={setOpenDespesaDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Registrar Despesa</DialogTitle>
+            <DialogTitle>Nova Despesa/Saída</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição *</Label>
+            <div>
+              <Label htmlFor="desc">Descrição *</Label>
               <Input
-                id="descricao"
-                placeholder="Ex: Aluguel, Produtos, etc."
+                id="desc"
                 value={descricaoDespesa}
                 onChange={(e) => setDescricaoDespesa(e.target.value)}
+                required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="valorDesp">Valor *</Label>
-              <Input
-                id="valorDesp"
-                type="number"
-                step="0.01"
-                placeholder="Ex: 150.00"
-                value={valorDespesa}
-                onChange={(e) => setValorDespesa(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="categoria">Categoria</Label>
+            <div>
+              <Label>Categoria</Label>
               <Select value={categoriaDespesa} onValueChange={setCategoriaDespesa}>
-                <SelectTrigger id="categoria">
-                  <SelectValue placeholder="Selecione a categoria" />
+                <SelectTrigger>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Aluguel">Aluguel</SelectItem>
@@ -636,7 +614,18 @@ const Faturamento = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div>
+              <Label htmlFor="valor-despesa">Valor *</Label>
+              <Input
+                id="valor-despesa"
+                type="number"
+                step="0.01"
+                value={valorDespesa}
+                onChange={(e) => setValorDespesa(e.target.value)}
+                required
+              />
+            </div>
+            <div>
               <Label>Data *</Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -648,7 +637,7 @@ const Faturamento = () => {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dataDespesa ? format(dataDespesa, "dd/MM/yyyy") : "Selecione a data"}
+                    {dataDespesa ? format(dataDespesa, "dd/MM/yyyy") : "Selecione"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -661,28 +650,25 @@ const Faturamento = () => {
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="metodoDesp">Método de Pagamento</Label>
+            <div>
+              <Label>Método de Pagamento</Label>
               <Select value={metodoDespesa} onValueChange={setMetodoDespesa}>
-                <SelectTrigger id="metodoDesp">
-                  <SelectValue placeholder="Selecione o método" />
+                <SelectTrigger>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PIX">PIX</SelectItem>
-                  <SelectItem value="Cartão de Débito">Cartão de Débito</SelectItem>
-                  <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
                   <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                  <SelectItem value="Boleto">Boleto</SelectItem>
+                  <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
+                  <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpenDespesaDialog(false)}>
                 Cancelar
               </Button>
-              <Button onClick={registrarDespesa} disabled={!descricaoDespesa || !valorDespesa || !dataDespesa}>
-                Registrar
-              </Button>
+              <Button onClick={registrarDespesa}>Registrar Despesa</Button>
             </div>
           </div>
         </DialogContent>
