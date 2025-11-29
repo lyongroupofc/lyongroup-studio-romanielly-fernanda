@@ -99,17 +99,18 @@ const Avisos = () => {
   };
 
   const handleTestarLembrete = async () => {
+    const loadingToast = toast.loading("Enviando lembrete de teste...");
     try {
-      toast.loading("Enviando lembrete de teste...");
-      
-      const { error } = await supabase.functions.invoke("whatsapp-reminders-fixed");
+      const { data, error } = await supabase.functions.invoke("whatsapp-reminders-fixed");
 
       if (error) throw error;
 
-      toast.success("Lembrete de teste enviado com sucesso!");
+      toast.dismiss(loadingToast);
+      toast.success(`Lembretes processados! ${data?.enviados || 0} enviados.`);
       await fetchLembretes();
     } catch (error) {
       console.error("Erro ao testar lembrete:", error);
+      toast.dismiss(loadingToast);
       toast.error("Erro ao enviar lembrete de teste");
     }
   };
