@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from "react";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Loader2, Bell, Clock, Check, X } from "lucide-react";
+import { Loader2, Bell, Clock, Send, Heart, Gift, Calendar as CalendarIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useFluxosAutomaticos } from "@/hooks/useFluxosAutomaticos";
 
 type LembreteEnviado = {
   id: string;
@@ -19,15 +20,15 @@ type LembreteEnviado = {
   created_at: string;
 };
 
-const Lembretes = () => {
+const Avisos = () => {
   const [loading, setLoading] = useState(true);
   const [lembretes, setLembretes] = useState<LembreteEnviado[]>([]);
   const [lembretesAtivos, setLembretesAtivos] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const hasFetchedRef = useRef(false);
+  const { fluxos, mensagens } = useFluxosAutomaticos();
 
   useEffect(() => {
-    // Prevent multiple executions on reload
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
 
@@ -98,21 +99,64 @@ const Lembretes = () => {
   };
 
   const handleTestarLembrete = async () => {
-    setSalvando(true);
     try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-reminders");
+      toast.loading("Enviando lembrete de teste...");
+      
+      const { error } = await supabase.functions.invoke("whatsapp-reminders-fixed");
 
       if (error) throw error;
 
-      toast.success(`Teste concluído! ${data?.remindersCount || 0} lembretes enviados`);
+      toast.success("Lembrete de teste enviado com sucesso!");
       await fetchLembretes();
     } catch (error) {
-      console.error("Erro ao testar lembretes:", error);
-      toast.error("Erro ao testar envio de lembretes");
-    } finally {
-      setSalvando(false);
+      console.error("Erro ao testar lembrete:", error);
+      toast.error("Erro ao enviar lembrete de teste");
     }
   };
+
+  const getTipoIcon = (tipo: string) => {
+    switch (tipo) {
+      case 'pos_primeira_visita':
+        return <Sparkles className="w-5 h-5 text-blue-500" />;
+      case 'reativacao':
+        return <Heart className="w-5 h-5 text-pink-500" />;
+      case 'aniversario':
+        return <Gift className="w-5 h-5 text-purple-500" />;
+      case 'natal':
+      case 'dia_mulher':
+      case 'dia_maes':
+      case 'dia_pais':
+        return <CalendarIcon className="w-5 h-5 text-orange-500" />;
+      default:
+        return <Bell className="w-5 h-5 text-primary" />;
+    }
+  };
+
+  const getTipoLabel = (tipo: string) => {
+    const labels: Record<string, string> = {
+      'pos_primeira_visita': 'Pós Primeira Visita',
+      'reativacao': 'Reativação',
+      'manutencao': 'Manutenção',
+      'aniversario': 'Aniversário',
+      'natal': 'Natal',
+      'dia_mulher': 'Dia da Mulher',
+      'dia_maes': 'Dia das Mães',
+      'dia_pais': 'Dia dos Pais',
+    };
+    return labels[tipo] || tipo;
+  };
+
+  // Agrupar mensagens por tipo de fluxo
+  const mensagensPorTipo = fluxos.reduce((acc, fluxo) => {
+    const mensagensDoFluxo = mensagens.filter(m => m.fluxo_id === fluxo.id);
+    acc[fluxo.tipo] = {
+      fluxo,
+      mensagens: mensagensDoFluxo,
+      enviadas: mensagensDoFluxo.filter(m => m.status === 'enviado').length,
+      pendentes: mensagensDoFluxo.filter(m => m.status === 'pendente').length,
+    };
+    return acc;
+  }, {} as Record<string, any>);
 
   if (loading) {
     return (
@@ -125,132 +169,153 @@ const Lembretes = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Lembretes Automáticos</h1>
-        <p className="text-muted-foreground mt-1">
-          Gerencie os lembretes enviados automaticamente aos clientes
+        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          Avisos e Notificações
+        </h1>
+        <p className="text-muted-foreground">
+          Gerencie lembretes automáticos e mensagens dos fluxos
         </p>
       </div>
 
-      {/* Card de Configuração */}
-      <Card className="p-6">
-        <div className="space-y-4">
+      {/* Card de Lembretes de Horários */}
+      <Card className="border-primary/20 shadow-lg hover:shadow-xl transition-shadow">
+        <CardHeader>
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label htmlFor="lembretes-ativos" className="text-base font-semibold">
-                Lembretes Automáticos
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Envia lembretes automáticos 1 dia antes do agendamento
-              </p>
+            <div className="flex items-center gap-3">
+              <Clock className="w-6 h-6 text-blue-500" />
+              <div>
+                <CardTitle>Lembretes de Horários Agendados</CardTitle>
+                <CardDescription>
+                  Enviados 1 dia antes, às 10h da manhã
+                </CardDescription>
+              </div>
             </div>
-            <Switch
-              id="lembretes-ativos"
-              checked={lembretesAtivos}
-              onCheckedChange={handleToggleLembretes}
-              disabled={salvando}
-            />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="lembretes-ativos"
+                  checked={lembretesAtivos}
+                  onCheckedChange={handleToggleLembretes}
+                  disabled={salvando}
+                />
+                <Label htmlFor="lembretes-ativos" className="cursor-pointer">
+                  {lembretesAtivos ? "Ativo" : "Inativo"}
+                </Label>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTestarLembrete}
+                className="gap-2"
+              >
+                <Send className="w-4 h-4" />
+                Testar Envio
+              </Button>
+            </div>
           </div>
-
-          <div className="pt-4 border-t">
-            <Button
-              onClick={handleTestarLembrete}
-              disabled={salvando || !lembretesAtivos}
-              variant="outline"
-            >
-              {salvando ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Testando...
-                </>
-              ) : (
-                <>
-                  <Bell className="w-4 h-4 mr-2" />
-                  Testar Envio de Lembretes
-                </>
-              )}
-            </Button>
-            <p className="text-xs text-muted-foreground mt-2">
-              Envia lembretes para todos os agendamentos de amanhã
-            </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 max-h-[300px] overflow-y-auto">
+            {lembretes.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                Nenhum lembrete enviado ainda
+              </p>
+            ) : (
+              lembretes.map((lembrete) => (
+                <Card key={lembrete.id} className="border-blue-500/20 bg-blue-500/5">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{lembrete.cliente_nome}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {lembrete.servico_nome || "Serviço não especificado"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {lembrete.cliente_telefone}
+                        </p>
+                      </div>
+                      <div className="text-right text-sm text-muted-foreground">
+                        <p>{format(parseISO(lembrete.created_at), "dd/MM/yyyy", { locale: ptBR })}</p>
+                        <p>{format(parseISO(lembrete.created_at), "HH:mm", { locale: ptBR })}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
-        </div>
+        </CardContent>
       </Card>
 
-      {/* Lista de Lembretes Enviados */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Histórico de Lembretes</h2>
-        {lembretes.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Bell className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>Nenhum lembrete enviado ainda</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {lembretes.map((lembrete) => (
-              <Card key={lembrete.id} className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Check className="w-4 h-4 text-success" />
-                      <span className="font-semibold">{lembrete.cliente_nome}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {lembrete.cliente_telefone}
-                      </span>
-                    </div>
-                    {lembrete.servico_nome && (
-                      <p className="text-sm text-muted-foreground">
-                        Serviço: {lembrete.servico_nome}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {format(parseISO(lembrete.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </span>
-                      <span className="px-2 py-1 bg-primary/10 text-primary rounded">
-                        {lembrete.tipo_lembrete}
-                      </span>
-                    </div>
-                  </div>
+      {/* Cards de Fluxos Automáticos */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {Object.entries(mensagensPorTipo).map(([tipo, data]) => (
+          <Card key={tipo} className="border-primary/20 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                {getTipoIcon(tipo)}
+                <div>
+                  <CardTitle className="text-lg">{getTipoLabel(tipo)}</CardTitle>
+                  <CardDescription>
+                    {data.fluxo.ativo ? "Ativo" : "Inativo"} • {data.enviadas} enviadas • {data.pendentes} pendentes
+                  </CardDescription>
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </Card>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {data.mensagens.length === 0 ? (
+                  <p className="text-center text-muted-foreground text-sm py-4">
+                    Nenhuma mensagem agendada
+                  </p>
+                ) : (
+                  data.mensagens.slice(0, 5).map((mensagem: any) => (
+                    <div
+                      key={mensagem.id}
+                      className="flex items-center justify-between p-2 rounded-lg bg-muted/30 text-sm"
+                    >
+                      <span className="text-muted-foreground">
+                        {format(new Date(mensagem.data_envio), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                      <span className={`text-xs font-medium ${
+                        mensagem.status === 'enviado' ? 'text-green-600' :
+                        mensagem.status === 'erro' ? 'text-red-600' :
+                        'text-amber-600'
+                      }`}>
+                        {mensagem.status === 'enviado' ? 'Enviado' :
+                         mensagem.status === 'erro' ? 'Erro' : 'Pendente'}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-      {/* Informações */}
-      <Card className="p-6 bg-muted/50">
-        <h3 className="font-semibold mb-2">Como funciona?</h3>
-        <ul className="space-y-2 text-sm text-muted-foreground">
-          <li className="flex items-start gap-2">
-            <span className="text-primary">•</span>
-            <span>
-              Lembretes são enviados automaticamente 1 dia antes do agendamento
-            </span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary">•</span>
-            <span>
-              Apenas agendamentos com status "Confirmado" recebem lembretes
-            </span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary">•</span>
-            <span>
-              O sistema verifica diariamente às 10h da manhã
-            </span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary">•</span>
-            <span>
-              Você pode testar o envio a qualquer momento usando o botão acima
-            </span>
-          </li>
-        </ul>
+      {/* Informações sobre os avisos */}
+      <Card className="border-primary/20 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="w-5 h-5 text-primary" />
+            Como Funcionam os Avisos
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>
+            <strong>Lembretes de Horários:</strong> Enviados automaticamente 1 dia antes do agendamento, às 10h da manhã.
+          </p>
+          <p>
+            <strong>Fluxos Automáticos:</strong> Mensagens configuradas no Lyon Flow são enviadas automaticamente nos horários e datas definidos.
+          </p>
+          <p>
+            <strong>Status das Mensagens:</strong> Você pode acompanhar se cada mensagem foi enviada com sucesso, está pendente ou teve erro no envio.
+          </p>
+        </CardContent>
       </Card>
     </div>
   );
 };
 
-export default Lembretes;
+export default Avisos;
