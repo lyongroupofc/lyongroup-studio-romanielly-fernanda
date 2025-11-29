@@ -16,6 +16,7 @@ import { useServicos } from "@/hooks/useServicos";
 import { useProfissionais } from "@/hooks/useProfissionais";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { useAgendaConfig } from "@/hooks/useAgendaConfig";
+import { usePromocoes } from "@/hooks/usePromocoes";
 import { isFeriado } from "@/lib/feriados";
 import Footer from "@/components/Footer";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
@@ -30,12 +31,14 @@ const Agendar = () => {
     servico: "",
     profissional: "",
     horario: "",
+    promocao: "",
   });
 
   const { servicos, loading: loadingServicos } = useServicos();
   const { profissionais, loading: loadingProfissionais } = useProfissionais();
   const { agendamentos, loading: loadingAgendamentos, addAgendamento } = useAgendamentos();
   const { configs, getConfig } = useAgendaConfig();
+  const { promocoes } = usePromocoes();
 
   // Estado para agendamentos em tempo real da data selecionada
   const [agendamentosDataAtual, setAgendamentosDataAtual] = useState<typeof agendamentos>([]);
@@ -273,6 +276,19 @@ const Agendar = () => {
       
       const profissional = formData.profissional ? profissionais.find(p => p.id === formData.profissional) : null;
 
+      // Calcular desconto se houver promoção selecionada
+      let descontoAplicado = 0;
+      if (formData.promocao) {
+        const promocao = promocoes.find(p => p.id === formData.promocao);
+        if (promocao) {
+          if (promocao.desconto_porcentagem) {
+            descontoAplicado = (servico.preco * promocao.desconto_porcentagem) / 100;
+          } else if (promocao.desconto_valor) {
+            descontoAplicado = promocao.desconto_valor;
+          }
+        }
+      }
+
       // Criar ou atualizar cliente
       const { supabase } = await import('@/integrations/supabase/client');
       const { data: clienteExistente } = await supabase
@@ -355,6 +371,8 @@ const Agendar = () => {
         status: "Confirmado",
         observacoes: null,
         origem: "link_externo",
+        promocao_id: formData.promocao || null,
+        desconto_aplicado: descontoAplicado,
       });
 
       toast.success("Agendamento confirmado! Você receberá uma confirmação no WhatsApp.");
@@ -485,6 +503,28 @@ const Agendar = () => {
                   </Select>
                 )}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="promocao">Promoção (Opcional)</Label>
+              <Select
+                value={formData.promocao}
+                onValueChange={(value) => setFormData({ ...formData, promocao: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem promoção" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sem promoção</SelectItem>
+                  {promocoes
+                    .filter(p => p.ativa && new Date(p.data_inicio) <= new Date() && new Date(p.data_fim) >= new Date())
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome} - {p.desconto_porcentagem ? `${p.desconto_porcentagem}%` : `R$ ${p.desconto_valor}`}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-4">

@@ -18,6 +18,7 @@ import { useAgendaConfig } from "@/hooks/useAgendaConfig";
 import { useServicos } from "@/hooks/useServicos";
 import { useProfissionais } from "@/hooks/useProfissionais";
 import { useClientes } from "@/hooks/useClientes";
+import { usePromocoes } from "@/hooks/usePromocoes";
 import { useSearchParams } from "react-router-dom";
 import { isFeriado } from "@/lib/feriados";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,6 +44,7 @@ const Agenda = () => {
   const { servicos, loading: loadingServicos, refetch: refetchServicos } = useServicos();
   const { profissionais, loading: loadingProfissionais, refetch: refetchProfissionais } = useProfissionais();
   const { clientes } = useClientes();
+  const { promocoes } = usePromocoes();
 
   // Estado para agendamentos em tempo real da data selecionada
   const [agendamentosDataAtual, setAgendamentosDataAtual] = useState<Agendamento[]>([]);
@@ -129,6 +131,7 @@ const Agenda = () => {
     profissional: "",
     horario: "",
     observacoes: "",
+    promocao: "",
   });
 
   const [clienteCadastradoSelecionado, setClienteCadastradoSelecionado] = useState<string>("");
@@ -175,6 +178,7 @@ const Agenda = () => {
       profissional: "",
       horario: "",
       observacoes: "",
+      promocao: "",
     });
     setClienteCadastradoSelecionado("");
     setOpenEscolhaClienteDialog(false);
@@ -509,6 +513,19 @@ const Agenda = () => {
       
       const profissional = formData.profissional ? profissionais.find((p) => p.id === formData.profissional) : null;
 
+      // Calcular desconto se houver promoção selecionada
+      let descontoAplicado = 0;
+      if (formData.promocao) {
+        const promocao = promocoes.find(p => p.id === formData.promocao);
+        if (promocao) {
+          if (promocao.desconto_porcentagem) {
+            descontoAplicado = (servico.preco * promocao.desconto_porcentagem) / 100;
+          } else if (promocao.desconto_valor) {
+            descontoAplicado = promocao.desconto_valor;
+          }
+        }
+      }
+
       // Criar ou atualizar cliente com data de nascimento
       const { supabase } = await import('@/integrations/supabase/client');
       
@@ -612,6 +629,8 @@ const Agenda = () => {
         status: "Confirmado",
         observacoes: formData.observacoes || null,
         origem: "manual",
+        promocao_id: formData.promocao || null,
+        desconto_aplicado: descontoAplicado,
       });
 
       // Limpar cache para forçar atualização em outras abas
@@ -620,7 +639,7 @@ const Agenda = () => {
       setOpenReservarDialog(false);
       setOpenNovoDialog(false);
       setClienteCadastradoSelecionado("");
-      setFormData({ nome: "", telefone: "", dataNascimento: "", servico: "", profissional: "", horario: "", observacoes: "" });
+      setFormData({ nome: "", telefone: "", dataNascimento: "", servico: "", profissional: "", horario: "", observacoes: "", promocao: "" });
     } catch (error) {
       console.error("Erro ao criar agendamento:", error);
       toast.error("Erro ao salvar agendamento. Tente novamente.");
@@ -1161,6 +1180,24 @@ const Agenda = () => {
               </Select>
             </div>
             <div className="space-y-2">
+              <Label>Promoção (opcional)</Label>
+              <Select value={formData.promocao} onValueChange={(value) => setFormData({ ...formData, promocao: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem promoção" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sem promoção</SelectItem>
+                  {promocoes
+                    .filter(p => p.ativa && new Date(p.data_inicio) <= new Date() && new Date(p.data_fim) >= new Date())
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome} - {p.desconto_porcentagem ? `${p.desconto_porcentagem}%` : `R$ ${p.desconto_valor}`}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea value={formData.observacoes} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} />
             </div>
@@ -1258,6 +1295,24 @@ const Agenda = () => {
                       <SelectItem key={h} value={h}>{h}</SelectItem>
                     ))
                   )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Promoção (opcional)</Label>
+              <Select value={formData.promocao} onValueChange={(value) => setFormData({ ...formData, promocao: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem promoção" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sem promoção</SelectItem>
+                  {promocoes
+                    .filter(p => p.ativa && new Date(p.data_inicio) <= new Date() && new Date(p.data_fim) >= new Date())
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome} - {p.desconto_porcentagem ? `${p.desconto_porcentagem}%` : `R$ ${p.desconto_valor}`}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1450,6 +1505,7 @@ const Agenda = () => {
                       profissional: selectedAgendamento.profissional_id || '',
                       horario: selectedAgendamento.horario,
                       observacoes: selectedAgendamento.observacoes || '',
+                      promocao: selectedAgendamento.promocao_id || '',
                     });
                     setOpenDetalhesDialog(false);
                     setOpenEditarDialog(true);
