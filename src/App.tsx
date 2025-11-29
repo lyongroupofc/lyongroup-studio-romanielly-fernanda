@@ -144,6 +144,11 @@ const App = () => (
                   <Aniversariantes />
                 </Suspense>
               } />
+              <Route path="suporte" element={
+                <Suspense fallback={<PageLoader />}>
+                  <Suporte />
+                </Suspense>
+              } />
             </Route>
 
             <Route path="*" element={<NotFound />} />
