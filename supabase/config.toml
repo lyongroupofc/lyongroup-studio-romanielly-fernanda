@@ -2,3 +2,12 @@ project_id = "tusqthowtpnocokpqzcs"
 
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+[functions.whatsapp-send]
+verify_jwt = false
+
+[functions.whatsapp-reminders-fixed]
+verify_jwt = false
+
+[functions.processar-lyon-flow]
+verify_jwt = false
