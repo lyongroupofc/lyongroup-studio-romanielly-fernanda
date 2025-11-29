@@ -131,7 +131,7 @@ const Agenda = () => {
     profissional: "",
     horario: "",
     observacoes: "",
-    promocao: "",
+    promocao: "none",
   });
 
   const [clienteCadastradoSelecionado, setClienteCadastradoSelecionado] = useState<string>("");
@@ -178,7 +178,7 @@ const Agenda = () => {
       profissional: "",
       horario: "",
       observacoes: "",
-      promocao: "",
+      promocao: "none",
     });
     setClienteCadastradoSelecionado("");
     setOpenEscolhaClienteDialog(false);
@@ -629,7 +629,7 @@ const Agenda = () => {
         status: "Confirmado",
         observacoes: formData.observacoes || null,
         origem: "manual",
-        promocao_id: formData.promocao || null,
+        promocao_id: formData.promocao && formData.promocao !== 'none' ? formData.promocao : null,
         desconto_aplicado: descontoAplicado,
       });
 
@@ -639,7 +639,7 @@ const Agenda = () => {
       setOpenReservarDialog(false);
       setOpenNovoDialog(false);
       setClienteCadastradoSelecionado("");
-      setFormData({ nome: "", telefone: "", dataNascimento: "", servico: "", profissional: "", horario: "", observacoes: "", promocao: "" });
+      setFormData({ nome: "", telefone: "", dataNascimento: "", servico: "", profissional: "", horario: "", observacoes: "", promocao: "none" });
     } catch (error) {
       console.error("Erro ao criar agendamento:", error);
       toast.error("Erro ao salvar agendamento. Tente novamente.");
@@ -1186,7 +1186,7 @@ const Agenda = () => {
                   <SelectValue placeholder="Sem promoção" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem promoção</SelectItem>
+                  <SelectItem value="none">Sem promoção</SelectItem>
                   {promocoes
                     .filter(p => p.ativa && new Date(p.data_inicio) <= new Date() && new Date(p.data_fim) >= new Date())
                     .map((p) => (
@@ -1305,7 +1305,7 @@ const Agenda = () => {
                   <SelectValue placeholder="Sem promoção" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem promoção</SelectItem>
+                  <SelectItem value="none">Sem promoção</SelectItem>
                   {promocoes
                     .filter(p => p.ativa && new Date(p.data_inicio) <= new Date() && new Date(p.data_fim) >= new Date())
                     .map((p) => (
