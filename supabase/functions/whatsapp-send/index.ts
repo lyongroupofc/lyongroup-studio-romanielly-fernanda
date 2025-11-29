@@ -60,12 +60,18 @@ serve(async (req) => {
       });
     }
 
-    // Formatar telefone (remover @s.whatsapp.net se presente)
-    const numeroFormatado = telefone.replace('@s.whatsapp.net', '').replace('@lid', '');
+    // Formatar telefone (remover @s.whatsapp.net se presente e adicionar DDI 55 se necessário)
+    let numeroFormatado = telefone.replace('@s.whatsapp.net', '').replace('@lid', '');
+    
+    // Se o número não começa com 55 (Brasil) e tem apenas 11 dígitos (DDD + número), adiciona o 55
+    if (!numeroFormatado.startsWith('55') && numeroFormatado.length === 11) {
+      numeroFormatado = '55' + numeroFormatado;
+    }
     
     console.log('📤 Enviando via Evolution API:', {
       url: `${evolutionUrl}/message/sendText/${evolutionInstance}`,
-      numero: numeroFormatado
+      numero: numeroFormatado,
+      telefoneOriginal: telefone
     });
 
     try {
