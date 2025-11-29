@@ -13,8 +13,14 @@ import {
   Bell,
   Cake,
   BarChart3,
+  Package,
+  Award,
+  Workflow,
+  Bot,
+  Headphones,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { NavLink } from "@/components/NavLink";
 import { format } from "date-fns";
 import {
@@ -44,12 +50,13 @@ const menuItems = [
   { icon: DollarSign, label: "Fluxo de Caixa", path: "/admin/faturamento" },
   { icon: BarChart3, label: "Relatórios", path: "/admin/relatorios" },
   { icon: Sparkle, label: "Marketing", path: "/admin/marketing" },
-  { icon: MessageCircle, label: "Estoque", path: "/admin/estoque" },
-  { icon: MessageCircle, label: "Fidelidade", path: "/admin/fidelidade" },
-  { icon: MessageCircle, label: "Marketing Auto", path: "/admin/marketing-automatico" },
-  { icon: MessageCircle, label: "Bot WhatsApp", path: "/admin/bot-whatsapp" },
-  { icon: Bell, label: "Lembretes", path: "/admin/lembretes" },
+  { icon: Package, label: "Estoque", path: "/admin/estoque" },
+  { icon: Award, label: "Clube da Fidelidade", path: "/admin/fidelidade" },
+  { icon: Workflow, label: "Lyon Flow", path: "/admin/marketing-automatico" },
+  { icon: Bot, label: "Lyon Bot", path: "/admin/bot-whatsapp" },
+  { icon: Bell, label: "Avisos", path: "/admin/lembretes" },
   { icon: Cake, label: "Aniversariantes", path: "/admin/aniversariantes" },
+  { icon: Headphones, label: "Suporte", path: "/admin/suporte" },
 ];
 
 function AppSidebar() {
@@ -190,7 +197,8 @@ const AdminLayout = () => {
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8">
+          <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8 relative">
+            <AnimatedBackground />
             <Outlet />
           </main>
           

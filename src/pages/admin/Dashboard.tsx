@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, DollarSign, Plus, Eye, EyeOff, Palette, Brush, Sparkle, Gem } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Users, DollarSign, Plus, Palette, Brush, Sparkle, Gem } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
@@ -13,7 +14,7 @@ import { MotivationalMessage } from "@/components/MotivationalMessage";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [showTotal, setShowTotal] = useState(true);
+  // Remover botão de ocultar valores conforme requisito
   const [currentTime, setCurrentTime] = useState(new Date());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { agendamentos, loading: loadingAgendamentos, refetch: refetchAgendamentos } = useAgendamentos();
@@ -133,10 +134,6 @@ const Dashboard = () => {
     },
   ];
 
-  const todayStats = [
-    { label: "Atendimentos Hoje", value: stats.agendamentosHoje.toString() },
-    { label: "Total de Agendamentos", value: agendamentos.length.toString() },
-  ];
 
   // Agendamentos de amanhã
   const amanha = format(new Date(new Date().setDate(new Date().getDate() + 1)), "yyyy-MM-dd");
@@ -186,70 +183,67 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Resumo Diário */}
-      <Card className="p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6">
-          <h2 className="text-lg sm:text-xl font-semibold">Resumo do Dia</h2>
-          <Button variant="outline" size="sm" onClick={() => setShowTotal(!showTotal)}>
-            {showTotal ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
-            <span className="hidden sm:inline">{showTotal ? "Ocultar" : "Mostrar"} valores</span>
-            <span className="sm:hidden">{showTotal ? "Ocultar" : "Mostrar"}</span>
-          </Button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6">
-          {todayStats.map((stat) => (
-            <div key={stat.label} className="space-y-2">
-              <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
-              <p className="text-xl sm:text-2xl font-bold">
-                {stat.label === "Faturamento do Dia" ? (showTotal ? stat.value : "R$ •••,••") : stat.value}
-              </p>
-            </div>
-          ))}
-        </div>
-        
-        {/* Lista de Clientes Agendados Hoje */}
-        {stats.agendamentosHoje > 0 && (
-          <div className="border-t pt-4 mb-4">
-            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Agendamentos de Hoje</h3>
-            <div className="space-y-2">
-              {agendamentos
-                .filter(ag => ag.data === stats.hoje && ag.status !== 'Cancelado' && ag.status !== 'Reagendado')
-                .sort((a, b) => a.horario.localeCompare(b.horario))
-                .map((ag) => (
-                  <div 
-                    key={ag.id} 
-                    className="flex items-center justify-between p-2 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                      <span className="text-sm font-medium">{ag.cliente_nome}</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">{ag.horario.substring(0, 5)}</span>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-
-        {/* Lista de Agendamentos de Amanhã */}
-        {agendamentosAmanha.length > 0 && (
-          <div className="border-t pt-4">
-            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Agendamentos de Amanhã</h3>
-            <div className="space-y-2">
-              {agendamentosAmanha.map((ag) => (
+      {/* Agendamentos de Hoje - Card Redesenhado */}
+      <Card className="p-6 bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-primary/20">
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-primary" />
+          Agendamentos de Hoje
+        </h2>
+        {stats.agendamentosHoje > 0 ? (
+          <div className="space-y-3">
+            {agendamentos
+              .filter(ag => ag.data === stats.hoje && ag.status !== 'Cancelado' && ag.status !== 'Reagendado')
+              .sort((a, b) => a.horario.localeCompare(b.horario))
+              .map((ag) => (
                 <div 
                   key={ag.id} 
-                  className="flex items-center justify-between p-2 rounded-lg bg-accent/50 hover:bg-accent/70 transition-colors"
+                  className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-white to-primary/5 border border-primary/20 hover:shadow-lg hover:shadow-primary/20 transition-all duration-300"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-accent-foreground" />
-                    <span className="text-sm font-medium">{ag.cliente_nome}</span>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+                      <span className="text-primary-foreground font-bold">{ag.cliente_nome.charAt(0)}</span>
+                    </div>
+                    <span className="font-semibold text-base">{ag.cliente_nome}</span>
                   </div>
-                  <span className="text-sm text-muted-foreground">{ag.horario.substring(0, 5)}</span>
+                  <Badge variant="secondary" className="text-sm font-semibold px-3 py-1">
+                    {ag.horario.substring(0, 5)}
+                  </Badge>
                 </div>
               ))}
-            </div>
           </div>
+        ) : (
+          <p className="text-center text-muted-foreground py-6">Nenhum agendamento para hoje</p>
+        )}
+
+      </Card>
+
+      {/* Agendamentos de Amanhã - Card Redesenhado */}
+      <Card className="p-6 bg-gradient-to-br from-accent/20 via-accent/10 to-secondary/10 border-accent/30">
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-accent-foreground" />
+          Agendamentos de Amanhã
+        </h2>
+        {agendamentosAmanha.length > 0 ? (
+          <div className="space-y-3">
+            {agendamentosAmanha.map((ag) => (
+              <div 
+                key={ag.id} 
+                className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-white to-accent/20 border border-accent/30 hover:shadow-lg hover:shadow-accent/20 transition-all duration-300"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center shadow-lg shadow-accent/30">
+                    <span className="text-accent-foreground font-bold">{ag.cliente_nome.charAt(0)}</span>
+                  </div>
+                  <span className="font-semibold text-base">{ag.cliente_nome}</span>
+                </div>
+                <Badge variant="outline" className="text-sm font-semibold px-3 py-1 border-accent text-accent-foreground">
+                  {ag.horario.substring(0, 5)}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-muted-foreground py-6">Nenhum agendamento para amanhã</p>
         )}
       </Card>
 
