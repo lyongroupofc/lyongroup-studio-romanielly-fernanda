@@ -28,6 +28,14 @@ const Index = () => {
               <p className="text-xs md:text-sm text-white/90">Sua Agência Completa</p>
             </div>
           </div>
+          
+          <Button 
+            variant="outline" 
+            className="bg-primary/10 border-primary/30 text-white hover:bg-primary hover:text-primary-foreground shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
+            onClick={() => navigate("/login")}
+          >
+            Área Admin
+          </Button>
         </div>
       </header>
 
@@ -60,36 +68,14 @@ const Index = () => {
               A Lyon Group é uma agência completa de marketing digital e automação para profissionais da beleza que querem crescer com estratégia e tecnologia
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                size="lg" 
-                className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
-                onClick={() => navigate("/agendar")}
-              >
-                <Calendar className="w-5 h-5 mr-2" />
-                Agendar Horário
-              </Button>
-              
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="text-lg px-8 bg-background/10 border-primary/30 text-white hover:bg-primary hover:text-primary-foreground shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
-                onClick={() => window.open("https://api.whatsapp.com/send/?phone=5531991625182", "_blank")}
-              >
-                <MessageCircle className="w-5 h-5 mr-2" />
-                Falar com a Lyon Group
-              </Button>
-              
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="text-lg px-8 bg-background/10 border-primary/30 text-white hover:bg-primary hover:text-primary-foreground shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
-                onClick={() => navigate("/login")}
-              >
-                <Shield className="w-5 h-5 mr-2" />
-                Área Administrativa
-              </Button>
-            </div>
+            <Button 
+              size="lg" 
+              className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
+              onClick={() => window.open("https://api.whatsapp.com/send/?phone=5531991625182", "_blank")}
+            >
+              <MessageCircle className="w-5 h-5 mr-2" />
+              Falar com a Lyon Group
+            </Button>
           </div>
         </div>
       </section>
