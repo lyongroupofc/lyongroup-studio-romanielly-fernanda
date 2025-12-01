@@ -28,9 +28,88 @@ serve(async (req) => {
     
     const body = await req.json();
     const validated = webhookSchema.parse(body);
-    const { telefone, mensagem, instancia } = validated;
+    let { telefone, mensagem, instancia } = validated;
 
-    console.log('📱 Mensagem recebida:', { telefone, mensagem, instancia });
+    // ============ DETECÇÃO E TRATAMENTO DE NÚMEROS @lid ============
+    const isLidFormat = telefone.includes('@lid');
+    const isWhatsAppFormat = telefone.includes('@s.whatsapp.net');
+    
+    console.log('📱 ==================== NOVA MENSAGEM ====================');
+    console.log('📱 Telefone original:', telefone);
+    console.log('📱 Mensagem:', mensagem);
+    console.log('📱 Instância:', instancia);
+    console.log('📱 Formato @lid detectado:', isLidFormat);
+    console.log('📱 Formato @s.whatsapp.net:', isWhatsAppFormat);
+    
+    // Tentar extrair número real do formato @lid
+    let telefoneOriginal = telefone;
+    let telefoneExtraido: string | null = null;
+    
+    if (isLidFormat) {
+      console.log('⚠️ ALERTA: Número em formato @lid detectado!');
+      console.log('⚠️ Este formato é usado por dispositivos vinculados e pode não receber mensagens diretas.');
+      
+      // Tentar extrair números do @lid (alguns têm o número real embutido)
+      const lidMatch = telefone.match(/^(\d+)@lid$/);
+      if (lidMatch) {
+        const lidNumber = lidMatch[1];
+        console.log('🔍 Número extraído do @lid:', lidNumber);
+        
+        // Se o número do @lid parece um número de telefone brasileiro (11+ dígitos)
+        if (lidNumber.length >= 11) {
+          // Pode ser um número válido, mas @lid geralmente não é
+          console.log('🔍 Tentando usar número do @lid como fallback');
+          telefoneExtraido = lidNumber;
+        }
+      }
+      
+      // Verificar se há campo adicional com número real no body
+      if (body.sender && typeof body.sender === 'string') {
+        console.log('🔍 Campo sender encontrado no body:', body.sender);
+        const senderMatch = body.sender.match(/^(\d+)@/);
+        if (senderMatch) {
+          telefoneExtraido = senderMatch[1];
+          console.log('✅ Número real extraído do sender:', telefoneExtraido);
+        }
+      }
+      
+      if (body.remoteJid && typeof body.remoteJid === 'string') {
+        console.log('🔍 Campo remoteJid encontrado no body:', body.remoteJid);
+        const remoteMatch = body.remoteJid.match(/^(\d+)@/);
+        if (remoteMatch) {
+          telefoneExtraido = remoteMatch[1];
+          console.log('✅ Número real extraído do remoteJid:', telefoneExtraido);
+        }
+      }
+      
+      if (body.pushName) {
+        console.log('🔍 Nome do contato (pushName):', body.pushName);
+      }
+      
+      // Se conseguimos extrair um número, usar ele
+      if (telefoneExtraido && telefoneExtraido.length >= 10) {
+        console.log('✅ Usando número extraído em vez do @lid:', telefoneExtraido);
+        telefone = telefoneExtraido;
+      } else {
+        console.log('⚠️ Não foi possível extrair número real. Usando @lid como identificador.');
+        // Remover o @lid para salvar apenas o número
+        telefone = telefone.replace('@lid', '');
+      }
+    } else if (isWhatsAppFormat) {
+      // Formato normal @s.whatsapp.net - extrair apenas o número
+      const whatsappMatch = telefone.match(/^(\d+)@s\.whatsapp\.net$/);
+      if (whatsappMatch) {
+        telefone = whatsappMatch[1];
+        console.log('✅ Número extraído do formato WhatsApp:', telefone);
+      }
+    }
+    
+    // Log final do telefone que será usado
+    console.log('📱 --------------------------------------------------------');
+    console.log('📱 Telefone FINAL a ser usado:', telefone);
+    console.log('📱 Telefone ORIGINAL recebido:', telefoneOriginal);
+    console.log('📱 É @lid?', isLidFormat, '| Número extraído:', telefoneExtraido || 'N/A');
+    console.log('📱 ========================================================');
 
     // Instâncias de automação que sempre funcionam (ignoram config global)
     const instanciasAutomacao = ['Bot disparo', 'Automações Agencia', 'Automações-Agencia', 'Automacoes-Agencia'];
