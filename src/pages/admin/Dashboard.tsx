@@ -282,7 +282,11 @@ const Dashboard = () => {
       {/* Atalhos Rápidos */}
       <Card className="p-4 sm:p-6">
         <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Atalhos Rápidos</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <Button className="h-auto py-3 sm:py-4 flex-col gap-2" onClick={() => navigate("/agendar")}> 
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-sm sm:text-base">Agendar Horário</span>
+          </Button>
           <Button className="h-auto py-3 sm:py-4 flex-col gap-2" onClick={() => navigate("/admin/agenda")}> 
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="text-sm sm:text-base">Novo Agendamento</span>
