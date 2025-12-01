@@ -14,7 +14,7 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="w-full py-4 px-4 absolute top-0 left-0 z-20">
+      <header className="w-full py-4 px-4 fixed top-0 left-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="relative">

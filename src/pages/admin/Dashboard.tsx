@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, DollarSign, Plus, Palette, Brush, Sparkle, Gem, AlertCircle } from "lucide-react";
+import { Calendar, Users, DollarSign, Share2, CalendarPlus, Scissors, UserPlus, Palette, Brush, Sparkle, Gem, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
@@ -284,19 +284,19 @@ const Dashboard = () => {
         <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Atalhos Rápidos</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Button className="h-auto py-3 sm:py-4 flex-col gap-2" onClick={() => navigate("/agendar")}> 
-            <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="text-sm sm:text-base">Agendar Horário</span>
+            <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-sm sm:text-base">Link Compartilhável</span>
           </Button>
           <Button className="h-auto py-3 sm:py-4 flex-col gap-2" onClick={() => navigate("/admin/agenda")}> 
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <CalendarPlus className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="text-sm sm:text-base">Novo Agendamento</span>
           </Button>
           <Button variant="outline" className="h-auto py-3 sm:py-4 flex-col gap-2" onClick={() => navigate("/admin/servicos")}>
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <Scissors className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="text-sm sm:text-base">Novo Serviço</span>
           </Button>
           <Button variant="outline" className="h-auto py-3 sm:py-4 flex-col gap-2" onClick={() => navigate("/admin/profissionais")}>
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <UserPlus className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="text-sm sm:text-base">Novo Profissional</span>
           </Button>
         </div>
