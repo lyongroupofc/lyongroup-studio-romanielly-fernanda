@@ -40,7 +40,7 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ 
@@ -51,31 +51,56 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/50" />
         
         <div className="container mx-auto px-4 relative z-10 text-white">
-          <div className="max-w-4xl">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/40 mb-6 backdrop-blur-sm">
-              <Zap className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">Crescer o seu negócio nunca foi tão fácil</span>
+          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+            {/* Conteúdo de texto à esquerda */}
+            <div className="max-w-2xl text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/40 mb-6 backdrop-blur-sm">
+                <Zap className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">Crescer o seu negócio nunca foi tão fácil</span>
+              </div>
+              
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+                Transforme seu negócio de beleza em uma{" "}
+                <span className="bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
+                  máquina de resultados
+                </span>
+              </h1>
+              
+              <p className="text-base md:text-lg text-white/90 mb-8 max-w-xl">
+                A Lyon Group é uma agência completa de marketing digital e automação para profissionais da beleza que querem crescer com estratégia e tecnologia
+              </p>
+              
+              <Button 
+                size="lg" 
+                className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
+                onClick={() => window.open("https://api.whatsapp.com/send/?phone=5531991625182", "_blank")}
+              >
+                <MessageCircle className="w-5 h-5 mr-2" />
+                Falar com a Lyon Group
+              </Button>
             </div>
             
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-              Transforme seu negócio de beleza em uma{" "}
-              <span className="bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
-                máquina de resultados
-              </span>
-            </h1>
-            
-            <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl">
-              A Lyon Group é uma agência completa de marketing digital e automação para profissionais da beleza que querem crescer com estratégia e tecnologia
-            </p>
-            
-            <Button 
-              size="lg" 
-              className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
-              onClick={() => window.open("https://api.whatsapp.com/send/?phone=5531991625182", "_blank")}
-            >
-              <MessageCircle className="w-5 h-5 mr-2" />
-              Falar com a Lyon Group
-            </Button>
+            {/* Fotos das embaixadoras à direita */}
+            <div className="flex gap-4 lg:gap-6 mt-8 lg:mt-0">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/40 to-primary/10 blur-xl"></div>
+                <div className="relative w-36 h-48 md:w-44 md:h-60 lg:w-52 lg:h-68 rounded-2xl overflow-hidden border-2 border-primary/50 shadow-2xl shadow-primary/30">
+                  <img src={edmila2} alt="Edmila Alice - Embaixadora Lyon Group" className="w-full h-full object-cover" />
+                </div>
+                <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
+                  Edmila Alice
+                </div>
+              </div>
+              <div className="relative mt-12">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/40 to-primary/10 blur-xl"></div>
+                <div className="relative w-36 h-48 md:w-44 md:h-60 lg:w-52 lg:h-68 rounded-2xl overflow-hidden border-2 border-primary/50 shadow-2xl shadow-primary/30">
+                  <img src={romanielly} alt="Romanielly Fernanda - Embaixadora Lyon Group" className="w-full h-full object-cover" />
+                </div>
+                <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
+                  Romanielly
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
