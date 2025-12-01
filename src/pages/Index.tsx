@@ -4,9 +4,8 @@ import { MessageCircle, TrendingUp, Palette, Zap, Users, Award, Target, Calendar
 import Footer from "@/components/Footer";
 import lyonLogo from "@/assets/lyon-group-logo.jpeg";
 import lyonBanner from "@/assets/lyon-banner.jpg";
-import edmila1 from "@/assets/edmila-1.png";
-import edmila2 from "@/assets/edmila-2.png";
-import romanielly from "@/assets/romanielly.jpg";
+import edmilaNova from "@/assets/edmila-nova.png";
+import romaniellyNova from "@/assets/romanielly-nova.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -85,7 +84,7 @@ const Index = () => {
               <div className="relative">
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/40 to-primary/10 blur-xl"></div>
                 <div className="relative w-36 h-48 md:w-44 md:h-60 lg:w-52 lg:h-68 rounded-2xl overflow-hidden border-2 border-primary/50 shadow-2xl shadow-primary/30">
-                  <img src={edmila2} alt="Edmila Alice - Embaixadora Lyon Group" className="w-full h-full object-cover" />
+                  <img src={edmilaNova} alt="Edmila Alice - Embaixadora Lyon Group" className="w-full h-full object-cover" />
                 </div>
                 <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
                   Edmila Alice
@@ -94,7 +93,7 @@ const Index = () => {
               <div className="relative mt-12">
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/40 to-primary/10 blur-xl"></div>
                 <div className="relative w-36 h-48 md:w-44 md:h-60 lg:w-52 lg:h-68 rounded-2xl overflow-hidden border-2 border-primary/50 shadow-2xl shadow-primary/30">
-                  <img src={romanielly} alt="Romanielly Fernanda - Embaixadora Lyon Group" className="w-full h-full object-cover" />
+                  <img src={romaniellyNova} alt="Romanielly Fernanda - Embaixadora Lyon Group" className="w-full h-full object-cover" />
                 </div>
                 <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
                   Romanielly
@@ -120,8 +119,8 @@ const Index = () => {
             <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
               <div className="aspect-[4/5] relative overflow-hidden">
                 <img 
-                  src={edmila2} 
-                  alt="Edmila Alice" 
+                  src={edmilaNova} 
+                  alt="Edmila Alice"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
@@ -136,8 +135,8 @@ const Index = () => {
             <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
               <div className="aspect-[4/5] relative overflow-hidden">
                 <img 
-                  src={romanielly} 
-                  alt="Romanielly Fernanda" 
+                  src={romaniellyNova} 
+                  alt="Romanielly Fernanda"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
