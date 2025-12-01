@@ -82,14 +82,12 @@ const Index = () => {
             {/* Fotos das embaixadoras à direita - encostadas no final da hero */}
             <div className="flex mt-8 lg:mt-0 items-end self-end">
               <div className="relative z-20 -mr-8 lg:-mr-12">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/40 to-primary/10 blur-xl"></div>
-                <div className="relative w-44 h-56 md:w-52 md:h-68 lg:w-64 lg:h-80 rounded-t-2xl overflow-hidden border-2 border-b-0 border-primary/50 shadow-2xl shadow-primary/30">
+                <div className="w-44 h-56 md:w-52 md:h-68 lg:w-64 lg:h-80 rounded-t-2xl overflow-hidden">
                   <img src={romaniellyNova} alt="Romanielly Fernanda - Embaixadora Lyon Group" className="w-full h-full object-cover" />
                 </div>
               </div>
               <div className="relative z-10">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/40 to-primary/10 blur-xl"></div>
-                <div className="relative w-44 h-56 md:w-52 md:h-68 lg:w-64 lg:h-80 rounded-t-2xl overflow-hidden border-2 border-b-0 border-primary/50 shadow-2xl shadow-primary/30">
+                <div className="w-44 h-56 md:w-52 md:h-68 lg:w-64 lg:h-80 rounded-t-2xl overflow-hidden">
                   <img src={edmilaNova} alt="Edmila Alice - Embaixadora Lyon Group" className="w-full h-full object-cover" />
                 </div>
               </div>
