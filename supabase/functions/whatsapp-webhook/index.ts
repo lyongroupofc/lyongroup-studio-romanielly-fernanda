@@ -107,11 +107,13 @@ serve(async (req) => {
       conteudo: mensagem,
     });
 
-    // Buscar histórico de mensagens
+    // Buscar histórico de mensagens (apenas últimas 4 horas)
+    const quatroHorasAtras = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
     const { data: historicoMensagens } = await supabase
       .from('bot_mensagens')
       .select('*')
       .eq('conversa_id', conversa.id)
+      .gte('timestamp', quatroHorasAtras)
       .order('timestamp', { ascending: true })
       .limit(20);
 
@@ -291,7 +293,43 @@ serve(async (req) => {
     console.log(`📌 Referências rápidas criadas: ${referenciasRapidas.length} entradas`);
     
     // Obter contexto atual
-    const contexto = conversa.contexto || {};
+    let contexto = conversa.contexto || {};
+    
+    // 🧹 FASE 1: Limpeza automática de contexto antigo
+    let contextoLimpo = false;
+    
+    // Verificar se a data do contexto já passou
+    if (contexto.data) {
+      const dataContexto = new Date(contexto.data + 'T23:59:59');
+      const agora = new Date();
+      
+      if (dataContexto < agora) {
+        console.log('🧹 Limpando contexto antigo - data já passou:', contexto.data);
+        contexto = {};
+        contextoLimpo = true;
+      }
+    }
+    
+    // Verificar se passou mais de 24h desde último contato
+    if (!contextoLimpo && conversa.ultimo_contato) {
+      const ultimoContato = new Date(conversa.ultimo_contato);
+      const agora = new Date();
+      const diferencaHoras = (agora.getTime() - ultimoContato.getTime()) / (1000 * 60 * 60);
+      
+      if (diferencaHoras > 24) {
+        console.log('🧹 Limpando contexto - passou mais de 24h desde último contato');
+        contexto = {};
+        contextoLimpo = true;
+      }
+    }
+    
+    // Atualizar contexto no banco se foi limpo
+    if (contextoLimpo) {
+      await supabase
+        .from('bot_conversas')
+        .update({ contexto: {} })
+        .eq('id', conversa.id);
+    }
     
     // Buscar cliente existente
     const { data: clienteExistente } = await supabase
@@ -343,6 +381,15 @@ ${referenciasTexto}
 3. ✅ Quando a cliente falar "próxima quarta", "sábado que vem", etc → CONSULTE a "REFERÊNCIA RÁPIDA POR DIA DA SEMANA"
 4. ✅ Se tiver dúvida, mostre 2-3 opções do calendário com datas EXATAS
 5. ⚠️ Se você errar o dia da semana, a cliente vai perder confiança no atendimento
+
+**🎯 AGENDAMENTO PARA TERCEIROS (AMIGOS/FAMÍLIA):**
+Se a cliente mencionar que quer agendar para OUTRA PESSOA (ex: "para minha amiga", "para minha mãe", "para a Adriele"):
+1. **ENTENDA QUE NÃO É PARA A PESSOA QUE ESTÁ CONVERSANDO** - a pessoa no WhatsApp é quem está agendando, mas o atendimento será para outra pessoa
+2. **LIMPE qualquer informação anterior do contexto** - se havia dados de outra conversa/agendamento, desconsidere
+3. Pergunte: **nome completo da pessoa que será atendida**, **telefone com DDD dessa pessoa**, e **data de nascimento dessa pessoa**
+4. Use SEMPRE os dados da OUTRA PESSOA (a que será atendida) para criar o agendamento
+5. **NÃO confunda** os dados de quem está mandando mensagem com os dados de quem será atendida
+6. Exemplo correto: "Perfeito! Para confirmar o agendamento da sua amiga, preciso do nome completo dela, telefone com DDD e data de nascimento."
 
 **Serviços do Studio:**
 ${servicosFormatados}
