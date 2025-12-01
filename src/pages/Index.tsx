@@ -1,116 +1,236 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Calendar, Sparkles, TrendingUp, Palette, Zap, MessageCircle } from "lucide-react";
+import { MessageCircle, TrendingUp, Palette, Zap, Users, Award, Target } from "lucide-react";
 import Footer from "@/components/Footer";
 import lyonLogo from "@/assets/lyon-group-logo.jpeg";
-import { AnimatedBackground } from "@/components/AnimatedBackground";
+import lyonBanner from "@/assets/lyon-banner.jpg";
+import edmila1 from "@/assets/edmila-1.png";
+import edmila2 from "@/assets/edmila-2.png";
+import romanielly from "@/assets/romanielly.jpg";
+
 const Index = () => {
   const navigate = useNavigate();
-  return <div className="min-h-screen gradient-soft flex flex-col relative">
-      <AnimatedBackground />
-      {/* Header com Logo e Texto no Topo Direito */}
-      <header className="w-full py-6">
-        <div className="container mx-auto px-4 flex justify-end">
-          <div className="flex items-center gap-1.5">
-            <div className="text-left">
-              <h3 className="text-xl md:text-2xl font-bold">                                                 Lyon Group
-            </h3>
-              <p className="text-sm md:text-base text-muted-foreground">Sua Agência De Marketing e Automação completa</p>
-            </div>
+  
+  return (
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="w-full py-4 px-4 absolute top-0 left-0 z-20">
+        <div className="container mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-3">
             <div className="relative">
               <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 blur-sm"></div>
               <div className="relative p-1 rounded-full bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-                <img src={lyonLogo} alt="Lyon Group" className="h-14 w-14 object-cover rounded-full" />
+                <img src={lyonLogo} alt="Lyon Group" className="h-12 w-12 object-cover rounded-full" />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-lg md:text-xl font-bold text-white">Lyon Group</h3>
+              <p className="text-xs md:text-sm text-white/90">Sua Agência Completa</p>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            className="bg-primary/10 border-primary/30 text-white hover:bg-primary hover:text-primary-foreground"
+            onClick={() => navigate("/login")}
+          >
+            Área Admin
+          </Button>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ 
+            backgroundImage: `url(${lyonBanner})`,
+            filter: 'brightness(0.6)'
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/50" />
+        
+        <div className="container mx-auto px-4 relative z-10 text-white">
+          <div className="max-w-4xl">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/40 mb-6 backdrop-blur-sm">
+              <Zap className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Crescer o seu negócio nunca foi tão fácil</span>
+            </div>
+            
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+              Transforme seu negócio de beleza em uma{" "}
+              <span className="bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
+                máquina de resultados
+              </span>
+            </h1>
+            
+            <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl">
+              A Lyon Group é uma agência completa de marketing digital e automação para profissionais da beleza que querem crescer com estratégia e tecnologia
+            </p>
+            
+            <Button 
+              size="lg" 
+              className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
+              onClick={() => window.open("https://api.whatsapp.com/send/?phone=5531991625182", "_blank")}
+            >
+              <MessageCircle className="w-5 h-5 mr-2" />
+              Falar com a Lyon Group
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Embaixadoras Section */}
+      <section className="py-20 bg-gradient-to-b from-background to-secondary/20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
+              <Award className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Nossas Embaixadoras</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Conheça nossas embaixadoras</h2>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
+              <div className="aspect-[4/5] relative overflow-hidden">
+                <img 
+                  src={edmila2} 
+                  alt="Edmila Alice" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="text-2xl font-bold mb-2">Edmila Alice</h3>
+                <p className="text-muted-foreground mb-2">Design de Sobrancelhas e Mentora</p>
+                <p className="text-sm text-primary font-semibold mb-3">Embaixadora Lyon Group</p>
+                <p className="text-sm text-muted-foreground">@edmilaalice</p>
+              </div>
+            </div>
+            
+            <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
+              <div className="aspect-[4/5] relative overflow-hidden">
+                <img 
+                  src={romanielly} 
+                  alt="Romanielly Fernanda" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="text-2xl font-bold mb-2">Romanielly Fernanda</h3>
+                <p className="text-muted-foreground mb-2">Nail Designer e Mentora</p>
+                <p className="text-sm text-primary font-semibold mb-3">Embaixadora Lyon Group</p>
+                <p className="text-sm text-muted-foreground">@romaniellyfernanda.nail</p>
               </div>
             </div>
           </div>
         </div>
-      </header>
+      </section>
 
-      <div className="container mx-auto px-4 py-8 md:py-12 flex-1">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Full Beauty System by Lyon Group</span>
-          </div>
-
-          {/* Main Heading */}
-          <div className="space-y-4">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
-              Seja Bem-Vinda,{" "}
-              <span className="bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
-                Romanielly Fernanda
-              </span>
-            </h1>
-            
-            <p className="text-lg md:text-xl text-foreground/80 max-w-3xl mx-auto leading-relaxed">
-              Este é o <span className="font-semibold text-primary">Full Beauty System</span> — o painel completo que vai{" "}
-              <span className="font-semibold text-primary">revolucionar a gestão do seu negócio</span>{" "}
-              com tecnologia, organização e automação estratégica.
-            </p>
-
-            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-              💡 <span className="font-medium text-primary">Mas tem mais:</span> além do painel, você pode integrar serviços que aceleram resultados reais: 
-              gestão de tráfego pago, identidade visual premium, social mídia profissional e muito mais.
-            </p>
-            
-            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-              👇 Clique abaixo e fale com nossa equipe agora mesmo!
+      {/* Soluções Section */}
+      <section className="py-20 bg-gradient-to-b from-secondary/20 to-background">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Soluções Completas para seu Negócio</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Integre serviços estratégicos que aceleram resultados reais
             </p>
           </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:shadow-primary/20 hover:border-primary/50 transition-all duration-300">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
+                <TrendingUp className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold">Tráfego Pago</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Estratégias avançadas para atrair clientes qualificados todos os dias e maximizar seu ROI
+              </p>
+            </div>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Button size="lg" className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300" onClick={() => navigate("/agendar")}>
-              <Calendar className="w-5 h-5 mr-2" />
-              Agendar Horário
-            </Button>
-            <Button size="lg" variant="secondary" className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300" onClick={() => window.open("https://api.whatsapp.com/send/?phone=5531991625182", "_blank")}>
-              <MessageCircle className="w-5 h-5 mr-2" />
-              Falar com a Lyon Group
-            </Button>
-            <Button size="lg" className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300" onClick={() => navigate("/login")}>
-              Área Administrativa
-            </Button>
+            <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:shadow-primary/20 hover:border-primary/50 transition-all duration-300">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
+                <Palette className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold">Social Media</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Presença digital que gera autoridade, conexão e resultados reais
+              </p>
+            </div>
+
+            <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:shadow-primary/20 hover:border-primary/50 transition-all duration-300">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
+                <Zap className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold">Automação Inteligente</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Sistemas personalizados que otimizam seu atendimento e escalam seu negócio com eficiência
+              </p>
+            </div>
+
+            <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:shadow-primary/20 hover:border-primary/50 transition-all duration-300">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
+                <Target className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold">Gestão & Crescimento</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Dados e estratégias para escalar com segurança e profissionalismo
+              </p>
+            </div>
           </div>
         </div>
+      </section>
 
-        {/* Features */}
-        <div className="grid md:grid-cols-3 gap-6 mt-20 max-w-5xl mx-auto">
-          <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:shadow-primary/50 hover:border-primary/50 transition-all duration-300">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
-              <TrendingUp className="w-8 h-8 text-primary" />
+      {/* Stats Section */}
+      <section className="py-20 bg-gradient-to-b from-background to-primary/5">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="text-center space-y-2">
+              <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                5+
+              </div>
+              <p className="text-lg font-semibold">Anos de Experiência</p>
             </div>
-            <h3 className="text-xl font-bold">Tráfego Pago</h3>
-            <p className="text-muted-foreground leading-relaxed">
-              Estratégias avançadas para atrair clientes qualificados todos os dias e maximizar seu ROI
-            </p>
-          </div>
-
-          <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:shadow-primary/50 hover:border-primary/50 transition-all duration-300">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
-              <Palette className="w-8 h-8 text-primary" />
+            
+            <div className="text-center space-y-2">
+              <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                98%
+              </div>
+              <p className="text-lg font-semibold">Taxa de Satisfação</p>
             </div>
-            <h3 className="text-xl font-bold">Design Premium</h3>
-            <p className="text-muted-foreground leading-relaxed">
-              Identidade visual sofisticada que eleva sua marca e conquista a confiança dos seus clientes
-            </p>
-          </div>
-
-          <div className="text-center space-y-4 p-8 rounded-2xl bg-card border border-border/50 shadow-lg hover:shadow-xl hover:shadow-primary/50 hover:border-primary/50 transition-all duration-300">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
-              <Zap className="w-8 h-8 text-primary" />
+            
+            <div className="text-center space-y-2">
+              <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                +3x
+              </div>
+              <p className="text-lg font-semibold">Crescimento Médio</p>
             </div>
-            <h3 className="text-xl font-bold">Automação Inteligente</h3>
-            <p className="text-muted-foreground leading-relaxed">
-              Sistemas personalizados que otimizam seu atendimento e escalam seu negócio com eficiência
-            </p>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* CTA Final */}
+      <section className="py-20 bg-gradient-to-b from-primary/5 to-background">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">
+            Pronto para transformar seu negócio?
+          </h2>
+          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Fale com nossa equipe e descubra como a Lyon Group pode acelerar seus resultados
+          </p>
+          <Button 
+            size="lg" 
+            className="text-lg px-8 shadow-lg hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
+            onClick={() => window.open("https://api.whatsapp.com/send/?phone=5531991625182", "_blank")}
+          >
+            <MessageCircle className="w-5 h-5 mr-2" />
+            Falar com a Lyon Group
+          </Button>
+        </div>
+      </section>
       
       <Footer />
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
