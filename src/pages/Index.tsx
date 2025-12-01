@@ -39,7 +39,7 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+      <section className="relative min-h-screen flex items-end overflow-hidden pt-20 pb-0">
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ 
@@ -49,10 +49,10 @@ const Index = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/50" />
         
-        <div className="container mx-auto px-4 relative z-10 text-white">
-          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+        <div className="container mx-auto px-4 relative z-10 text-white pb-0">
+          <div className="flex flex-col lg:flex-row items-end gap-8 lg:gap-12">
             {/* Conteúdo de texto à esquerda */}
-            <div className="max-w-2xl text-center lg:text-left">
+            <div className="max-w-2xl text-center lg:text-left pb-16 lg:pb-24">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/40 mb-6 backdrop-blur-sm">
                 <Zap className="w-4 h-4 text-primary" />
                 <span className="text-sm font-medium">Crescer o seu negócio nunca foi tão fácil</span>
@@ -79,24 +79,24 @@ const Index = () => {
               </Button>
             </div>
             
-            {/* Fotos das embaixadoras à direita */}
-            <div className="flex gap-4 lg:gap-6 mt-8 lg:mt-0">
+            {/* Fotos das embaixadoras à direita - encostadas no final da hero */}
+            <div className="flex gap-4 lg:gap-6 mt-8 lg:mt-0 items-end self-end">
               <div className="relative">
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/40 to-primary/10 blur-xl"></div>
-                <div className="relative w-36 h-48 md:w-44 md:h-60 lg:w-52 lg:h-68 rounded-2xl overflow-hidden border-2 border-primary/50 shadow-2xl shadow-primary/30">
-                  <img src={edmilaNova} alt="Edmila Alice - Embaixadora Lyon Group" className="w-full h-full object-cover" />
-                </div>
-                <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
-                  Edmila Alice
-                </div>
-              </div>
-              <div className="relative mt-12">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/40 to-primary/10 blur-xl"></div>
-                <div className="relative w-36 h-48 md:w-44 md:h-60 lg:w-52 lg:h-68 rounded-2xl overflow-hidden border-2 border-primary/50 shadow-2xl shadow-primary/30">
+                <div className="relative w-36 h-48 md:w-44 md:h-60 lg:w-52 lg:h-68 rounded-t-2xl overflow-hidden border-2 border-b-0 border-primary/50 shadow-2xl shadow-primary/30">
                   <img src={romaniellyNova} alt="Romanielly Fernanda - Embaixadora Lyon Group" className="w-full h-full object-cover" />
                 </div>
-                <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
+                <div className="absolute top-4 right-4 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
                   Romanielly
+                </div>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/40 to-primary/10 blur-xl"></div>
+                <div className="relative w-36 h-48 md:w-44 md:h-60 lg:w-52 lg:h-68 rounded-t-2xl overflow-hidden border-2 border-b-0 border-primary/50 shadow-2xl shadow-primary/30">
+                  <img src={edmilaNova} alt="Edmila Alice - Embaixadora Lyon Group" className="w-full h-full object-cover" />
+                </div>
+                <div className="absolute top-4 right-4 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
+                  Edmila Alice
                 </div>
               </div>
             </div>
@@ -119,24 +119,8 @@ const Index = () => {
             <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
               <div className="aspect-[4/5] relative overflow-hidden">
                 <img 
-                  src={edmilaNova} 
-                  alt="Edmila Alice"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-2xl font-bold mb-2">Edmila Alice</h3>
-                <p className="text-muted-foreground mb-2">Design de Sobrancelhas e Mentora</p>
-                <p className="text-sm text-primary font-semibold mb-3">Embaixadora Lyon Group</p>
-                <p className="text-sm text-muted-foreground">@edmilaalice</p>
-              </div>
-            </div>
-            
-            <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
-              <div className="aspect-[4/5] relative overflow-hidden">
-                <img 
                   src={romaniellyNova} 
-                  alt="Romanielly Fernanda"
+                  alt="Romanielly Fernanda" 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
@@ -145,6 +129,22 @@ const Index = () => {
                 <p className="text-muted-foreground mb-2">Nail Designer e Mentora</p>
                 <p className="text-sm text-primary font-semibold mb-3">Embaixadora Lyon Group</p>
                 <p className="text-sm text-muted-foreground">@romaniellyfernanda.nail</p>
+              </div>
+            </div>
+            
+            <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
+              <div className="aspect-[4/5] relative overflow-hidden">
+                <img 
+                  src={edmilaNova} 
+                  alt="Edmila Alice" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="text-2xl font-bold mb-2">Edmila Alice</h3>
+                <p className="text-muted-foreground mb-2">Design de Sobrancelhas e Mentora</p>
+                <p className="text-sm text-primary font-semibold mb-3">Embaixadora Lyon Group</p>
+                <p className="text-sm text-muted-foreground">@edmilaalice</p>
               </div>
             </div>
           </div>
