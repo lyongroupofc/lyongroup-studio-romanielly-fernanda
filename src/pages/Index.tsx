@@ -80,23 +80,17 @@ const Index = () => {
             </div>
             
             {/* Fotos das embaixadoras à direita - encostadas no final da hero */}
-            <div className="flex gap-4 lg:gap-6 mt-8 lg:mt-0 items-end self-end">
-              <div className="relative">
+            <div className="flex mt-8 lg:mt-0 items-end self-end">
+              <div className="relative z-20 -mr-8 lg:-mr-12">
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/40 to-primary/10 blur-xl"></div>
-                <div className="relative w-36 h-48 md:w-44 md:h-60 lg:w-52 lg:h-68 rounded-t-2xl overflow-hidden border-2 border-b-0 border-primary/50 shadow-2xl shadow-primary/30">
+                <div className="relative w-44 h-56 md:w-52 md:h-68 lg:w-64 lg:h-80 rounded-t-2xl overflow-hidden border-2 border-b-0 border-primary/50 shadow-2xl shadow-primary/30">
                   <img src={romaniellyNova} alt="Romanielly Fernanda - Embaixadora Lyon Group" className="w-full h-full object-cover" />
                 </div>
-                <div className="absolute top-4 right-4 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
-                  Romanielly
-                </div>
               </div>
-              <div className="relative">
+              <div className="relative z-10">
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/40 to-primary/10 blur-xl"></div>
-                <div className="relative w-36 h-48 md:w-44 md:h-60 lg:w-52 lg:h-68 rounded-t-2xl overflow-hidden border-2 border-b-0 border-primary/50 shadow-2xl shadow-primary/30">
+                <div className="relative w-44 h-56 md:w-52 md:h-68 lg:w-64 lg:h-80 rounded-t-2xl overflow-hidden border-2 border-b-0 border-primary/50 shadow-2xl shadow-primary/30">
                   <img src={edmilaNova} alt="Edmila Alice - Embaixadora Lyon Group" className="w-full h-full object-cover" />
-                </div>
-                <div className="absolute top-4 right-4 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
-                  Edmila Alice
                 </div>
               </div>
             </div>
