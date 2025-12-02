@@ -61,8 +61,10 @@ const Index = () => {
                 <span className="text-sm font-medium">Crescer o seu negócio nunca foi tão fácil</span>
               </div>
               
-              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight lg:whitespace-nowrap">
-                Transforme seu negócio de beleza em uma{" "}
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+                Transforme seu negócio de beleza
+                <br className="hidden lg:block" />
+                em uma {""}
                 <span className="bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
                   máquina de resultados
                 </span>
