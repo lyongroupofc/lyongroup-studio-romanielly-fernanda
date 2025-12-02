@@ -594,15 +594,16 @@ Romanielly - Banco Sicoob
 
 **Regra de Pagamento:** Sempre que confirmar um agendamento, informe as condições de pagamento de forma natural e amigável.
 
-**Regras Importantes:**
-1. NÃO funcionamos aos domingos - sempre informe isso se cliente escolher domingo
-2. Para agendar, você PRECISA de: serviço, data, horário e nome da cliente
-3. O TELEFONE já está disponível no sistema - NÃO PERGUNTE o telefone da cliente
-4. Escolha SEMPRE um serviço usando exatamente um dos nomes listados em "Serviços Disponíveis". Não invente nomes.
-5. Não invente IDs de serviço. Se não souber o servico_id, deixe-o em branco; o sistema resolve pelo nome.
-6. Use a ferramenta criar_agendamento SOMENTE quando tiver TODAS as informações (serviço, data, horário e nome)
-7. A ferramenta vai validar se há disponibilidade e criar o agendamento automaticamente
-8. Se não houver vaga, a ferramenta vai retornar sugestões de horários alternativos
+    **Regras Importantes:**
+    1. NÃO funcionamos aos domingos - sempre informe isso se cliente escolher domingo
+    2. Para agendar, você PRECISA de: serviço, data, horário e nome da cliente
+    3. O TELEFONE já está disponível no sistema - NÃO PERGUNTE o telefone da cliente
+    4. Escolha SEMPRE um serviço usando exatamente um dos nomes listados em "Serviços Disponíveis". Não invente nomes.
+    5. Não invente IDs de serviço. Se não souber o servico_id, deixe-o em branco; o sistema resolve pelo nome.
+    6. Use a ferramenta criar_agendamento SOMENTE quando tiver TODAS as informações (serviço, data, horário e nome)
+    7. A ferramenta vai validar se há disponibilidade e criar o agendamento automaticamente
+    8. Se não houver vaga, a ferramenta vai retornar sugestões de horários alternativos
+    9. **VOCABULÁRIO CRÍTICO:** só use palavras como "agendado", "agendada", "confirmado" ou "confirmada" DEPOIS que o sistema criar o agendamento com a ferramenta criar_agendamento ou criar_agendamento_multiplo. Antes disso, use expressões como "esse horário está disponível" ou "podemos combinar para esse horário".
 **Política de Cancelamento:**
 - Cancelamento: permitido até 24 horas antes
 - Reagendamento: permitido até 24 horas antes
@@ -875,6 +876,7 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
 
     let resposta = aiData.choices[0]?.message?.content || 'Desculpe, não entendi. Pode reformular?';
     const toolCalls = aiData.choices[0]?.message?.tool_calls;
+    let agendamentoCriado = false;
 
     // Extrair e salvar contexto após resposta da IA
     console.log('🔍 Contexto ANTES:', JSON.stringify(conversa.contexto || {}));
@@ -1684,6 +1686,7 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
           }
 
           console.log('✅ Agendamento criado:', novoAgendamento);
+          agendamentoCriado = true;
 
           // Formatar resposta de confirmação
           const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
@@ -1850,6 +1853,7 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             const diaSemana = diasSemana[dataAgendamento.getUTCDay()];
             
             resposta = `Perfeito! Seus agendamentos foram confirmados para ${dd}/${mm} (${diaSemana}):\n\n${agendamentosCriados.map(a => `💅 ${a}`).join('\n')}\n\nTe aguardo, ${args.cliente_nome.split(' ')[0]}! 💜✨`;
+            agendamentoCriado = true;
 
             await supabase
               .from('bot_conversas')
@@ -1864,6 +1868,17 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
           }
           continue;
         }
+      }
+    }
+
+    // Garantir que não usamos vocabulário de confirmação sem agendamento real
+    if (!agendamentoCriado) {
+      const confirmacaoRegex = /\b(agendad[ao]s?|confirmad[ao]s?)\b/i;
+      if (confirmacaoRegex.test(resposta)) {
+        console.log('⚠️ Ajustando resposta para remover "agendado/confirmado" sem agendamento criado:', resposta);
+        resposta = resposta
+          .replace(/\bagendad[ao]s?\b/gi, 'combinado')
+          .replace(/\bconfirmad[ao]s?\b/gi, 'combinado');
       }
     }
 
