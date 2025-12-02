@@ -42,7 +42,7 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-end overflow-hidden pt-20 pb-0">
+      <section className="relative min-h-[80vh] md:min-h-screen flex items-center md:items-end overflow-hidden pt-24 md:pt-20 pb-0">
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ 
@@ -83,19 +83,19 @@ const Index = () => {
             </div>
             
             {/* Fotos das embaixadoras à direita - encostadas no final da hero */}
-            <div className="flex mt-8 lg:mt-0 items-end self-end">
-              <div className="relative z-10 -mr-10 lg:-mr-16">
-                <div className="w-52 h-64 md:w-64 md:h-80 lg:w-80 lg:h-96 rounded-t-2xl overflow-hidden">
+            <div className="flex mt-8 lg:mt-0 items-end self-center lg:self-end justify-center">
+              <div className="relative z-10 -mr-2 sm:-mr-4 lg:-mr-16">
+                <div className="w-32 h-40 sm:w-40 sm:h-52 md:w-56 md:h-72 lg:w-72 lg:h-96 rounded-t-2xl overflow-hidden">
                   <img src={romaniellyNova} alt="Romanielly Fernanda - Embaixadora Lyon Group" className="w-full h-full object-cover" />
                 </div>
               </div>
-              <div className="relative z-20 -mr-10 lg:-mr-16">
-                <div className="w-52 h-64 md:w-64 md:h-80 lg:w-80 lg:h-96 rounded-t-2xl overflow-hidden">
+              <div className="relative z-20 -mr-2 sm:-mr-4 lg:-mr-16">
+                <div className="w-32 h-40 sm:w-40 sm:h-52 md:w-56 md:h-72 lg:w-72 lg:h-96 rounded-t-2xl overflow-hidden">
                   <img src={anaAndradeHero} alt="Ana Andrade - Embaixadora Lyon Group" className="w-full h-full object-cover object-top md:object-center" />
                 </div>
               </div>
               <div className="relative z-10">
-                <div className="w-52 h-64 md:w-64 md:h-80 lg:w-80 lg:h-96 rounded-t-2xl overflow-hidden">
+                <div className="w-32 h-40 sm:w-40 sm:h-52 md:w-56 md:h-72 lg:w-72 lg:h-96 rounded-t-2xl overflow-hidden">
                   <img src={edmilaNova} alt="Edmila Alice - Embaixadora Lyon Group" className="w-full h-full object-cover" />
                 </div>
               </div>
