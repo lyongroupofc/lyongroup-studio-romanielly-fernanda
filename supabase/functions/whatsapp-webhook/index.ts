@@ -772,10 +772,27 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
         type: "function",
         function: {
           name: "consultar_agendamento",
-          description: "Consulta os agendamentos ativos do cliente. Use para verificar se o cliente já tem agendamento antes de cancelar ou reagendar.",
+          description: "Consulta os agendamentos do cliente no painel. Use para confirmar se um horário específico está realmente registrado ou para listar próximos horários ativos.",
           parameters: {
             type: "object",
-            properties: {},
+            properties: {
+              telefone: {
+                type: "string",
+                description: "Telefone da cliente com DDD (apenas números). Se não informar, o bot usará o telefone desta conversa."
+              },
+              data: {
+                type: "string",
+                description: "Data do agendamento no formato YYYY-MM-DD (opcional, para conferir um dia específico)."
+              },
+              horario: {
+                type: "string",
+                description: "Horário do agendamento no formato HH:MM (opcional, para conferir um horário específico)."
+              },
+              cliente_nome: {
+                type: "string",
+                description: "Nome completo da cliente (opcional, apenas para ajudar na conferência)."
+              }
+            },
             required: []
           }
         }
@@ -1238,23 +1255,72 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
         }
 
         if (toolCall.function.name === 'consultar_agendamento') {
-          console.log('🔍 Consultando agendamento...');
+          console.log('🔍 Consultando agendamento (confirmação no painel)...');
           
-          const { data: agendamentosAtivos } = await supabase
+          let args: any = {};
+          try {
+            args = toolCall.function.arguments ? JSON.parse(toolCall.function.arguments) : {};
+          } catch (e) {
+            console.warn('⚠️ Não foi possível parsear argumentos de consultar_agendamento, usando defaults.', e);
+          }
+
+          const telefoneConsultaRaw: string = (args.telefone as string | undefined) || telefone;
+          const telefoneConsulta = (telefoneConsultaRaw || '').replace(/\D/g, '');
+
+          let query = supabase
             .from('agendamentos')
             .select('*')
-            .eq('cliente_telefone', telefone)
-            .neq('status', 'Cancelado')
+            .neq('status', 'Cancelado');
+
+          if (telefoneConsulta) {
+            query = query.eq('cliente_telefone', telefoneConsulta);
+          }
+
+          if (args.data) {
+            query = query.eq('data', args.data);
+          }
+
+          if (args.horario) {
+            query = query.eq('horario', args.horario);
+          }
+
+          if (args.cliente_nome) {
+            query = query.ilike('cliente_nome', `%${args.cliente_nome}%`);
+          }
+
+          const { data: agendamentosEncontrados, error: erroConsultaAg } = await query
             .order('data', { ascending: true })
             .order('horario', { ascending: true });
 
-          if (!agendamentosAtivos || agendamentosAtivos.length === 0) {
-            resposta = 'Você não tem nenhum agendamento ativo no momento, amor. Quer agendar algo? 💜';
-          } else {
-            const agendamento = agendamentosAtivos[0];
-            const [yyyy, mm, dd] = agendamento.data.split('-');
-            resposta = `Encontrei seu agendamento: ${agendamento.servico_nome} no dia ${dd}/${mm}/${yyyy} às ${agendamento.horario}. 💜`;
+          if (erroConsultaAg) {
+            console.error('❌ Erro ao consultar agendamentos:', erroConsultaAg);
+            resposta = 'Amor, tentei conferir no painel mas tive um problema técnico. Pode tentar perguntar de novo daqui a pouquinho? 💜';
+            continue;
           }
+
+          if (!agendamentosEncontrados || agendamentosEncontrados.length === 0) {
+            if (args.data && args.horario) {
+              const [yyyy, mm, dd] = String(args.data).split('-');
+              resposta = `Olhei aqui no painel e não encontrei nenhum agendamento para você no dia ${dd}/${mm} às ${args.horario}, amor. Isso significa que esse horário não está registrado. Se quiser, posso agendar certinho agora pra você. 💜`;
+            } else {
+              resposta = 'Não encontrei nenhum agendamento ativo no painel para esse telefone agora, amor. Se quiser, posso criar um horário pra você. 💜';
+            }
+            continue;
+          }
+
+          if (args.data && args.horario) {
+            const agendamento = agendamentosEncontrados[0];
+            const [yyyy, mm, dd] = agendamento.data.split('-');
+            resposta = `Sim, amor! Encontrei no painel: ${agendamento.servico_nome} no dia ${dd}/${mm}/${yyyy} às ${agendamento.horario}. Esse horário está confirmado no sistema. 💜`;
+            // Marcar como "seguro" para usar vocabulário de confirmação,
+            // já que estamos espelhando exatamente o que existe no painel
+            agendamentoCriado = true;
+          } else {
+            const agendamento = agendamentosEncontrados[0];
+            const [yyyy, mm, dd] = agendamento.data.split('-');
+            resposta = `Encontrei no painel: ${agendamento.servico_nome} no dia ${dd}/${mm}/${yyyy} às ${agendamento.horario}. 💜`;
+          }
+
           continue;
         }
 
