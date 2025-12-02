@@ -622,6 +622,13 @@ Romanielly - Banco Sicoob
 - NÃO repita informações que já estão no contexto (marcadas com ✅)
 - Quando a cliente perguntar "tem vaga de manhã/tarde?", responda: "Me diz um horário que você prefere e eu verifico! 😊"
 
+**⛔⛔ REGRA CRÍTICA - NUNCA AVISE QUE VAI VERIFICAR:**
+- ❌ PROIBIDO: "Deixa eu verificar...", "Um minutinho...", "Vou checar...", "Aguarda que vou verificar...", "Deixa eu ver..."
+- ✅ CORRETO: Chame a ferramenta SILENCIOSAMENTE e responda APENAS com o RESULTADO FINAL
+- Quando precisar verificar disponibilidade, NÃO avise a cliente que vai verificar
+- Sua resposta deve ser COMPLETA e DEFINITIVA, nunca intermediária
+- A cliente NÃO deve esperar outra mensagem após a sua resposta
+
 **⚠️ EXEMPLO DE USO CORRETO DA REFERÊNCIA RÁPIDA:**
 Cliente: "Quero agendar na próxima quarta"
 Você: [CONSULTA "REFERÊNCIA RÁPIDA POR DIA DA SEMANA" → encontra "PRÓXIMA QUARTA-FEIRA: 04/12/2025"]
@@ -631,26 +638,34 @@ Você: "Perfeito! Quarta-feira dia 04/12. Que horário você prefere?" ✅ CORRE
 - ❌ ERRADO: Pedir nome e data de nascimento ANTES de verificar se o horário está disponível
 - ✅ CORRETO: Verificar disponibilidade PRIMEIRO, só depois pedir dados pessoais
 
-**Exemplo CORRETO de conversa:**
+**Exemplo CORRETO de conversa (NUNCA diga "deixa eu verificar"):**
 Cliente: "Quero agendar Manicure para amanhã às 14:00"
-Você: "Perfeito! Deixa eu verificar se esse horário está disponível..." [CHAMA verificar_disponibilidade]
-Sistema: "Horário disponível"
-Você: "Ótima notícia! O horário de 14:00 está disponível para Manicure amanhã! Agora preciso do seu nome completo e telefone com DDD para confirmar. Se quiser, pode passar a data de nascimento também (é opcional) 😊"
-Cliente: "Maria Silva, 31987654321"
-Você: [CHAMA criar_agendamento] "Agendamento confirmado! Maria Silva, Manicure amanhã às 14:00..."
+[IA chama verificar_disponibilidade SILENCIOSAMENTE - sem avisar a cliente]
+Você: "Ótima notícia! O horário de 14:00 está disponível para Manicure amanhã! 🎉 Agora preciso do seu nome completo e telefone com DDD para confirmar. Se quiser, pode passar a data de nascimento também (é opcional) 💜"
+✅ CORRETO: Resposta única e definitiva COM o resultado da verificação
 
 **Exemplo CORRETO quando cliente pergunta sobre disponibilidade:**
 Cliente: "Tem vaga de manhã na quarta-feira?"
-Você: "Claro! Que horário da manhã você prefere? Me diz um horário e eu verifico se está disponível! 😊"
+Você: "Me diz um horário que você prefere e eu te confirmo na hora! 😊"
 Cliente: "Às 10:00"
-Você: [CHAMA verificar_disponibilidade] → Se disponível, confirma. Se não, sistema retorna alternativas.
+[IA chama verificar_disponibilidade SILENCIOSAMENTE]
+Você: "Perfeito! 10:00 está disponível para quarta-feira! Qual serviço você gostaria?" ✅ CORRETO
 
 **Exemplo ERRADO (NÃO FAÇA ISSO):**
 Cliente: "Quero agendar Manicure para amanhã às 14:00"
-Você: ❌ "Perfeito! Qual seu nome completo e data de nascimento?" [ERRO: NÃO verificou disponibilidade antes de pedir dados]
+Você: ❌ "Perfeito! Deixa eu verificar..." [ERRO GRAVE: avisou que vai verificar, cliente vai esperar outra mensagem]
+Você: ❌ "Perfeito! Qual seu nome completo?" [ERRO: NÃO verificou disponibilidade antes de pedir dados]
 
 Cliente: "Tem vaga de manhã?"
 Você: ❌ "Sim! Temos 09:00 e 10:00 disponíveis!" [ERRO CRÍTICO: sugeriu horários SEM verificar disponibilidade]
+
+**🎯 MÚLTIPLOS SERVIÇOS (2+ serviços consecutivos):**
+Se a cliente quiser agendar 2 ou mais serviços no mesmo dia (ex: "quero fazer sobrancelha e cílios"):
+1. Identifique todos os serviços desejados
+2. Pergunte data e horário de INÍCIO (horário do primeiro serviço)
+3. Calcule automaticamente os horários consecutivos baseado na duração de cada serviço
+4. Use criar_agendamento_multiplo para agendar todos de uma vez
+Exemplo: Sobrancelha (30min) às 14:00 + Cílios (60min) às 14:30 = ambos agendados com horários corretos
 
 **Importante:**
 - Se a cliente mencionar "alisamento" ou "cabelo afro", ajude a identificar o serviço correto
@@ -755,6 +770,53 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
               }
             },
             required: ["confirmar"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "criar_agendamento_multiplo",
+          description: "Cria múltiplos agendamentos consecutivos para quando a cliente quer fazer 2 ou mais serviços no mesmo dia. Use esta ferramenta quando a cliente pedir mais de um serviço (ex: 'quero fazer sobrancelha e cílios'). Os horários devem ser calculados consecutivamente com base na duração de cada serviço.",
+          parameters: {
+            type: "object",
+            properties: {
+              agendamentos: {
+                type: "array",
+                description: "Lista de agendamentos a serem criados em sequência",
+                items: {
+                  type: "object",
+                  properties: {
+                    servico_nome: {
+                      type: "string",
+                      description: "Nome do serviço"
+                    },
+                    horario: {
+                      type: "string",
+                      description: "Horário no formato HH:MM"
+                    }
+                  },
+                  required: ["servico_nome", "horario"]
+                }
+              },
+              data: {
+                type: "string",
+                description: "Data dos agendamentos no formato YYYY-MM-DD"
+              },
+              cliente_nome: {
+                type: "string",
+                description: "Nome completo da cliente"
+              },
+              telefone: {
+                type: "string",
+                description: "Telefone da cliente com DDD (apenas números)"
+              },
+              data_nascimento: {
+                type: "string",
+                description: "Data de nascimento no formato DD/MM/AAAA (OPCIONAL)"
+              }
+            },
+            required: ["agendamentos", "data", "cliente_nome", "telefone"]
           }
         }
       }
@@ -1615,6 +1677,169 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
               ultimo_contato: new Date().toISOString() 
             })
             .eq('id', conversa.id);
+        }
+
+        // NOVO: Processar múltiplos agendamentos consecutivos
+        if (toolCall.function.name === 'criar_agendamento_multiplo') {
+          const args = JSON.parse(toolCall.function.arguments);
+          console.log('📝 Criando agendamentos múltiplos:', args);
+
+          const normalize = (s: string) => s
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          // Validar todos os serviços primeiro
+          const agendamentosValidados: Array<{servico: any, horario: string}> = [];
+          for (const ag of args.agendamentos) {
+            const servicoEncontrado = servicos?.find(s => normalize(s.nome) === normalize(ag.servico_nome))
+              ?? servicos?.find(s => normalize(s.nome).includes(normalize(ag.servico_nome)) || normalize(ag.servico_nome).includes(normalize(s.nome)));
+            
+            if (!servicoEncontrado) {
+              resposta = `Ops, não encontrei o serviço "${ag.servico_nome}". Pode escolher da lista de serviços disponíveis?`;
+              continue;
+            }
+            agendamentosValidados.push({ servico: servicoEncontrado, horario: ag.horario });
+          }
+
+          if (agendamentosValidados.length !== args.agendamentos.length) {
+            continue;
+          }
+
+          // Verificar disponibilidade de todos os horários
+          const dataAgendamento = new Date(args.data + 'T12:00:00');
+          const dayOfWeek = dataAgendamento.getDay();
+
+          if (dayOfWeek === 0 || dayOfWeek === 1) {
+            resposta = `Desculpa amor, não funcionamos aos ${dayOfWeek === 0 ? 'domingos' : 'segundas-feiras'}. Pode escolher outra data? 💜`;
+            continue;
+          }
+
+          const { data: agendamentosExistentes } = await supabase
+            .from('agendamentos')
+            .select('horario, servico_id, servico_nome')
+            .eq('data', args.data)
+            .neq('status', 'Cancelado');
+
+          const slotsOcupados = new Set<string>();
+          (agendamentosExistentes || []).forEach((ag: any) => {
+            const servicoAg = servicos?.find(s => s.id === ag.servico_id);
+            const duracao = servicoAg?.duracao || 30;
+            const [h, m] = ag.horario.split(':').map(Number);
+            const inicioMin = h * 60 + m;
+            const fimMin = inicioMin + duracao;
+            for (let t = inicioMin; t < fimMin; t += 30) {
+              const hh = String(Math.floor(t / 60)).padStart(2, '0');
+              const mm = String(t % 60).padStart(2, '0');
+              slotsOcupados.add(`${hh}:${mm}`);
+            }
+          });
+
+          // Verificar se todos os slots necessários estão livres
+          let todosDisponiveis = true;
+          for (const ag of agendamentosValidados) {
+            const [h, m] = ag.horario.split(':').map(Number);
+            const inicioMin = h * 60 + m;
+            const fimMin = inicioMin + ag.servico.duracao;
+            for (let t = inicioMin; t < fimMin; t += 30) {
+              const slot = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+              if (slotsOcupados.has(slot)) {
+                todosDisponiveis = false;
+                break;
+              }
+            }
+            if (!todosDisponiveis) break;
+          }
+
+          if (!todosDisponiveis) {
+            resposta = `Desculpa amor, um dos horários não está disponível para os serviços escolhidos. Pode tentar outros horários? 💜`;
+            continue;
+          }
+
+          // Criar/atualizar cliente
+          const telefoneCliente = args.telefone || telefone;
+          const { data: clienteBuscado } = await supabase
+            .from('clientes')
+            .select('*')
+            .eq('telefone', telefoneCliente)
+            .maybeSingle();
+
+          let dataNascimentoFormatada = clienteBuscado?.data_nascimento;
+          if (args.data_nascimento) {
+            const [dia, mes, ano] = args.data_nascimento.split('/');
+            dataNascimentoFormatada = `${ano}-${mes}-${dia}`;
+          }
+
+          let clienteId = clienteBuscado?.id;
+          if (clienteBuscado) {
+            await supabase
+              .from('clientes')
+              .update({
+                nome: args.cliente_nome || clienteBuscado.nome,
+                data_nascimento: dataNascimentoFormatada,
+              })
+              .eq('id', clienteBuscado.id);
+          } else {
+            const { data: novoCliente } = await supabase
+              .from('clientes')
+              .insert({
+                nome: args.cliente_nome,
+                telefone: telefoneCliente,
+                data_nascimento: dataNascimentoFormatada,
+              })
+              .select()
+              .single();
+            clienteId = novoCliente?.id;
+          }
+
+          // Criar todos os agendamentos
+          const agendamentosCriados: string[] = [];
+          for (const ag of agendamentosValidados) {
+            const { data: novoAg, error: erroAg } = await supabase
+              .from('agendamentos')
+              .insert({
+                servico_id: ag.servico.id,
+                servico_nome: ag.servico.nome,
+                data: args.data,
+                horario: ag.horario,
+                cliente_nome: args.cliente_nome,
+                cliente_telefone: telefoneCliente,
+                cliente_id: clienteId,
+                status: 'Confirmado',
+                origem: 'bot',
+                bot_conversa_id: conversa.id,
+                instancia: instancia || 'default',
+              })
+              .select()
+              .single();
+
+            if (!erroAg && novoAg) {
+              agendamentosCriados.push(`${ag.servico.nome} às ${ag.horario}`);
+              console.log('✅ Agendamento múltiplo criado:', novoAg);
+            }
+          }
+
+          if (agendamentosCriados.length === agendamentosValidados.length) {
+            const [yyyy, mm, dd] = args.data.split('-');
+            const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+            const diaSemana = diasSemana[dataAgendamento.getUTCDay()];
+            
+            resposta = `Perfeito! Seus agendamentos foram confirmados para ${dd}/${mm} (${diaSemana}):\n\n${agendamentosCriados.map(a => `💅 ${a}`).join('\n')}\n\nTe aguardo, ${args.cliente_nome.split(' ')[0]}! 💜✨`;
+
+            await supabase
+              .from('bot_conversas')
+              .update({ 
+                contexto: {},
+                cliente_nome: args.cliente_nome, 
+                ultimo_contato: new Date().toISOString() 
+              })
+              .eq('id', conversa.id);
+          } else {
+            resposta = 'Ops, tive um problema ao criar alguns agendamentos. Pode tentar novamente? 😊';
+          }
+          continue;
         }
       }
     }
