@@ -90,7 +90,7 @@ const Index = () => {
                 </div>
               </div>
               <div className="relative z-20 -mr-2 sm:-mr-4 lg:-mr-16">
-                <div className="w-32 h-40 sm:w-40 sm:h-52 md:w-56 md:h-72 lg:w-72 lg:h-96 rounded-t-2xl overflow-hidden">
+                <div className="w-36 h-48 sm:w-44 sm:h-60 md:w-60 md:h-80 lg:w-80 lg:h-96 rounded-t-2xl overflow-hidden">
                   <img src={anaAndradeHero} alt="Ana Andrade - Embaixadora Lyon Group" className="w-full h-full object-cover object-top md:object-center" />
                 </div>
               </div>
