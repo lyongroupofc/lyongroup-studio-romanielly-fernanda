@@ -965,9 +965,23 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
           // Gerar slots ocupados
           const { data: agendamentosExistentes } = await supabase
             .from('agendamentos')
-            .select('horario, servico_id, servico_nome')
+            .select('id, data, horario, servico_id, servico_nome, cliente_telefone')
             .eq('data', args.data)
             .neq('status', 'Cancelado');
+
+          // Se já existe um agendamento deste mesmo número exatamente nesse horário,
+          // informar que ele JÁ TEM esse horário reservado, em vez de dizer que está indisponível
+          const agendamentoMesmoCliente = (agendamentosExistentes || []).find(
+            (ag: any) =>
+              ag.horario === args.horario &&
+              ag.cliente_telefone === telefone
+          );
+
+          if (agendamentoMesmoCliente) {
+            const [yyyyEx, mmEx, ddEx] = agendamentoMesmoCliente.data.split('-');
+            resposta = `Você já tem um agendamento de ${agendamentoMesmoCliente.servico_nome} para ${ddEx}/${mmEx} às ${agendamentoMesmoCliente.horario}, amor. Se quiser mudar o horário, me avisa que eu vejo outra opção pra você 💜`;
+            continue;
+          }
 
           const slotsOcupados = new Set<string>();
           
