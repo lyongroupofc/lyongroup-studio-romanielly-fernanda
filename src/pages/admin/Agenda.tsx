@@ -1005,12 +1005,12 @@ const Agenda = () => {
             </Button>
 
             {/* Agendamentos do dia selecionado */}
-            <div className="mt-6">
-              <h3 className="font-semibold mb-3">Agendamentos deste dia</h3>
+            <div className="mt-6 flex flex-col gap-3">
+              <h3 className="font-semibold">Agendamentos deste dia</h3>
               {agendamentosDia.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum agendamento</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 -mr-2">
                   {agendamentosDia.map((agendamento) => (
                     <Card 
                       key={agendamento.id} 
