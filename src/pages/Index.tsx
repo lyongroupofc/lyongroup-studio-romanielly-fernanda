@@ -7,6 +7,7 @@ import lyonBanner from "@/assets/lyon-banner.jpg";
 import edmilaNova from "@/assets/edmila-nova.png";
 import romaniellyNova from "@/assets/romanielly-nova.png";
 import anaAndradeNova from "@/assets/ana-andrade-nova.png";
+import anaAndradeEmbaixadora from "@/assets/ana-andrade-embaixadora.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -149,7 +150,7 @@ const Index = () => {
             <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
               <div className="aspect-[4/5] relative overflow-hidden bg-white">
                 <img 
-                  src={anaAndradeNova} 
+                  src={anaAndradeEmbaixadora} 
                   alt="Ana Andrade" 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
