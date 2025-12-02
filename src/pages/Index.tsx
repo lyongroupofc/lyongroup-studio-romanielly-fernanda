@@ -86,12 +86,12 @@ const Index = () => {
             <div className="flex mt-8 lg:mt-0 items-end self-end">
               <div className="relative z-10 -mr-10 lg:-mr-16">
                 <div className="w-52 h-64 md:w-64 md:h-80 lg:w-80 lg:h-96 rounded-t-2xl overflow-hidden">
-                  <img src={anaAndradeHero} alt="Ana Andrade - Embaixadora Lyon Group" className="w-full h-full object-cover object-top md:object-center" />
+                  <img src={romaniellyNova} alt="Romanielly Fernanda - Embaixadora Lyon Group" className="w-full h-full object-cover" />
                 </div>
               </div>
               <div className="relative z-20 -mr-10 lg:-mr-16">
                 <div className="w-52 h-64 md:w-64 md:h-80 lg:w-80 lg:h-96 rounded-t-2xl overflow-hidden">
-                  <img src={romaniellyNova} alt="Romanielly Fernanda - Embaixadora Lyon Group" className="w-full h-full object-cover" />
+                  <img src={anaAndradeHero} alt="Ana Andrade - Embaixadora Lyon Group" className="w-full h-full object-cover object-top md:object-center" />
                 </div>
               </div>
               <div className="relative z-10">
@@ -117,6 +117,29 @@ const Index = () => {
           
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
+              <div className="aspect-[4/5] relative overflow-hidden bg-white">
+                <img 
+                  src={anaAndradeEmbaixadora} 
+                  alt="Ana Andrade" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="text-2xl font-bold mb-2">Ana Andrade</h3>
+                <p className="text-muted-foreground mb-2">Lash Designer e Mentora</p>
+                <p className="text-sm text-primary font-semibold mb-3">Embaixadora Lyon Group</p>
+                <a 
+                  href="https://www.instagram.com/andrade.concept" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-sm text-primary hover:underline"
+                >
+                  @andrade.concept
+                </a>
+              </div>
+            </div>
+            
+            <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
               <div className="aspect-[4/5] relative overflow-hidden">
                 <img 
                   src={romaniellyNova} 
@@ -128,7 +151,14 @@ const Index = () => {
                 <h3 className="text-2xl font-bold mb-2">Romanielly Fernanda</h3>
                 <p className="text-muted-foreground mb-2">Nail Designer e Mentora</p>
                 <p className="text-sm text-primary font-semibold mb-3">Embaixadora Lyon Group</p>
-                <p className="text-sm text-muted-foreground">@romaniellyfernanda.nail</p>
+                <a 
+                  href="https://www.instagram.com/romaniellyfernanda.nail" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-sm text-primary hover:underline"
+                >
+                  @romaniellyfernanda.nail
+                </a>
               </div>
             </div>
             
@@ -144,23 +174,14 @@ const Index = () => {
                 <h3 className="text-2xl font-bold mb-2">Edmila Alice</h3>
                 <p className="text-muted-foreground mb-2">Design de Sobrancelhas e Mentora</p>
                 <p className="text-sm text-primary font-semibold mb-3">Embaixadora Lyon Group</p>
-                <p className="text-sm text-muted-foreground">@edmilaalice</p>
-              </div>
-            </div>
-            
-            <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
-              <div className="aspect-[4/5] relative overflow-hidden bg-white">
-                <img 
-                  src={anaAndradeEmbaixadora} 
-                  alt="Ana Andrade" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-2xl font-bold mb-2">Ana Andrade</h3>
-                <p className="text-muted-foreground mb-2">Lash Designer e Mentora</p>
-                <p className="text-sm text-primary font-semibold mb-3">Embaixadora Lyon Group</p>
-                <p className="text-sm text-muted-foreground">@andrade.concept</p>
+                <a 
+                  href="https://www.instagram.com/edmilaalice" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-sm text-primary hover:underline"
+                >
+                  @edmilaalice
+                </a>
               </div>
             </div>
           </div>
