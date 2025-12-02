@@ -86,7 +86,7 @@ const Index = () => {
             <div className="flex mt-8 lg:mt-0 items-end self-end">
               <div className="relative z-10 -mr-10 lg:-mr-16">
                 <div className="w-52 h-64 md:w-64 md:h-80 lg:w-80 lg:h-96 rounded-t-2xl overflow-hidden">
-                  <img src={anaAndradeHero} alt="Ana Andrade - Embaixadora Lyon Group" className="w-full h-full object-cover" />
+                  <img src={anaAndradeHero} alt="Ana Andrade - Embaixadora Lyon Group" className="w-full h-full object-cover object-top md:object-center" />
                 </div>
               </div>
               <div className="relative z-20 -mr-10 lg:-mr-16">
