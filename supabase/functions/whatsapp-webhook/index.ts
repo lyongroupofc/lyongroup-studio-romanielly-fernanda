@@ -1734,7 +1734,7 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             continue;
           }
 
-          // Verificar disponibilidade de todos os horários
+          // Verificar disponibilidade de todos os horários (mesma lógica de verificar_disponibilidade)
           const dataAgendamento = new Date(args.data + 'T12:00:00');
           const dayOfWeek = dataAgendamento.getDay();
 
@@ -1743,6 +1743,16 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             continue;
           }
 
+          // Buscar configuração do dia
+          const { data: config } = await supabase
+            .from('agenda_config')
+            .select('*')
+            .eq('data', args.data)
+            .maybeSingle();
+
+          const diaEstaFechado = config?.fechado || false;
+
+          // Buscar agendamentos existentes do dia
           const { data: agendamentosExistentes } = await supabase
             .from('agendamentos')
             .select('horario, servico_id, servico_nome')
@@ -1750,12 +1760,24 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             .neq('status', 'Cancelado');
 
           const slotsOcupados = new Set<string>();
+
           (agendamentosExistentes || []).forEach((ag: any) => {
-            const servicoAg = servicos?.find(s => s.id === ag.servico_id);
-            const duracao = servicoAg?.duracao || 30;
+            // Tentar encontrar serviço pelo ID primeiro
+            let servicoAg = servicos?.find(s => s.id === ag.servico_id);
+
+            // Fallback: buscar pelo nome se não encontrou pelo ID
+            if (!servicoAg && ag.servico_nome) {
+              const normalizeNome = (s: string) =>
+                s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+              const nomeAlvo = normalizeNome(ag.servico_nome.split(',')[0]);
+              servicoAg = servicos?.find(s => normalizeNome(s.nome).includes(nomeAlvo) || nomeAlvo.includes(normalizeNome(s.nome)));
+            }
+
+            const duracao = servicoAg?.duracao || 60;
             const [h, m] = ag.horario.split(':').map(Number);
             const inicioMin = h * 60 + m;
             const fimMin = inicioMin + duracao;
+
             for (let t = inicioMin; t < fimMin; t += 30) {
               const hh = String(Math.floor(t / 60)).padStart(2, '0');
               const mm = String(t % 60).padStart(2, '0');
@@ -1763,12 +1785,64 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             }
           });
 
-          // Verificar se todos os slots necessários estão livres
+          // Adicionar horários bloqueados manualmente
+          (config?.horarios_bloqueados || []).forEach((h: string) => slotsOcupados.add(h));
+
+          // Determinar horário de funcionamento base
+          let startHour = 8;
+          let endHour = 13;
+
+          if (!diaEstaFechado) {
+            // Dia aberto: usar horários normais de funcionamento
+            if (dayOfWeek === 2 || dayOfWeek === 3) {
+              startHour = 13;
+              endHour = 20;
+            } else if (dayOfWeek === 4 || dayOfWeek === 5) {
+              startHour = 9;
+              endHour = 19;
+            } else if (dayOfWeek === 6) {
+              startHour = 8;
+              endHour = 13;
+            }
+          } else {
+            // Dia fechado: usar apenas horários extras, se existirem
+            if (config?.horarios_extras && config.horarios_extras.length > 0) {
+              const ultimoHorarioExtra = config.horarios_extras[config.horarios_extras.length - 1];
+              const [he, me] = ultimoHorarioExtra.split(':').map(Number);
+              startHour = 0;
+              endHour = he + (me > 0 ? 1 : 0);
+            } else {
+              startHour = 0;
+              endHour = 24;
+            }
+          }
+
+          const startMin = startHour * 60;
+          const endMin = endHour * 60;
+
           let todosDisponiveis = true;
+
           for (const ag of agendamentosValidados) {
             const [h, m] = ag.horario.split(':').map(Number);
             const inicioMin = h * 60 + m;
             const fimMin = inicioMin + ag.servico.duracao;
+
+            // Se dia está fechado, horário precisa estar nos horários extras
+            if (diaEstaFechado) {
+              const horarioEstaEmExtras = (config?.horarios_extras || []).includes(ag.horario);
+              if (!horarioEstaEmExtras) {
+                todosDisponiveis = false;
+                break;
+              }
+            } else {
+              // Dia aberto: verificar se está dentro do horário de funcionamento
+              if (inicioMin < startMin || fimMin > endMin) {
+                todosDisponiveis = false;
+                break;
+              }
+            }
+
+            // Verificar conflito com slots ocupados (banco + agendamentos já validados)
             for (let t = inicioMin; t < fimMin; t += 30) {
               const slot = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
               if (slotsOcupados.has(slot)) {
@@ -1776,11 +1850,18 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
                 break;
               }
             }
+
             if (!todosDisponiveis) break;
+
+            // Reservar slots desse agendamento para os próximos da lista
+            for (let t = inicioMin; t < fimMin; t += 30) {
+              const slot = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+              slotsOcupados.add(slot);
+            }
           }
 
           if (!todosDisponiveis) {
-            resposta = `Desculpa amor, um dos horários não está disponível para os serviços escolhidos. Pode tentar outros horários? 💜`;
+            resposta = `Desculpa amor, um dos horários não está disponível para os serviços escolhidos. Pode tentar outros horários ou outro dia? 💜`;
             continue;
           }
 

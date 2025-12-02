@@ -14,7 +14,7 @@ import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -50,6 +50,41 @@ const BotWhatsApp = () => {
   const [authenticatedInfo, setAuthenticatedInfo] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [informacoesAdicionais, setInformacoesAdicionais] = useState("");
+  const [filtroConversa, setFiltroConversa] = useState("");
+
+  const conversasFiltradas = useMemo(() => {
+    if (!filtroConversa.trim()) return conversas;
+
+    const normalizar = (valor: string) =>
+      valor
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "");
+
+    const termoNumero = filtroConversa.replace(/\D/g, "");
+    const termoTexto = normalizar(filtroConversa);
+
+    return conversas.filter((conversa) => {
+      const nomeBase =
+        conversa.cliente_nome ||
+        conversa.contexto?.cliente_nome ||
+        "";
+
+      const telefoneLimpo = (conversa.telefone || "")
+        .replace("@s.whatsapp.net", "")
+        .replace("@lid", "")
+        .replace(/\D/g, "");
+
+      const nomeNormalizado = normalizar(nomeBase);
+
+      const matchNome = termoTexto && nomeNormalizado.includes(termoTexto);
+      const matchTelefone =
+        termoNumero && telefoneLimpo.includes(termoNumero);
+
+      return matchNome || matchTelefone;
+    });
+  }, [conversas, filtroConversa]);
 
   useEffect(() => {
     if (openInformacoes && authenticatedInfo) {
@@ -297,6 +332,14 @@ const BotWhatsApp = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-4">
+          <div className="mb-3">
+            <Input
+              placeholder="Buscar por nome ou telefone..."
+              value={filtroConversa}
+              onChange={(e) => setFiltroConversa(e.target.value)}
+              className="bg-white"
+            />
+          </div>
           {loadingConversas ? (
             <div className="space-y-2">
               <Skeleton className="h-20 w-full" />
@@ -307,12 +350,17 @@ const BotWhatsApp = () => {
               <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>Nenhuma conversa ainda</p>
             </div>
+          ) : conversasFiltradas.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground bg-white rounded-lg">
+              <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>Nenhuma conversa encontrada para esse filtro</p>
+            </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
               {/* Lista de Conversas */}
               <ScrollArea className="h-[500px] pr-4 bg-white rounded-lg p-2">
                 <div className="space-y-2">
-                  {conversas.map((conversa) => (
+                  {conversasFiltradas.map((conversa) => (
                     <div
                       key={conversa.id}
                       className={`w-full rounded-lg border transition-colors ${
