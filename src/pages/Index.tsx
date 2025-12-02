@@ -147,7 +147,7 @@ const Index = () => {
             </div>
             
             <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
-              <div className="aspect-[4/5] relative overflow-hidden">
+              <div className="aspect-[4/5] relative overflow-hidden bg-white">
                 <img 
                   src={anaAndradeNova} 
                   alt="Ana Andrade" 
