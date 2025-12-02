@@ -47,7 +47,8 @@ const Index = () => {
           className="absolute inset-0 bg-cover bg-center"
           style={{ 
             backgroundImage: `url(${lyonBanner})`,
-            filter: 'brightness(0.6)'
+            filter: "brightness(0.6)",
+            backgroundPosition: "center top"
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/50" />
@@ -55,18 +56,19 @@ const Index = () => {
         <div className="container mx-auto px-4 relative z-10 text-white pb-0">
           <div className="flex flex-col lg:flex-row items-end gap-8 lg:gap-12">
             {/* Conteúdo de texto à esquerda */}
-            <div className="max-w-2xl lg:max-w-5xl text-center lg:text-left pb-16 lg:pb-24">
+            <div className="max-w-2xl lg:max-w-5xl text-center lg:text-left pb-20 lg:pb-32">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/40 mb-6 backdrop-blur-sm">
                 <Zap className="w-4 h-4 text-primary" />
                 <span className="text-sm font-medium">Crescer o seu negócio nunca foi tão fácil</span>
               </div>
               
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-                Transforme seu negócio de beleza
-                <br className="hidden lg:block" />
-                em uma {""}
-                <span className="bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
-                  máquina de resultados
+                <span className="block">Transforme seu negócio de beleza</span>
+                <span className="block">
+                  {"em uma "}
+                  <span className="bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
+                    máquina de resultados
+                  </span>
                 </span>
               </h1>
               
