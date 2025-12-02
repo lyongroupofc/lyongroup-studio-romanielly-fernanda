@@ -147,6 +147,29 @@ serve(async (req) => {
       });
     }
 
+    // Verificar se existe alguma conversa desativada para este número
+    const { data: conversaDesativada } = await supabase
+      .from('bot_conversas')
+      .select('id, bot_ativo')
+      .eq('telefone', telefone)
+      .eq('bot_ativo', false)
+      .order('ultimo_contato', { ascending: false })
+      .maybeSingle();
+
+    if (conversaDesativada) {
+      console.log('🔇 Bot desativado para este número (há conversa com bot_ativo = false)');
+
+      // Registrar a mensagem recebida mesmo com o bot desativado, para histórico
+      await supabase.from('bot_mensagens').insert({
+        conversa_id: conversaDesativada.id,
+        telefone,
+        tipo: 'recebida',
+        conteudo: mensagem,
+      });
+
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
+
     // Buscar ou criar conversa
     let query = supabase
       .from('bot_conversas')
