@@ -143,6 +143,47 @@ export type Database = {
           },
         ]
       }
+      agendamentos_auditoria: {
+        Row: {
+          agendamento_id: string | null
+          created_at: string
+          dados_antes: Json | null
+          dados_depois: Json | null
+          id: string
+          origem: string | null
+          tipo_evento: string
+          usuario_responsavel: string | null
+        }
+        Insert: {
+          agendamento_id?: string | null
+          created_at?: string
+          dados_antes?: Json | null
+          dados_depois?: Json | null
+          id?: string
+          origem?: string | null
+          tipo_evento: string
+          usuario_responsavel?: string | null
+        }
+        Update: {
+          agendamento_id?: string | null
+          created_at?: string
+          dados_antes?: Json | null
+          dados_depois?: Json | null
+          id?: string
+          origem?: string | null
+          tipo_evento?: string
+          usuario_responsavel?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_auditoria_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bot_config: {
         Row: {
           chave: string
