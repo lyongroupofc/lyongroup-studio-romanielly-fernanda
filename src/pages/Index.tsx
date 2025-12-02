@@ -6,7 +6,7 @@ import lyonLogo from "@/assets/lyon-group-logo.jpeg";
 import lyonBanner from "@/assets/lyon-banner.jpg";
 import edmilaNova from "@/assets/edmila-nova.png";
 import romaniellyNova from "@/assets/romanielly-nova.png";
-import anaAndrade from "@/assets/ana-andrade.jpeg";
+import anaAndradeNova from "@/assets/ana-andrade-nova.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -82,15 +82,9 @@ const Index = () => {
             
             {/* Fotos das embaixadoras à direita - encostadas no final da hero */}
             <div className="flex mt-8 lg:mt-0 items-end self-end">
-              {/* Ana Andrade - atrás, maior */}
-              <div className="relative z-0 -mr-20 lg:-mr-28">
-                <div className="w-56 h-72 md:w-72 md:h-96 lg:w-96 lg:h-[28rem] rounded-t-2xl overflow-hidden opacity-80">
-                  <img src={anaAndrade} alt="Ana Andrade - Embaixadora Lyon Group" className="w-full h-full object-cover" />
-                </div>
-              </div>
               <div className="relative z-20 -mr-10 lg:-mr-16">
                 <div className="w-52 h-64 md:w-64 md:h-80 lg:w-80 lg:h-96 rounded-t-2xl overflow-hidden">
-                  <img src={romaniellyNova} alt="Romanielly Fernanda - Embaixadora Lyon Group" className="w-full h-full object-cover" />
+                  <img src={anaAndradeNova} alt="Ana Andrade - Embaixadora Lyon Group" className="w-full h-full object-cover" />
                 </div>
               </div>
               <div className="relative z-10">
@@ -150,7 +144,7 @@ const Index = () => {
             <div className="group relative rounded-3xl overflow-hidden bg-card border border-border hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
               <div className="aspect-[4/5] relative overflow-hidden">
                 <img 
-                  src={anaAndrade} 
+                  src={anaAndradeNova} 
                   alt="Ana Andrade" 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
