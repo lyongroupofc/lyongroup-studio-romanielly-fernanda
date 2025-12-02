@@ -988,15 +988,19 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
 
           // Se já existe um agendamento deste mesmo número exatamente nesse horário,
           // informar que ele JÁ TEM esse horário reservado, em vez de dizer que está indisponível
+          const normalizarHorario = (h: string) => (h && h.length > 5 ? h.substring(0, 5) : h);
+          const normalizarTelefone = (v?: string | null) => (v || '').replace(/\D/g, '');
+
           const agendamentoMesmoCliente = (agendamentosExistentes || []).find(
             (ag: any) =>
-              ag.horario === args.horario &&
-              ag.cliente_telefone === telefone
+              normalizarHorario(ag.horario) === args.horario &&
+              normalizarTelefone(ag.cliente_telefone) === normalizarTelefone(telefone)
           );
 
           if (agendamentoMesmoCliente) {
             const [yyyyEx, mmEx, ddEx] = agendamentoMesmoCliente.data.split('-');
-            resposta = `Você já tem um agendamento de ${agendamentoMesmoCliente.servico_nome} para ${ddEx}/${mmEx} às ${agendamentoMesmoCliente.horario}, amor. Se quiser mudar o horário, me avisa que eu vejo outra opção pra você 💜`;
+            const horarioAg = normalizarHorario(agendamentoMesmoCliente.horario);
+            resposta = `Você já tem um agendamento de ${agendamentoMesmoCliente.servico_nome} para ${ddEx}/${mmEx} às ${horarioAg}, amor. Se quiser mudar o horário, me avisa que eu vejo outra opção pra você 💜`;
             continue;
           }
 
@@ -1022,7 +1026,7 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             
             console.log(`🔒 Bloqueando slot: ${ag.horario} (serviço: ${ag.servico_nome || 'sem nome'}, duração: ${duracao}min)`);
             
-            for (let t = inicioMin; t < fimMin; t += 30) {
+            for (let t = inicioMin; t <= fimMin; t += 30) {
               const hh = String(Math.floor(t / 60)).padStart(2, '0');
               const mm = String(t % 60).padStart(2, '0');
               slotsOcupados.add(`${hh}:${mm}`);
@@ -1858,7 +1862,7 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             const inicioMin = h * 60 + m;
             const fimMin = inicioMin + duracao;
 
-            for (let t = inicioMin; t < fimMin; t += 30) {
+            for (let t = inicioMin; t <= fimMin; t += 30) {
               const hh = String(Math.floor(t / 60)).padStart(2, '0');
               const mm = String(t % 60).padStart(2, '0');
               slotsOcupados.add(`${hh}:${mm}`);
