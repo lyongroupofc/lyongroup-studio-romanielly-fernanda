@@ -271,6 +271,63 @@ serve(async (req) => {
       return novoContexto;
     }
 
+    // Função para extrair dados pessoais da mensagem do cliente
+    function extrairContextoDaMensagemCliente(mensagemCliente: string, contextoAtual: any): any {
+      const novoContexto = { ...contextoAtual };
+      const msgLower = mensagemCliente.toLowerCase();
+      
+      // Extrair nome completo (padrões comuns)
+      // Padrão: "nome é X", "se chama X", "é a X", "Maria Silva", etc.
+      const regexNomeExplicito = /(?:nome\s+(?:é|e|dela\s+é|completo\s+é|da\s+cliente\s+é))\s*[:;]?\s*([A-Za-zÀ-ÿ\s]{3,50})/i;
+      const regexNomeChamado = /(?:se\s+chama|chamo|sou\s+(?:a|o)?)\s+([A-Za-zÀ-ÿ\s]{3,50})/i;
+      
+      let matchNome = mensagemCliente.match(regexNomeExplicito);
+      if (!matchNome) matchNome = mensagemCliente.match(regexNomeChamado);
+      
+      // Tentar extrair nome no início da mensagem se parece ser um nome (ex: "Maria Silva, 31...")
+      if (!matchNome && !novoContexto.nome_completo) {
+        const regexNomeInicio = /^([A-Za-zÀ-ÿ]+\s+[A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)\s*[,;]/i;
+        matchNome = mensagemCliente.match(regexNomeInicio);
+      }
+      
+      if (matchNome && matchNome[1] && !novoContexto.nome_completo) {
+        const nomeExtraido = matchNome[1].trim();
+        // Verificar se não é palavra comum/comando
+        const palavrasIgnoradas = ['sim', 'não', 'nao', 'ok', 'oi', 'olá', 'bom', 'boa', 'quero', 'pode', 'para'];
+        if (nomeExtraido.length > 4 && !palavrasIgnoradas.includes(nomeExtraido.toLowerCase())) {
+          novoContexto.nome_completo = nomeExtraido;
+          console.log('📝 Nome extraído da mensagem:', nomeExtraido);
+        }
+      }
+      
+      // Extrair telefone (10-11 dígitos, com ou sem formatação)
+      const regexTelefone = /(?:telefone|tel|celular|whatsapp|zap|número|fone)?[:\s]*\(?(\d{2})\)?[\s.-]?(\d{4,5})[\s.-]?(\d{4})/gi;
+      const matchTelefone = mensagemCliente.match(regexTelefone);
+      if (matchTelefone && !novoContexto.telefone_cliente) {
+        // Limpar para pegar apenas números
+        const telefoneLimpo = matchTelefone[0].replace(/\D/g, '');
+        if (telefoneLimpo.length >= 10 && telefoneLimpo.length <= 11) {
+          novoContexto.telefone_cliente = telefoneLimpo;
+          console.log('📝 Telefone extraído da mensagem:', telefoneLimpo);
+        }
+      }
+      
+      // Extrair data de nascimento (DD/MM/AAAA ou DD-MM-AAAA)
+      const regexNascimento = /(?:nascimento|nasceu|nasc|aniversário|aniversario)?[:\s]*(\d{2})[\/\-](\d{2})[\/\-](\d{4})/gi;
+      const matchNascimento = mensagemCliente.match(regexNascimento);
+      if (matchNascimento && !novoContexto.data_nascimento) {
+        // Extrair a data encontrada
+        const dataMatch = matchNascimento[0].match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+        if (dataMatch) {
+          const dataNasc = `${dataMatch[1]}/${dataMatch[2]}/${dataMatch[3]}`;
+          novoContexto.data_nascimento = dataNasc;
+          console.log('📝 Data de nascimento extraída da mensagem:', dataNasc);
+        }
+      }
+      
+      return novoContexto;
+    }
+
     // Função para extrair contexto da resposta da IA
     function extrairContextoDaResposta(respostaIA: string, contextoAtual: any): any {
       const novoContexto = { ...contextoAtual };
@@ -311,6 +368,18 @@ serve(async (req) => {
       const matchHorario = respostaIA.match(regexHorario);
       if (matchHorario && matchHorario.length > 0 && !novoContexto.horario) {
         novoContexto.horario = matchHorario[0];
+      }
+      
+      // Detectar confirmação de nome na resposta da IA
+      // Padrões: "Confirmando: Maria Silva", "nome é Maria Silva", "para Maria Silva"
+      const regexNomeConfirmado = /(?:confirmando|confirmar|nome\s+(?:é|da\s+cliente|completo)|para\s+(?:a\s+)?cliente|agendamento\s+(?:para|de))\s*[:;]?\s*([A-Za-zÀ-ÿ]+\s+[A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)/i;
+      const matchNomeIA = respostaIA.match(regexNomeConfirmado);
+      if (matchNomeIA && matchNomeIA[1] && !novoContexto.nome_completo) {
+        const nomeExtraido = matchNomeIA[1].trim();
+        if (nomeExtraido.length > 4) {
+          novoContexto.nome_completo = nomeExtraido;
+          console.log('📝 Nome confirmado pela IA:', nomeExtraido);
+        }
       }
       
       return novoContexto;
@@ -429,7 +498,7 @@ ${contexto.data ? `✅ Data: JÁ INFORMADA (${contexto.data})` : '❌ Data: aind
 ${contexto.horario ? `✅ Horário: JÁ ESCOLHIDO (${contexto.horario})` : '❌ Horário: ainda não escolhido'}
 ${contexto.disponibilidade_verificada ? `✅ Disponibilidade: JÁ VERIFICADA (horário confirmado disponível)` : '❌ Disponibilidade: ainda não verificada'}
 ${contexto.nome_completo || clienteExistente?.nome ? `✅ Nome: JÁ COLETADO (${contexto.nome_completo || clienteExistente?.nome})` : '❌ Nome: ainda não coletado'}
-${contexto.data_nascimento || clienteExistente?.data_nascimento ? `✅ Data de Nascimento: JÁ COLETADA (${contexto.data_nascimento || clienteExistente?.data_nascimento})` : '❌ Data de Nascimento: ainda não coletada'}
+${contexto.data_nascimento || clienteExistente?.data_nascimento ? `✅ Data de Nascimento: JÁ COLETADA (${contexto.data_nascimento || clienteExistente?.data_nascimento})` : '⚪ Data de Nascimento: OPCIONAL - ainda não coletada'}
 
 **⚠️ ATENÇÃO MÁXIMA - REGRAS DE CONTEXTO:**
 - Se uma informação está marcada com ✅ (JÁ ESCOLHIDO/INFORMADO/COLETADO), você NUNCA, EM HIPÓTESE ALGUMA, deve perguntar novamente!
@@ -465,10 +534,12 @@ ${referenciasTexto}
 Se a cliente mencionar que quer agendar para OUTRA PESSOA (ex: "para minha amiga", "para minha mãe", "para a Adriele"):
 1. **ENTENDA QUE NÃO É PARA A PESSOA QUE ESTÁ CONVERSANDO** - a pessoa no WhatsApp é quem está agendando, mas o atendimento será para outra pessoa
 2. **LIMPE qualquer informação anterior do contexto** - se havia dados de outra conversa/agendamento, desconsidere
-3. Pergunte: **nome completo da pessoa que será atendida**, **telefone com DDD dessa pessoa**, e **data de nascimento dessa pessoa**
-4. Use SEMPRE os dados da OUTRA PESSOA (a que será atendida) para criar o agendamento
-5. **NÃO confunda** os dados de quem está mandando mensagem com os dados de quem será atendida
-6. Exemplo correto: "Perfeito! Para confirmar o agendamento da sua amiga, preciso do nome completo dela, telefone com DDD e data de nascimento."
+3. Pergunte: **nome completo da pessoa que será atendida** e **telefone com DDD dessa pessoa**
+4. Data de nascimento é OPCIONAL - pergunte gentilmente se a pessoa quiser informar
+5. Use SEMPRE os dados da OUTRA PESSOA (a que será atendida) para criar o agendamento
+6. **NÃO confunda** os dados de quem está mandando mensagem com os dados de quem será atendida
+7. **IMPORTANTE:** Assim que o cliente passar os dados (nome, telefone), SALVE-OS no contexto imediatamente para não perder
+8. Exemplo correto: "Perfeito! Para confirmar o agendamento da sua amiga, preciso do nome completo dela e telefone com DDD. Se quiser, pode passar a data de nascimento também (é opcional) 😊"
 
 **Serviços do Studio:**
 ${servicosFormatados}
@@ -536,8 +607,9 @@ Romanielly - Banco Sicoob
    - Se não disponível → a ferramenta vai retornar 2 horários alternativos automaticamente, mostre-os e pergunte qual prefere
 
 **PASSO 5:** Apenas DEPOIS que a disponibilidade for confirmada:
-   - Se CLIENTE IDENTIFICADO (✅ Cliente cadastrado), confirme os dados: "Seu nome é [nome], certo? O telefone [telefone] e a data de nascimento [data], confirma?"
-   - Se ❌ Cliente novo, pergunte: nome completo, telefone com DDD (apenas números) e data de nascimento (DD/MM/AAAA)
+   - Se CLIENTE IDENTIFICADO (✅ Cliente cadastrado), confirme os dados: "Seu nome é [nome], certo?"
+   - Se ❌ Cliente novo, pergunte: nome completo e telefone com DDD (apenas números)
+   - ⚠️ Data de nascimento é OPCIONAL - pergunte de forma gentil: "Se quiser, pode me passar sua data de nascimento também? É opcional 😊"
 
 **PASSO 6:** Chame criar_agendamento com todos os dados
 
@@ -563,8 +635,8 @@ Você: "Perfeito! Quarta-feira dia 04/12. Que horário você prefere?" ✅ CORRE
 Cliente: "Quero agendar Manicure para amanhã às 14:00"
 Você: "Perfeito! Deixa eu verificar se esse horário está disponível..." [CHAMA verificar_disponibilidade]
 Sistema: "Horário disponível"
-Você: "Ótima notícia! O horário de 14:00 está disponível para Manicure amanhã! Agora preciso do seu nome completo e data de nascimento para confirmar, pode me passar?"
-Cliente: "Maria Silva, 15/03/1990"
+Você: "Ótima notícia! O horário de 14:00 está disponível para Manicure amanhã! Agora preciso do seu nome completo e telefone com DDD para confirmar. Se quiser, pode passar a data de nascimento também (é opcional) 😊"
+Cliente: "Maria Silva, 31987654321"
 Você: [CHAMA criar_agendamento] "Agendamento confirmado! Maria Silva, Manicure amanhã às 14:00..."
 
 **Exemplo CORRETO quando cliente pergunta sobre disponibilidade:**
@@ -650,10 +722,10 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
               },
               data_nascimento: {
                 type: "string",
-                description: "Data de nascimento no formato DD/MM/AAAA"
+                description: "Data de nascimento no formato DD/MM/AAAA (OPCIONAL - pode ser null se o cliente não quiser informar)"
               }
             },
-            required: ["servico_nome", "data", "horario", "cliente_nome", "telefone", "data_nascimento"]
+            required: ["servico_nome", "data", "horario", "cliente_nome", "telefone"]
           }
         }
       },
@@ -722,13 +794,19 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
     // Extrair e salvar contexto após resposta da IA
     console.log('🔍 Contexto ANTES:', JSON.stringify(conversa.contexto || {}));
     
-    // Primeiro extrair dos tool calls
+    // PASSO 1: Extrair informações da mensagem do cliente (nome, telefone, data_nascimento)
+    let contextoCliente = extrairContextoDaMensagemCliente(
+      mensagem, 
+      conversa.contexto || {}
+    );
+    
+    // PASSO 2: Extrair dos tool calls
     let contextoToolCalls = extrairInformacoesDoContexto(
-      conversa.contexto || {}, 
+      contextoCliente, 
       toolCalls || []
     );
     
-    // Depois extrair da resposta da IA
+    // PASSO 3: Extrair da resposta da IA
     let contextoResposta = extrairContextoDaResposta(resposta, contextoToolCalls);
     const novoContexto = contextoResposta;
     
@@ -993,7 +1071,7 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
               .eq('id', conversa.id);
 
             const [yyyy, mm, dd] = args.data.split('-');
-            resposta = `Ótima notícia! O horário de ${args.horario} está disponível para ${args.servico_nome} no dia ${dd}/${mm}! 🎉 Agora só preciso do seu nome completo e data de nascimento (DD/MM/AAAA) para confirmar o agendamento, pode me passar? 💜`;
+            resposta = `Ótima notícia! O horário de ${args.horario} está disponível para ${args.servico_nome} no dia ${dd}/${mm}! 🎉 Agora só preciso do seu nome completo e telefone com DDD para confirmar. Se quiser, pode passar sua data de nascimento também (é opcional) 💜`;
           } else {
             // Gerar horários alternativos
             const horariosDisponiveis: string[] = [];
