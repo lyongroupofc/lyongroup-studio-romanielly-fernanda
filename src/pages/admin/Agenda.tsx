@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2 } from "lucide-react";
+import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { isBefore, startOfToday, isSunday, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -961,9 +961,39 @@ const Agenda = () => {
       <Sheet open={openSideSheet} onOpenChange={setOpenSideSheet}>
         <SheetContent side="left" className="w-[400px] sm:w-[540px]">
           <SheetHeader>
-            <SheetTitle>
-              {selectedDate && format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-            </SheetTitle>
+            <div className="flex items-center justify-between gap-2">
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => {
+                  if (selectedDate) {
+                    const prevDay = new Date(selectedDate);
+                    prevDay.setDate(prevDay.getDate() - 1);
+                    setSelectedDate(prevDay);
+                  }
+                }}
+                className="hover:shadow-lg hover:shadow-primary/20"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <SheetTitle className="text-center flex-1">
+                {selectedDate && format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+              </SheetTitle>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => {
+                  if (selectedDate) {
+                    const nextDay = new Date(selectedDate);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    setSelectedDate(nextDay);
+                  }
+                }}
+                className="hover:shadow-lg hover:shadow-primary/20"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </SheetHeader>
           <div className="mt-6 space-y-4">
             <Button className="w-full" onClick={handleReservar}>

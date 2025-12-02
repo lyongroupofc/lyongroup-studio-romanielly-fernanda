@@ -386,10 +386,10 @@ const BotWhatsApp = () => {
               </ScrollArea>
 
               {/* Mensagens */}
-              <div className="border rounded-lg bg-[#e5ddd5] overflow-hidden">
+              <div className="border rounded-lg bg-gradient-to-b from-amber-900/90 to-amber-950/95 overflow-hidden shadow-lg">
                 {conversaSelecionada ? (
                   <>
-                    <div className="bg-[#008069] p-3 text-white flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-amber-700 to-amber-800 p-3 text-white flex items-center gap-3 shadow-md">
                       <Phone className="h-5 w-5" />
                       <span className="font-medium">
                         {conversas.find(c => c.id === conversaSelecionada)?.cliente_nome || 
@@ -397,7 +397,7 @@ const BotWhatsApp = () => {
                          conversas.find(c => c.id === conversaSelecionada)?.telefone.replace('@s.whatsapp.net', '').replace('@lid', '')}
                       </span>
                     </div>
-                    <ScrollArea className="h-[452px] p-4">
+                    <ScrollArea className="h-[452px] p-4 bg-gradient-to-b from-amber-900/80 to-amber-950/90">
                       <div className="space-y-3">
                         {mensagens[conversaSelecionada]?.map((msg) => (
                           <div
@@ -407,14 +407,14 @@ const BotWhatsApp = () => {
                             }`}
                           >
                             <div
-                              className={`max-w-[80%] rounded-lg p-3 shadow-sm ${
+                              className={`max-w-[80%] rounded-lg p-3 shadow-md ${
                                 msg.tipo === 'enviada'
-                                  ? 'bg-[#dcf8c6]'
-                                  : 'bg-white'
+                                  ? 'bg-gradient-to-br from-amber-500 to-amber-600 text-white'
+                                  : 'bg-white/95 border border-amber-200'
                               }`}
                             >
-                              <p className="text-sm whitespace-pre-wrap text-gray-800">{msg.conteudo}</p>
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className={`text-sm whitespace-pre-wrap ${msg.tipo === 'enviada' ? 'text-white' : 'text-gray-800'}`}>{msg.conteudo}</p>
+                              <p className={`text-xs mt-1 ${msg.tipo === 'enviada' ? 'text-amber-100' : 'text-gray-500'}`}>
                                 {new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
                                   hour: '2-digit',
                                   minute: '2-digit',
@@ -427,9 +427,9 @@ const BotWhatsApp = () => {
                     </ScrollArea>
                   </>
                 ) : (
-                  <div className="h-[500px] flex items-center justify-center bg-white">
-                    <div className="text-center text-muted-foreground">
-                      <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <div className="h-[500px] flex items-center justify-center bg-gradient-to-b from-amber-900/60 to-amber-950/80">
+                    <div className="text-center text-amber-200">
+                      <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-70" />
                       <p>Selecione uma conversa</p>
                     </div>
                   </div>
