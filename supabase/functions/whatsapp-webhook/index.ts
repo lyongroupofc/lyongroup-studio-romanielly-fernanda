@@ -281,12 +281,12 @@ serve(async (req) => {
         for (const toolCall of toolCalls) {
           if (toolCall.function.name === 'criar_agendamento') {
             const args = JSON.parse(toolCall.function.arguments);
-            if (args.servico_id) novoContexto.servico_id = args.servico_id;
-            if (args.servico_nome) novoContexto.servico_nome = args.servico_nome;
-            if (args.data) novoContexto.data = args.data;
-            if (args.horario) novoContexto.horario = args.horario;
-            if (args.cliente_nome) novoContexto.nome_completo = args.cliente_nome;
-            if (args.data_nascimento) novoContexto.data_nascimento = args.data_nascimento;
+            if (args.servico_id && !novoContexto.servico_id) novoContexto.servico_id = args.servico_id;
+            if (args.servico_nome && !novoContexto.servico_nome) novoContexto.servico_nome = args.servico_nome;
+            if (args.data && !novoContexto.data) novoContexto.data = args.data;
+            if (args.horario && !novoContexto.horario) novoContexto.horario = args.horario;
+            if (args.cliente_nome && !novoContexto.nome_completo) novoContexto.nome_completo = args.cliente_nome;
+            if (args.data_nascimento && !novoContexto.data_nascimento) novoContexto.data_nascimento = args.data_nascimento;
           }
         }
       }
@@ -1274,6 +1274,8 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             ? telefoneConsultaDigits.slice(-11)
             : telefoneConsultaDigits;
 
+          console.log('🔍 consultar_agendamento - telefone bruto:', telefoneConsultaRaw, 'digitos:', telefoneConsultaDigits, 'basico:', telefoneBasico, 'data:', args.data, 'horario:', args.horario, 'cliente_nome:', args.cliente_nome);
+
           let query = supabase
             .from('agendamentos')
             .select('*')
@@ -1309,6 +1311,8 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
           const { data: agendamentosEncontrados, error: erroConsultaAg } = await query
             .order('data', { ascending: true })
             .order('horario', { ascending: true });
+
+          console.log('🔍 consultar_agendamento - resultados encontrados:', agendamentosEncontrados ? agendamentosEncontrados.length : 0);
 
           if (erroConsultaAg) {
             console.error('❌ Erro ao consultar agendamentos:', erroConsultaAg);
