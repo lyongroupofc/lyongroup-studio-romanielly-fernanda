@@ -1269,15 +1269,29 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
           }
 
           const telefoneConsultaRaw: string = (args.telefone as string | undefined) || telefone;
-          const telefoneConsulta = (telefoneConsultaRaw || '').replace(/\D/g, '');
+          const telefoneConsultaDigits = (telefoneConsultaRaw || '').replace(/\D/g, '');
+          const telefoneBasico = telefoneConsultaDigits.length > 11
+            ? telefoneConsultaDigits.slice(-11)
+            : telefoneConsultaDigits;
 
           let query = supabase
             .from('agendamentos')
             .select('*')
-            .neq('status', 'Cancelado');
+            .neq('status', 'Cancelado')
+            .neq('status', 'Excluido');
 
-          if (telefoneConsulta) {
-            query = query.eq('cliente_telefone', telefoneConsulta);
+          if (telefoneBasico) {
+            // Buscar tanto pelo telefone completo (com DDI) quanto pela versão básica (apenas DDD + número)
+            const telefonesPossiveis = Array.from(new Set([
+              telefoneConsultaDigits,
+              telefoneBasico,
+            ].filter(Boolean)));
+
+            if (telefonesPossiveis.length === 1) {
+              query = query.eq('cliente_telefone', telefonesPossiveis[0]);
+            } else if (telefonesPossiveis.length > 1) {
+              query = query.in('cliente_telefone', telefonesPossiveis as string[]);
+            }
           }
 
           if (args.data) {
