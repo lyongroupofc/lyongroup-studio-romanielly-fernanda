@@ -7,6 +7,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Normaliza telefones para formato básico de 11 dígitos (DDD + número)
+function normalizarTelefoneBasico(raw: string | null | undefined): string {
+  const digits = (raw || '').replace(/\D/g, '');
+  if (!digits) return '';
+  return digits.length > 11 ? digits.slice(-11) : digits;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -109,6 +116,9 @@ serve(async (req) => {
     console.log('📱 Telefone FINAL a ser usado:', telefone);
     console.log('📱 Telefone ORIGINAL recebido:', telefoneOriginal);
     console.log('📱 É @lid?', isLidFormat, '| Número extraído:', telefoneExtraido || 'N/A');
+
+    const telefoneBasico = normalizarTelefoneBasico(telefone);
+    console.log('📱 Telefone BÁSICO normalizado (DDD + número):', telefoneBasico);
     console.log('📱 ========================================================');
 
     // Instâncias de automação que sempre funcionam (ignoram config global)
@@ -989,12 +999,17 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
           // Se já existe um agendamento deste mesmo número exatamente nesse horário,
           // informar que ele JÁ TEM esse horário reservado, em vez de dizer que está indisponível
           const normalizarHorario = (h: string) => (h && h.length > 5 ? h.substring(0, 5) : h);
-          const normalizarTelefone = (v?: string | null) => (v || '').replace(/\D/g, '');
+
+          const telefoneReferenciaBasico = (() => {
+            const telefoneContexto = (novoContexto as any)?.telefone_cliente as string | undefined;
+            const telefoneParaUsar = telefoneContexto || telefoneBasico || telefone;
+            return normalizarTelefoneBasico(telefoneParaUsar);
+          })();
 
           const agendamentoMesmoCliente = (agendamentosExistentes || []).find(
             (ag: any) =>
               normalizarHorario(ag.horario) === args.horario &&
-              normalizarTelefone(ag.cliente_telefone) === normalizarTelefone(telefone)
+              normalizarTelefoneBasico(ag.cliente_telefone) === telefoneReferenciaBasico
           );
 
           if (agendamentoMesmoCliente) {
@@ -1719,10 +1734,12 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             console.log('ℹ️ Nenhum agendamento anterior encontrado - primeiro agendamento');
           }
 
-          // Usar telefone fornecido pelo cliente ou telefone do WhatsApp como fallback
-          const telefoneCliente = args.telefone || telefone;
+          // Usar telefone fornecido pelo cliente ou telefone básico do WhatsApp como fallback
+          const telefoneClienteRaw = (args.telefone as string | undefined) || telefoneBasico || telefone;
+          const telefoneClienteBasico = normalizarTelefoneBasico(telefoneClienteRaw);
+          const telefoneCliente = telefoneClienteBasico || telefoneClienteRaw;
           
-          // Buscar cliente pelo telefone fornecido
+          // Buscar cliente pelo telefone normalizado
           const { data: clienteBuscado } = await supabase
             .from('clientes')
             .select('*')
@@ -1748,7 +1765,7 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
               })
               .eq('id', clienteBuscado.id);
           } else {
-            // Criar novo cliente com telefone fornecido
+            // Criar novo cliente com telefone normalizado
             const { data: novoCliente } = await supabase
               .from('clientes')
               .insert({
@@ -1761,7 +1778,7 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             clienteId = novoCliente?.id;
           }
 
-          // Criar novo agendamento com telefone fornecido pelo cliente
+          // Criar novo agendamento com telefone normalizado
           const { data: novoAgendamento, error: erroAgendamento } = await supabase
             .from('agendamentos')
             .insert({
