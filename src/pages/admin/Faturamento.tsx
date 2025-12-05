@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { usePagamentos } from "@/hooks/usePagamentos";
 import { useDespesas } from "@/hooks/useDespesas";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -150,7 +150,7 @@ const Faturamento = () => {
     ? pagamentos
         .filter((p) => {
           if (!p.data) return false;
-          const pData = new Date(p.data);
+          const pData = parseISO(p.data);
           return pData >= dataInicio && pData <= dataFim;
         })
         .reduce((acc, p) => acc + parseFloat(String(p.valor || 0)), 0)
@@ -499,7 +499,7 @@ const Faturamento = () => {
                       {showTotal ? `R$ ${Number(desp.valor).toFixed(2).replace(".", ",")}` : "R$ •••,••"}
                     </td>
                     <td className="p-3">{desp.metodo_pagamento || "-"}</td>
-                    <td className="p-3 text-muted-foreground">{format(new Date(desp.data), "dd/MM/yyyy")}</td>
+                    <td className="p-3 text-muted-foreground">{format(parseISO(desp.data), "dd/MM/yyyy")}</td>
                     <td className="p-3">
                       <Button
                         variant="ghost"
@@ -540,7 +540,7 @@ const Faturamento = () => {
                   <tr key={ag.id} className="border-b hover:bg-muted/50">
                     <td className="p-3">{ag.cliente_nome}</td>
                     <td className="p-3">{ag.servico_nome}</td>
-                    <td className="p-3">{format(new Date(ag.data), "dd/MM/yyyy")}</td>
+                    <td className="p-3">{format(parseISO(ag.data), "dd/MM/yyyy")}</td>
                     <td className="p-3">{ag.horario ? ag.horario.substring(0, 5) : "-"}</td>
                     <td className="p-3">
                       <Button
