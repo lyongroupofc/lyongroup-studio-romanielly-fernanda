@@ -1019,6 +1019,9 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             continue;
           }
 
+          // ============ NOVO SISTEMA: VERIFICAÇÃO POR SOBREPOSIÇÃO DE TEMPO ============
+          // Armazena os intervalos de tempo ocupados (início e fim em minutos)
+          const intervalosOcupados: { inicio: number; fim: number; servico: string; cliente: string }[] = [];
           const slotsOcupados = new Set<string>();
           
           (agendamentosExistentes || []).forEach((ag: any) => {
@@ -1039,8 +1042,17 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             const inicioMin = h * 60 + m;
             const fimMin = inicioMin + duracao;
             
-            console.log(`🔒 Bloqueando slot: ${ag.horario} (serviço: ${ag.servico_nome || 'sem nome'}, duração: ${duracao}min)`);
+            // Guardar intervalo para verificação de sobreposição
+            intervalosOcupados.push({
+              inicio: inicioMin,
+              fim: fimMin,
+              servico: ag.servico_nome || 'sem nome',
+              cliente: ag.cliente_nome || 'sem cliente'
+            });
             
+            console.log(`🔒 Intervalo ocupado: ${ag.horario} até ${String(Math.floor(fimMin / 60)).padStart(2, '0')}:${String(fimMin % 60).padStart(2, '0')} (${ag.servico_nome || 'sem nome'}, ${duracao}min, cliente: ${ag.cliente_nome})`);
+            
+            // Também manter slots para retrocompatibilidade com horários extras/bloqueados
             for (let t = inicioMin; t <= fimMin; t += 30) {
               const hh = String(Math.floor(t / 60)).padStart(2, '0');
               const mm = String(t % 60).padStart(2, '0');
@@ -1093,15 +1105,16 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
           if (diaEstaFechado) {
             const horarioEstaEmExtras = (config?.horarios_extras || []).includes(args.horario);
             if (!horarioEstaEmExtras) {
-              // Sugerir apenas horários extras disponíveis
+              // Sugerir apenas horários extras disponíveis usando verificação de sobreposição
               const horariosExtrasDisponiveis = (config?.horarios_extras || []).filter((horarioExtra: string) => {
                 const [hh, mm] = horarioExtra.split(':').map(Number);
                 const inicio = hh * 60 + mm;
                 const fim = inicio + servico.duracao;
                 
-                for (let t = inicio; t < fim; t += 30) {
-                  const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
-                  if (slotsOcupados.has(slotCheck)) {
+                // Verificar sobreposição com todos os intervalos ocupados
+                for (const intervalo of intervalosOcupados) {
+                  const hasSobreposicao = inicio < intervalo.fim && fim > intervalo.inicio;
+                  if (hasSobreposicao) {
                     return false;
                   }
                 }
@@ -1121,22 +1134,22 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
           }
           
           if (inicioMin < startMin || fimMin > endMin) {
-            // Gerar horários alternativos dentro do horário de funcionamento
+            // Gerar horários alternativos dentro do horário de funcionamento usando verificação de sobreposição
             const horariosDisponiveis: string[] = [];
             
             for (let h = startHour; h < endHour; h++) {
               for (let m = 0; m < 60; m += 30) {
                 const horario = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                const [hh, mm] = horario.split(':').map(Number);
-                const inicio = hh * 60 + mm;
+                const inicio = h * 60 + m;
                 const fim = inicio + servico.duracao;
                 
                 if (fim > endHour * 60) continue;
                 
+                // Verificar sobreposição com todos os intervalos ocupados
                 let isDisponivel = true;
-                for (let t = inicio; t < fim; t += 30) {
-                  const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
-                  if (slotsOcupados.has(slotCheck)) {
+                for (const intervalo of intervalosOcupados) {
+                  const hasSobreposicao = inicio < intervalo.fim && fim > intervalo.inicio;
+                  if (hasSobreposicao) {
                     isDisponivel = false;
                     break;
                   }
@@ -1153,10 +1166,11 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
               const inicio = hh * 60 + mm;
               const fim = inicio + servico.duracao;
               
+              // Verificar sobreposição com todos os intervalos ocupados
               let isDisponivel = true;
-              for (let t = inicio; t < fim; t += 30) {
-                const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
-                if (slotsOcupados.has(slotCheck)) {
+              for (const intervalo of intervalosOcupados) {
+                const hasSobreposicao = inicio < intervalo.fim && fim > intervalo.inicio;
+                if (hasSobreposicao) {
                   isDisponivel = false;
                   break;
                 }
@@ -1182,15 +1196,22 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             continue;
           }
 
-          // Verificar disponibilidade
+          // ============ VERIFICAR DISPONIBILIDADE POR SOBREPOSIÇÃO DE TEMPO ============
+          // Um agendamento conflita se: novoInicio < existenteFim AND novoFim > existenteInicio
           let disponivel = true;
-          for (let t = inicioMin; t < fimMin; t += 30) {
-            const slot = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
-            if (slotsOcupados.has(slot)) {
+          let conflitoCom = '';
+          
+          for (const intervalo of intervalosOcupados) {
+            const hasSobreposicao = inicioMin < intervalo.fim && fimMin > intervalo.inicio;
+            if (hasSobreposicao) {
               disponivel = false;
+              conflitoCom = `${intervalo.servico} (${intervalo.cliente})`;
+              console.log(`❌ CONFLITO DETECTADO: Novo agendamento ${args.horario}-${String(Math.floor(fimMin / 60)).padStart(2, '0')}:${String(fimMin % 60).padStart(2, '0')} sobrepõe com ${String(Math.floor(intervalo.inicio / 60)).padStart(2, '0')}:${String(intervalo.inicio % 60).padStart(2, '0')}-${String(Math.floor(intervalo.fim / 60)).padStart(2, '0')}:${String(intervalo.fim % 60).padStart(2, '0')} (${intervalo.servico})`);
               break;
             }
           }
+          
+          console.log(`🔍 Verificação de disponibilidade: ${args.horario} para ${args.servico_nome} (${servico.duracao}min) - ${disponivel ? '✅ DISPONÍVEL' : '❌ INDISPONÍVEL - conflita com ' + conflitoCom}`);
 
           if (disponivel) {
             // Marcar disponibilidade verificada no contexto
@@ -1210,22 +1231,22 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             const [yyyy, mm, dd] = args.data.split('-');
             resposta = `Ótima notícia! O horário de ${args.horario} está disponível para ${args.servico_nome} no dia ${dd}/${mm}! 🎉 Agora só preciso do seu nome completo e telefone com DDD para confirmar. Se quiser, pode passar sua data de nascimento também (é opcional) 💜`;
           } else {
-            // Gerar horários alternativos
+            // Gerar horários alternativos usando verificação de sobreposição
             const horariosDisponiveis: string[] = [];
             
             for (let h = startHour; h < endHour; h++) {
               for (let m = 0; m < 60; m += 30) {
                 const horario = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                const [hh, mm] = horario.split(':').map(Number);
-                const inicio = hh * 60 + mm;
+                const inicio = h * 60 + m;
                 const fim = inicio + servico.duracao;
                 
                 if (fim > endHour * 60) continue;
                 
+                // Verificar sobreposição com todos os intervalos ocupados
                 let isDisponivel = true;
-                for (let t = inicio; t < fim; t += 30) {
-                  const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
-                  if (slotsOcupados.has(slotCheck)) {
+                for (const intervalo of intervalosOcupados) {
+                  const hasSobreposicao = inicio < intervalo.fim && fim > intervalo.inicio;
+                  if (hasSobreposicao) {
                     isDisponivel = false;
                     break;
                   }
@@ -1242,10 +1263,11 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
               const inicio = hh * 60 + mm;
               const fim = inicio + servico.duracao;
               
+              // Verificar sobreposição com todos os intervalos ocupados
               let isDisponivel = true;
-              for (let t = inicio; t < fim; t += 30) {
-                const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
-                if (slotsOcupados.has(slotCheck)) {
+              for (const intervalo of intervalosOcupados) {
+                const hasSobreposicao = inicio < intervalo.fim && fim > intervalo.inicio;
+                if (hasSobreposicao) {
                   isDisponivel = false;
                   break;
                 }
@@ -1478,12 +1500,13 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
           // Gerar todos os slots ocupados (excluindo agendamentos da própria pessoa)
           const { data: agendamentosExistentes } = await supabase
             .from('agendamentos')
-            .select('horario, servico_id, servico_nome')
+            .select('horario, servico_id, servico_nome, cliente_nome')
             .eq('data', args.data)
             .neq('status', 'Cancelado')
             .neq('cliente_telefone', telefone); // Ignorar agendamentos da própria pessoa ao verificar disponibilidade
 
           const slotsOcupados = new Set<string>();
+          const intervalosOcupados: { inicio: number; fim: number; servico: string; cliente: string }[] = [];
           
           // Adicionar slots bloqueados por agendamentos existentes
           (agendamentosExistentes || []).forEach((ag: any) => {
@@ -1504,7 +1527,15 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             const inicioMin = h * 60 + m;
             const fimMin = inicioMin + duracao;
             
-            console.log(`🔒 Bloqueando slot ao criar: ${ag.horario} (serviço: ${ag.servico_nome || 'sem nome'}, duração: ${duracao}min)`);
+            // Guardar intervalo para verificação de sobreposição
+            intervalosOcupados.push({
+              inicio: inicioMin,
+              fim: fimMin,
+              servico: ag.servico_nome || 'sem nome',
+              cliente: ag.cliente_nome || 'sem cliente'
+            });
+            
+            console.log(`🔒 Intervalo ocupado ao criar: ${ag.horario} até ${String(Math.floor(fimMin / 60)).padStart(2, '0')}:${String(fimMin % 60).padStart(2, '0')} (${ag.servico_nome || 'sem nome'}, ${duracao}min)`);
             
             for (let t = inicioMin; t < fimMin; t += 30) {
               const hh = String(Math.floor(t / 60)).padStart(2, '0');
@@ -1545,17 +1576,12 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             continue;
           }
 
-          // Verificar se todos os slots necessários estão disponíveis
+          // Verificar se todos os slots necessários estão disponíveis usando sobreposição de tempo
           let disponivel = true;
-          const slotsNecessarios: string[] = [];
           
-          for (let t = inicioMin; t < fimMin; t += 30) {
-            const hh = String(Math.floor(t / 60)).padStart(2, '0');
-            const mm = String(t % 60).padStart(2, '0');
-            const slot = `${hh}:${mm}`;
-            slotsNecessarios.push(slot);
-            
-            if (slotsOcupados.has(slot) || t >= 21 * 60) {
+          for (const intervalo of intervalosOcupados) {
+            const hasSobreposicao = inicioMin < intervalo.fim && fimMin > intervalo.inicio;
+            if (hasSobreposicao) {
               disponivel = false;
               break;
             }
@@ -1593,17 +1619,14 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             for (let h = startHour; h < endHour; h++) {
               for (let m = 0; m < 60; m += 30) {
                 const horario = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                const [hh, mm] = horario.split(':').map(Number);
-                const inicio = hh * 60 + mm;
+                const inicio = h * 60 + m;
                 const fim = inicio + servico.duracao;
                 
-                // Verificar se o serviço termina dentro do horário de funcionamento
                 if (fim > endHour * 60) continue;
                 
                 let isDisponivel = true;
-                for (let t = inicio; t < fim; t += 30) {
-                  const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
-                  if (slotsOcupados.has(slotCheck)) {
+                for (const intervalo of intervalosOcupados) {
+                  if (inicio < intervalo.fim && fim > intervalo.inicio) {
                     isDisponivel = false;
                     break;
                   }
@@ -1622,9 +1645,8 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
               const fim = inicio + servico.duracao;
               
               let isDisponivel = true;
-              for (let t = inicio; t < fim; t += 30) {
-                const slotCheck = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
-                if (slotsOcupados.has(slotCheck)) {
+              for (const intervalo of intervalosOcupados) {
+                if (inicio < intervalo.fim && fim > intervalo.inicio) {
                   isDisponivel = false;
                   break;
                 }
