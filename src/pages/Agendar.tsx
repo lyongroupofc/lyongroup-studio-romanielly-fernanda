@@ -457,7 +457,6 @@ const Agendar = () => {
                 type="date"
                 value={formData.dataNascimento}
                 onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
-                required
                 max={new Date().toISOString().split('T')[0]}
               />
             </div>
