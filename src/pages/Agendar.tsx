@@ -262,7 +262,7 @@ const Agendar = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!date || !formData.nome || !formData.telefone || !formData.servico || !formData.horario || !formData.dataNascimento) {
+    if (!date || !formData.nome || !formData.telefone || !formData.servico || !formData.horario) {
       toast.error("Por favor, preencha todos os campos obrigatórios");
       return;
     }
@@ -300,21 +300,26 @@ const Agendar = () => {
       let clienteId = clienteExistente?.id;
 
       if (clienteExistente) {
+        const updateData: any = { nome: formData.nome };
+        // Só atualiza data de nascimento se foi preenchida
+        if (formData.dataNascimento) {
+          updateData.data_nascimento = formData.dataNascimento;
+        }
         await supabase
           .from('clientes')
-          .update({
-            nome: formData.nome,
-            data_nascimento: formData.dataNascimento,
-          })
+          .update(updateData)
           .eq('id', clienteExistente.id);
       } else {
+        const insertData: any = {
+          nome: formData.nome,
+          telefone: formData.telefone,
+        };
+        if (formData.dataNascimento) {
+          insertData.data_nascimento = formData.dataNascimento;
+        }
         const { data: novoCliente } = await supabase
           .from('clientes')
-          .insert({
-            nome: formData.nome,
-            telefone: formData.telefone,
-            data_nascimento: formData.dataNascimento,
-          })
+          .insert(insertData)
           .select()
           .single();
         clienteId = novoCliente?.id;
