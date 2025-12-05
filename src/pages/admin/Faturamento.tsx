@@ -24,7 +24,7 @@ const Faturamento = () => {
   const [showTotal, setShowTotal] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
-  const { agendamentos, loading: loadingAgendamentos } = useAgendamentos();
+  const { agendamentos, loading: loadingAgendamentos, updateAgendamento } = useAgendamentos();
   const { pagamentos, loading: loadingPagamentos, addPagamento } = usePagamentos();
   const { despesas, loading: loadingDespesas, addDespesa, deleteDespesa } = useDespesas();
   const { servicos } = useServicos();
@@ -104,11 +104,21 @@ const Faturamento = () => {
     if (!agendamentoSelecionado) return;
 
     const valorFinal = valorEditado ? parseFloat(valorEditado) : 0;
+    const servicoFinal = servicoSelecionado || agendamentoSelecionado.servico_nome;
+
+    // Se o serviço foi alterado, atualiza também o agendamento
+    if (servicoFinal !== agendamentoSelecionado.servico_nome) {
+      const servicoEncontrado = servicos.find(s => s.nome === servicoFinal);
+      await updateAgendamento(agendamentoSelecionado.id, {
+        servico_nome: servicoFinal,
+        servico_id: servicoEncontrado?.id || null,
+      });
+    }
 
     await addPagamento({
       agendamento_id: agendamentoSelecionado.id,
       cliente_nome: agendamentoSelecionado.cliente_nome,
-      servico: servicoSelecionado || agendamentoSelecionado.servico_nome,
+      servico: servicoFinal,
       valor: valorFinal,
       metodo_pagamento: metodoSelecionado,
       status: "Pago",
