@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { isBefore, startOfToday, isSunday, format } from "date-fns";
@@ -128,7 +129,7 @@ const Agenda = () => {
     nome: "",
     telefone: "",
     dataNascimento: "",
-    servico: undefined as string | undefined,
+    servicosSelecionados: [] as string[],
     profissional: undefined as string | undefined,
     horario: undefined as string | undefined,
     observacoes: "",
@@ -175,7 +176,7 @@ const Agenda = () => {
       nome: "",
       telefone: "",
       dataNascimento: "",
-      servico: undefined,
+      servicosSelecionados: [],
       profissional: undefined,
       horario: undefined,
       observacoes: "",
@@ -387,6 +388,54 @@ const Agenda = () => {
     });
   };
 
+  // Função para calcular slots disponíveis para múltiplos serviços
+  const getMultiServiceStartSlots = (d: Date | undefined, servicoIds: string[], useRealTimeData: boolean = false) => {
+    if (!d || servicoIds.length === 0) return [];
+    const base = getAvailableSlots(d, useRealTimeData);
+    const baseSet = new Set(base);
+    
+    // Calcular duração total de todos os serviços
+    const duracaoTotal = servicoIds.reduce((acc, id) => {
+      const serv = servicos.find(s => s.id === id);
+      return acc + (serv?.duracao || 0);
+    }, 0);
+    
+    if (duracaoTotal === 0) return base;
+
+    const steps = Math.ceil(duracaoTotal / 30);
+    
+    const dayData = getDayData(d);
+    const dayOfWeek = d.getDay();
+    let limiteMinutos = 13 * 60;
+    
+    if (dayData.horariosExtras.length > 0) {
+      const ultimoHorarioExtra = dayData.horariosExtras[dayData.horariosExtras.length - 1];
+      const [h, m] = ultimoHorarioExtra.split(':').map(Number);
+      limiteMinutos = h * 60 + m + 30;
+    } else {
+      if (dayOfWeek === 2 || dayOfWeek === 3) limiteMinutos = 20 * 60;
+      else if (dayOfWeek === 4 || dayOfWeek === 5) limiteMinutos = 19 * 60;
+      else if (dayOfWeek === 6) limiteMinutos = 13 * 60;
+    }
+
+    const toMin = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    };
+    const toHHMM = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+    return base.filter((start) => {
+      const inicio = toMin(start);
+      const fim = inicio + duracaoTotal;
+      if (fim > limiteMinutos) return false;
+      for (let k = 0; k < steps; k++) {
+        const slot = toHHMM(inicio + k * 30);
+        if (!baseSet.has(slot)) return false;
+      }
+      return true;
+    });
+  };
+
   const isDayFull = (d: Date) => {
     const dayData = getDayData(d);
     if (dayData.fechado) return false;
@@ -500,27 +549,32 @@ const Agenda = () => {
 
   const handleSubmitReservar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDate || !formData.nome || !formData.telefone || !formData.servico || !formData.horario) {
-      toast.error("Preencha todos os campos obrigatórios");
+    if (!selectedDate || !formData.nome || !formData.telefone || formData.servicosSelecionados.length === 0 || !formData.horario) {
+      toast.error("Preencha todos os campos obrigatórios (incluindo pelo menos 1 serviço)");
       return;
     }
 
     try {
-      const servico = servicos.find((s) => s.id === formData.servico);
-      if (!servico) {
+      // Buscar todos os serviços selecionados
+      const servicosSelecionados = formData.servicosSelecionados
+        .map(id => servicos.find(s => s.id === id))
+        .filter(Boolean) as typeof servicos;
+      
+      if (servicosSelecionados.length === 0) {
         toast.error("Serviço não encontrado");
         return;
       }
       
       const profissional = formData.profissional ? profissionais.find((p) => p.id === formData.profissional) : null;
 
-      // Calcular desconto se houver promoção selecionada
+      // Calcular desconto se houver promoção selecionada (baseado no preço total dos serviços)
+      const precoTotal = servicosSelecionados.reduce((acc, s) => acc + s.preco, 0);
       let descontoAplicado = 0;
-      if (formData.promocao) {
+      if (formData.promocao && formData.promocao !== 'none') {
         const promocao = promocoes.find(p => p.id === formData.promocao);
         if (promocao) {
           if (promocao.desconto_porcentagem) {
-            descontoAplicado = (servico.preco * promocao.desconto_porcentagem) / 100;
+            descontoAplicado = (precoTotal * promocao.desconto_porcentagem) / 100;
           } else if (promocao.desconto_valor) {
             descontoAplicado = promocao.desconto_valor;
           }
@@ -596,8 +650,9 @@ const Agenda = () => {
         return;
       }
 
-      // Calcular slots que o novo agendamento vai ocupar
-      const slotsNovoAgendamento = calcularHorariosBloqueados(formData.horario, servico.duracao);
+      // Calcular slots que TODOS os novos agendamentos vão ocupar
+      const duracaoTotal = servicosSelecionados.reduce((acc, s) => acc + s.duracao, 0);
+      const slotsNovoAgendamento = calcularHorariosBloqueados(formData.horario, duracaoTotal);
 
       // Verificar se algum slot conflita com agendamentos existentes
       let temConflito = false;
@@ -621,29 +676,48 @@ const Agenda = () => {
         return;
       }
 
-      // Criar agendamento
-      await addAgendamento({
-        data: fmtKey(selectedDate),
-        horario: formData.horario,
-        cliente_nome: formData.nome,
-        cliente_telefone: formData.telefone,
-        cliente_id: clienteId,
-        servico_id: formData.servico,
-        servico_nome: servico?.nome || "",
-        profissional_id: formData.profissional || null,
-        profissional_nome: profissional?.nome || null,
-        status: "Confirmado",
-        observacoes: formData.observacoes || null,
-        origem: "manual",
-        promocao_id: formData.promocao && formData.promocao !== 'none' ? formData.promocao : null,
-        desconto_aplicado: descontoAplicado,
-      });
+      // Criar agendamentos consecutivos para cada serviço
+      const toMin = (t: string) => {
+        const [h, m] = t.split(":").map(Number);
+        return h * 60 + m;
+      };
+      const toHHMM = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+      
+      let horarioAtual = toMin(formData.horario);
+      const nomesServicos = servicosSelecionados.map(s => s.nome).join(', ');
+      
+      for (let i = 0; i < servicosSelecionados.length; i++) {
+        const serv = servicosSelecionados[i];
+        const horarioStr = toHHMM(horarioAtual);
+        
+        await addAgendamento({
+          data: fmtKey(selectedDate),
+          horario: horarioStr,
+          cliente_nome: formData.nome,
+          cliente_telefone: formData.telefone,
+          cliente_id: clienteId,
+          servico_id: serv.id,
+          servico_nome: serv.nome,
+          profissional_id: formData.profissional || null,
+          profissional_nome: profissional?.nome || null,
+          status: "Confirmado",
+          observacoes: servicosSelecionados.length > 1 
+            ? `${formData.observacoes || ''} [Combo: ${nomesServicos}]`.trim()
+            : (formData.observacoes || null),
+          origem: "manual",
+          promocao_id: i === 0 && formData.promocao && formData.promocao !== 'none' ? formData.promocao : null,
+          desconto_aplicado: i === 0 ? descontoAplicado : 0,
+        });
+        
+        // Avançar para o próximo horário baseado na duração do serviço atual
+        horarioAtual += serv.duracao;
+      }
 
       // Limpar cache para forçar atualização em outras abas
       sessionStorage.removeItem('agendamentos_cache');
       
       setOpenSuccessDialog(true);
-      setFormData({ nome: "", telefone: "", dataNascimento: "", servico: "", profissional: "", horario: "", observacoes: "", promocao: "none" });
+      setFormData({ nome: "", telefone: "", dataNascimento: "", servicosSelecionados: [], profissional: undefined, horario: undefined, observacoes: "", promocao: "none" });
     } catch (error) {
       console.error("Erro ao criar agendamento:", error);
       toast.error("Erro ao salvar agendamento. Tente novamente.");
@@ -1164,49 +1238,64 @@ const Agenda = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Serviço *</Label>
-                <Select value={formData.servico || undefined} onValueChange={(value) => setFormData({ ...formData, servico: value, horario: undefined })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {servicos.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="space-y-2">
+              <Label>Serviços * (selecione 1 ou mais)</Label>
+              <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
+                {servicos.filter(s => s.ativo !== false).map((s) => (
+                  <div key={s.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`servico-novo-${s.id}`}
+                      checked={formData.servicosSelecionados.includes(s.id)}
+                      onCheckedChange={(checked) => {
+                        const newServicos = checked
+                          ? [...formData.servicosSelecionados, s.id]
+                          : formData.servicosSelecionados.filter(id => id !== s.id);
+                        setFormData({ ...formData, servicosSelecionados: newServicos, horario: undefined });
+                      }}
+                    />
+                    <label htmlFor={`servico-novo-${s.id}`} className="text-sm cursor-pointer">
+                      {s.nome} ({s.duracao}min - R$ {s.preco})
+                    </label>
+                  </div>
+                ))}
               </div>
-              <div className="space-y-2">
-                <Label>Profissional</Label>
-                <Select value={formData.profissional || undefined} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sem preferência" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {profissionais.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {formData.servicosSelecionados.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Duração total: {formData.servicosSelecionados.reduce((acc, id) => {
+                    const serv = servicos.find(s => s.id === id);
+                    return acc + (serv?.duracao || 0);
+                  }, 0)}min
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Profissional</Label>
+              <Select value={formData.profissional || undefined} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem preferência" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profissionais.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Horário *</Label>
               <Select
                 value={formData.horario || undefined}
                 onValueChange={(value) => setFormData({ ...formData, horario: value })}
-                disabled={!formData.servico}
+                disabled={formData.servicosSelecionados.length === 0}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={formData.servico ? "Selecione um horário" : "Selecione um serviço primeiro"} />
+                  <SelectValue placeholder={formData.servicosSelecionados.length > 0 ? "Selecione um horário" : "Selecione um serviço primeiro"} />
                 </SelectTrigger>
                 <SelectContent>
                   {loadingDisponibilidade ? (
                     <div className="p-2 text-center text-sm text-muted-foreground">Carregando horários...</div>
                   ) : (
-                    getServiceStartSlots(selectedDate, formData.servico, true).map((h) => (
+                    getMultiServiceStartSlots(selectedDate, formData.servicosSelecionados, true).map((h) => (
                       <SelectItem key={h} value={h}>{h}</SelectItem>
                     ))
                   )}
@@ -1283,49 +1372,64 @@ const Agenda = () => {
                 disabled={!!clienteCadastradoSelecionado}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Serviço *</Label>
-                <Select value={formData.servico || undefined} onValueChange={(value) => setFormData({ ...formData, servico: value, horario: undefined })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {servicos.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="space-y-2">
+              <Label>Serviços * (selecione 1 ou mais)</Label>
+              <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
+                {servicos.filter(s => s.ativo !== false).map((s) => (
+                  <div key={s.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`servico-reservar-${s.id}`}
+                      checked={formData.servicosSelecionados.includes(s.id)}
+                      onCheckedChange={(checked) => {
+                        const newServicos = checked
+                          ? [...formData.servicosSelecionados, s.id]
+                          : formData.servicosSelecionados.filter(id => id !== s.id);
+                        setFormData({ ...formData, servicosSelecionados: newServicos, horario: undefined });
+                      }}
+                    />
+                    <label htmlFor={`servico-reservar-${s.id}`} className="text-sm cursor-pointer">
+                      {s.nome} ({s.duracao}min - R$ {s.preco})
+                    </label>
+                  </div>
+                ))}
               </div>
-              <div className="space-y-2">
-                <Label>Profissional</Label>
-                <Select value={formData.profissional || undefined} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sem preferência" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {profissionais.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {formData.servicosSelecionados.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Duração total: {formData.servicosSelecionados.reduce((acc, id) => {
+                    const serv = servicos.find(s => s.id === id);
+                    return acc + (serv?.duracao || 0);
+                  }, 0)}min
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Profissional</Label>
+              <Select value={formData.profissional || undefined} onValueChange={(value) => setFormData({ ...formData, profissional: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem preferência" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profissionais.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Horário *</Label>
               <Select
                 value={formData.horario || undefined}
                 onValueChange={(value) => setFormData({ ...formData, horario: value })}
-                disabled={!formData.servico}
+                disabled={formData.servicosSelecionados.length === 0}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={formData.servico ? "Selecione um horário" : "Selecione um serviço primeiro"} />
+                  <SelectValue placeholder={formData.servicosSelecionados.length > 0 ? "Selecione um horário" : "Selecione um serviço primeiro"} />
                 </SelectTrigger>
                 <SelectContent>
                   {loadingDisponibilidade ? (
                     <div className="p-2 text-center text-sm text-muted-foreground">Carregando horários...</div>
                   ) : (
-                    getServiceStartSlots(selectedDate, formData.servico, true).map((h) => (
+                    getMultiServiceStartSlots(selectedDate, formData.servicosSelecionados, true).map((h) => (
                       <SelectItem key={h} value={h}>{h}</SelectItem>
                     ))
                   )}
@@ -1530,12 +1634,12 @@ const Agenda = () => {
                 <Button 
                   variant="secondary"
                   onClick={() => {
-                    // Preencher formulário com dados do agendamento atual
+                    // Preencher formulário com dados do agendamento atual (serviço único para edição)
                     setFormData({
                       nome: selectedAgendamento.cliente_nome,
                       telefone: selectedAgendamento.cliente_telefone,
                       dataNascimento: '',
-                      servico: selectedAgendamento.servico_id || undefined,
+                      servicosSelecionados: selectedAgendamento.servico_id ? [selectedAgendamento.servico_id] : [],
                       profissional: selectedAgendamento.profissional_id || undefined,
                       horario: selectedAgendamento.horario,
                       observacoes: selectedAgendamento.observacoes || '',
@@ -1581,13 +1685,14 @@ const Agenda = () => {
           {selectedAgendamento && (
             <form onSubmit={async (e) => {
               e.preventDefault();
-              if (!formData.nome || !formData.telefone || !formData.servico || !formData.horario) {
+              if (!formData.nome || !formData.telefone || formData.servicosSelecionados.length === 0 || !formData.horario) {
                 toast.error("Preencha todos os campos obrigatórios");
                 return;
               }
 
               try {
-                const servico = servicos.find((s) => s.id === formData.servico);
+                const servicoId = formData.servicosSelecionados[0];
+                const servico = servicos.find((s) => s.id === servicoId);
                 if (!servico) {
                   toast.error("Serviço não encontrado");
                   return;
@@ -1627,7 +1732,10 @@ const Agenda = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Serviço *</Label>
-                  <Select value={formData.servico || undefined} onValueChange={(value) => setFormData({ ...formData, servico: value, horario: undefined })}>
+                  <Select 
+                    value={formData.servicosSelecionados[0] || undefined} 
+                    onValueChange={(value) => setFormData({ ...formData, servicosSelecionados: [value], horario: undefined })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
@@ -1657,16 +1765,16 @@ const Agenda = () => {
                 <Select
                   value={formData.horario || undefined}
                   onValueChange={(value) => setFormData({ ...formData, horario: value })}
-                  disabled={!formData.servico}
+                  disabled={formData.servicosSelecionados.length === 0}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder={formData.servico ? "Selecione um horário" : "Selecione um serviço primeiro"} />
+                    <SelectValue placeholder={formData.servicosSelecionados.length > 0 ? "Selecione um horário" : "Selecione um serviço primeiro"} />
                   </SelectTrigger>
                   <SelectContent>
                     {loadingDisponibilidade ? (
                       <div className="p-2 text-center text-sm text-muted-foreground">Carregando horários...</div>
                     ) : (
-                      getServiceStartSlots(selectedDate, formData.servico, true).map((h) => (
+                      getMultiServiceStartSlots(selectedDate, formData.servicosSelecionados, true).map((h) => (
                         <SelectItem key={h} value={h}>{h}</SelectItem>
                       ))
                     )}
