@@ -24,6 +24,7 @@ import { useSearchParams } from "react-router-dom";
 import { isFeriado } from "@/lib/feriados";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Component - Agenda Admin
 const Agenda = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
