@@ -451,7 +451,7 @@ const Agendar = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="dataNascimento">Data de Nascimento *</Label>
+              <Label htmlFor="dataNascimento">Data de Nascimento (opcional)</Label>
               <Input
                 id="dataNascimento"
                 type="date"

@@ -1218,7 +1218,7 @@ const Agenda = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Data de Nascimento *</Label>
+              <Label>Data de Nascimento (opcional)</Label>
               <Input 
                 type="date" 
                 value={formData.dataNascimento} 
@@ -1362,7 +1362,7 @@ const Agenda = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Data de Nascimento *</Label>
+              <Label>Data de Nascimento (opcional)</Label>
               <Input 
                 type="date" 
                 value={formData.dataNascimento} 
