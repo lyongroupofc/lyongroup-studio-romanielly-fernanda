@@ -541,7 +541,7 @@ const Faturamento = () => {
                     <td className="p-3">{ag.cliente_nome}</td>
                     <td className="p-3">{ag.servico_nome}</td>
                     <td className="p-3">{format(new Date(ag.data), "dd/MM/yyyy")}</td>
-                    <td className="p-3">{ag.horario}</td>
+                    <td className="p-3">{ag.horario ? ag.horario.substring(0, 5) : "-"}</td>
                     <td className="p-3">
                       <Button
                         size="sm"
