@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
 import { usePagamentos } from "@/hooks/usePagamentos";
 import { useDespesas } from "@/hooks/useDespesas";
+import { useServicos } from "@/hooks/useServicos";
 import { format, parseISO } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -26,10 +27,12 @@ const Faturamento = () => {
   const { agendamentos, loading: loadingAgendamentos } = useAgendamentos();
   const { pagamentos, loading: loadingPagamentos, addPagamento } = usePagamentos();
   const { despesas, loading: loadingDespesas, addDespesa, deleteDespesa } = useDespesas();
+  const { servicos } = useServicos();
   const [openPagamentoDialog, setOpenPagamentoDialog] = useState(false);
   const [openDespesaDialog, setOpenDespesaDialog] = useState(false);
   const [agendamentoSelecionado, setAgendamentoSelecionado] = useState<any>(null);
   const [metodoSelecionado, setMetodoSelecionado] = useState<string>("PIX");
+  const [servicoSelecionado, setServicoSelecionado] = useState<string>("");
   const [valorEditado, setValorEditado] = useState<string>("");
   const [observacoes, setObservacoes] = useState<string>("");
   const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
@@ -91,6 +94,7 @@ const Faturamento = () => {
   const abrirDialogPagamento = (agendamento: any) => {
     setAgendamentoSelecionado(agendamento);
     setMetodoSelecionado("PIX");
+    setServicoSelecionado(agendamento.servico_nome || "");
     setValorEditado("");
     setObservacoes("");
     setOpenPagamentoDialog(true);
@@ -104,7 +108,7 @@ const Faturamento = () => {
     await addPagamento({
       agendamento_id: agendamentoSelecionado.id,
       cliente_nome: agendamentoSelecionado.cliente_nome,
-      servico: observacoes || agendamentoSelecionado.servico_nome,
+      servico: servicoSelecionado || agendamentoSelecionado.servico_nome,
       valor: valorFinal,
       metodo_pagamento: metodoSelecionado,
       status: "Pago",
@@ -594,7 +598,18 @@ const Faturamento = () => {
             </div>
             <div>
               <Label>Serviço</Label>
-              <Input value={agendamentoSelecionado?.servico_nome || ""} disabled className="bg-muted" />
+              <Select value={servicoSelecionado} onValueChange={setServicoSelecionado}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o serviço" />
+                </SelectTrigger>
+                <SelectContent>
+                  {servicos.filter(s => s.ativo).map((servico) => (
+                    <SelectItem key={servico.id} value={servico.nome}>
+                      {servico.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="valor">Valor *</Label>
