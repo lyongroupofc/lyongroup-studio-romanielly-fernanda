@@ -519,11 +519,42 @@ serve(async (req) => {
       .eq('telefone', telefone)
       .maybeSingle();
 
+    // Buscar agendamentos recentes do cliente (criados nas últimas 2 horas) para detectar pós-agendamento
+    const duasHorasAtras = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const { data: agendamentosRecentes } = await supabase
+      .from('agendamentos')
+      .select('*')
+      .eq('bot_conversa_id', conversa.id)
+      .gte('created_at', duasHorasAtras)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    
+    const agendamentoRecente = agendamentosRecentes?.[0];
+    const temAgendamentoRecente = !!agendamentoRecente;
+    
+    console.log('📋 Agendamento recente encontrado:', temAgendamentoRecente ? `${agendamentoRecente.servico_nome} em ${agendamentoRecente.data} às ${agendamentoRecente.horario}` : 'Nenhum');
+
     // System prompt
     const systemPrompt = `Você é a Thaty, recepcionista do Studio Romanielly Fernanda, um studio de beleza especializado em estética e cuidados com unhas.
 
 **CLIENTE IDENTIFICADO:**
 ${clienteExistente ? `✅ Cliente cadastrado: ${clienteExistente.nome}${clienteExistente.data_nascimento ? ` (nascimento: ${clienteExistente.data_nascimento})` : ''}` : '❌ Cliente novo (não cadastrado)'}
+
+${temAgendamentoRecente ? `**🎉 AGENDAMENTO RECÉM CONFIRMADO (nas últimas 2 horas):**
+✅ Serviço: ${agendamentoRecente.servico_nome}
+✅ Data: ${agendamentoRecente.data}
+✅ Horário: ${agendamentoRecente.horario}
+✅ Cliente: ${agendamentoRecente.cliente_nome}
+✅ Status: ${agendamentoRecente.status}
+
+**⛔ REGRA CRÍTICA PÓS-AGENDAMENTO:**
+- O agendamento acima JÁ FOI CRIADO COM SUCESSO no sistema!
+- Se a cliente enviar mensagens curtas de agradecimento/confirmação (ex: "Ótimo", "Ok", "Perfeito", "Obrigada", "Valeu", "Top", "Combinado", "Beleza", "Certo", "Até lá", "Fechado", etc.), você DEVE:
+  1. ✅ Responder de forma simpática e positiva, confirmando que te aguarda no dia agendado
+  2. ✅ Exemplo: "Perfeito! Te aguardo no dia ${agendamentoRecente.data.split('-').reverse().join('/')} às ${agendamentoRecente.horario?.substring(0, 5)}! 💜✨"
+  3. ❌ NUNCA diga que "não tem horário disponível" ou ofereça outros horários - o agendamento já está feito!
+  4. ❌ NUNCA trate como se fosse um novo pedido de agendamento
+` : ''}
 
 **CONTEXTO DA CONVERSA ATUAL:**
 ${contexto.servico_nome ? `✅ Serviço: JÁ ESCOLHIDO (${contexto.servico_nome})` : '❌ Serviço: ainda não escolhido'}
