@@ -222,7 +222,8 @@ const Agenda = () => {
 
   const fmtKey = (d: Date) => format(d, "yyyy-MM-dd");
 
-  const generateSlots = (d?: Date) => {
+  // forceGenerate = true permite gerar slots mesmo para dias fechados (admin em datas passadas)
+  const generateSlots = (d?: Date, forceGenerate: boolean = false) => {
     const slots: string[] = [];
     if (!d) return slots;
     
@@ -235,7 +236,7 @@ const Agenda = () => {
     // Domingo (0): Fechado
     
     let startHour = 8;
-    let endHour = 13;
+    let endHour = 19;
     
     if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
       startHour = 13;
@@ -246,6 +247,10 @@ const Agenda = () => {
     } else if (dayOfWeek === 6) { // Sábado
       startHour = 8;
       endHour = 13;
+    } else if (forceGenerate) {
+      // Para datas passadas no admin, gerar horários padrão 08:00-19:00
+      startHour = 8;
+      endHour = 19;
     } else {
       return []; // Segunda e Domingo fechados
     }
@@ -302,6 +307,9 @@ const Agenda = () => {
 
       const dateStr = fmtKey(d);
       
+      // Verificar se é data passada (admin pode criar agendamentos retroativos)
+      const isPastDate = isBefore(d, startOfToday());
+      
       // Usar dados em tempo real quando solicitado E a data corresponde à selectedDate
       let agendamentosDay: Agendamento[];
       if (useRealTimeData) {
@@ -352,11 +360,18 @@ const Agenda = () => {
       
       dayData.horariosBloqueados.forEach(h => todosBloqueados.add(h));
 
-      // Se o dia está fechado, retornar apenas horários extras (se houver)
+      // Se é data passada no admin, forçar geração de slots mesmo para dias fechados
+      // Se o dia está fechado e NÃO é data passada, retornar apenas horários extras (se houver)
       // Se o dia está aberto, retornar horários normais + horários extras
-      const base = dayData.fechado 
-        ? dayData.horariosExtras 
-        : [...generateSlots(d), ...dayData.horariosExtras];
+      let base: string[];
+      if (isPastDate) {
+        // Para datas passadas, sempre gerar slots (forceGenerate=true)
+        base = [...generateSlots(d, true), ...dayData.horariosExtras];
+      } else if (dayData.fechado) {
+        base = dayData.horariosExtras;
+      } else {
+        base = [...generateSlots(d, false), ...dayData.horariosExtras];
+      }
       
       const disponiveis = base.filter((t) => !todosBloqueados.has(t)).sort();
       console.log(`[getAvailableSlots] Horários disponíveis para ${dateStr}:`, disponiveis);
