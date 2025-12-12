@@ -338,9 +338,6 @@ const Faturamento = () => {
               <p className={`text-2xl font-bold ${saldoHoje >= 0 ? 'text-success' : 'text-destructive'}`}>
                 {showTotal ? `R$ ${saldoHoje.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Entrada: R$ {faturamentoHoje.toFixed(2).replace(".", ",")} | Saída: R$ {despesasHoje.toFixed(2).replace(".", ",")}
-              </p>
             </div>
           </div>
         </Card>
@@ -354,9 +351,6 @@ const Faturamento = () => {
               <p className={`text-2xl font-bold ${saldoMes >= 0 ? 'text-success' : 'text-destructive'}`}>
                 {showTotal ? `R$ ${saldoMes.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Entrada: R$ {faturamentoMes.toFixed(2).replace(".", ",")} | Saída: R$ {despesasMes.toFixed(2).replace(".", ",")}
-              </p>
             </div>
           </div>
         </Card>
@@ -369,9 +363,6 @@ const Faturamento = () => {
               <p className="text-sm text-muted-foreground font-medium">Resultado do Ano</p>
               <p className={`text-2xl font-bold ${saldoAno >= 0 ? 'text-success' : 'text-destructive'}`}>
                 {showTotal ? `R$ ${saldoAno.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Entrada: R$ {faturamentoAno.toFixed(2).replace(".", ",")} | Saída: R$ {despesasAno.toFixed(2).replace(".", ",")}
               </p>
             </div>
           </div>
