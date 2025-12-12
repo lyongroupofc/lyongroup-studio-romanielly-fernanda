@@ -242,11 +242,63 @@ export function DayGridDialog({
             </div>
           )}
 
-          {/* Layout em Duas Colunas */}
-          <div className="flex-1 flex flex-col lg:flex-row" style={{ minHeight: 0, overflow: 'hidden' }}>
+          {/* Layout - Scrollável único no mobile, duas colunas no desktop */}
+          <div className="flex-1 overflow-y-auto lg:overflow-hidden lg:flex lg:flex-row" style={{ minHeight: 0 }}>
             
-            {/* Coluna Esquerda - Grid de Horários (scrollável) */}
-            <div className="flex-1 lg:w-[55%] border-r border-zinc-100 dark:border-zinc-800 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+            {/* Resumo do Dia - Primeiro no Mobile */}
+            <div className="lg:hidden p-3 bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-700">
+              {/* Resumo Compacto Mobile */}
+              <div className="bg-white dark:bg-zinc-900 rounded-lg p-3 border border-zinc-100 dark:border-zinc-800">
+                <h3 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">
+                  Resumo do Dia
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-center p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded">
+                    <p className="text-lg font-bold text-emerald-600">{totais.disponivel}</p>
+                    <p className="text-[10px] text-emerald-600/70">Livres</p>
+                  </div>
+                  <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950/30 rounded">
+                    <p className="text-lg font-bold text-yellow-600">{totais.agendado}</p>
+                    <p className="text-[10px] text-yellow-600/70">Agendados</p>
+                  </div>
+                  <div className="text-center p-2 bg-red-50 dark:bg-red-950/30 rounded">
+                    <p className="text-lg font-bold text-red-500">{totais.bloqueado}</p>
+                    <p className="text-[10px] text-red-500/70">Bloqueados</p>
+                  </div>
+                </div>
+                
+                {/* Valor Estimado inline no mobile */}
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-yellow-500" />
+                    <span className="text-xs text-zinc-500">Valor Estimado:</span>
+                    <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                      {valorVisivel ? `R$ ${valorTotal.toFixed(2)}` : "•••••"}
+                    </span>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setValorVisivel(!valorVisivel)}
+                    className="w-6 h-6 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    {valorVisivel ? <Eye className="w-3 h-3 text-zinc-400" /> : <EyeOff className="w-3 h-3 text-zinc-400" />}
+                  </Button>
+                </div>
+                
+                {/* Próximo Disponível inline */}
+                {proximoDisponivel && (
+                  <div className="flex items-center gap-2 mt-2 p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded">
+                    <Clock className="w-3 h-3 text-emerald-500" />
+                    <span className="text-[10px] text-emerald-600">Próximo:</span>
+                    <span className="text-xs font-bold text-emerald-700">{proximoDisponivel}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Grid de Horários */}
+            <div className="flex-1 lg:w-[55%] lg:border-r border-zinc-100 dark:border-zinc-800 lg:overflow-y-auto lg:max-h-[calc(100vh-200px)]">
               <div className="px-3 py-3 space-y-1 pb-6">
                 {todosHorarios.map((horario) => {
                   const status = getSlotStatus(horario);
@@ -336,8 +388,8 @@ export function DayGridDialog({
               </div>
             </div>
             
-            {/* Coluna Direita - Painel de Informações */}
-            <div className="lg:w-[45%] bg-zinc-50/50 dark:bg-zinc-900/50 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+            {/* Coluna Direita - Painel de Informações (apenas desktop) */}
+            <div className="hidden lg:block lg:w-[45%] bg-zinc-50/50 dark:bg-zinc-900/50 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
               <div className="p-4 space-y-4">
                 
                 {/* Resumo do Dia */}
