@@ -243,11 +243,11 @@ export function DayGridDialog({
           )}
 
           {/* Layout em Duas Colunas */}
-          <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden" style={{ minHeight: 0 }}>
             
             {/* Coluna Esquerda - Grid de Horários (scrollável) */}
-            <div className="flex-1 lg:w-[55%] flex flex-col min-h-0 border-r border-zinc-100 dark:border-zinc-800">
-              <div className="flex-1 h-0 overflow-y-auto overscroll-contain px-3 py-3 space-y-1 pb-6">
+            <div className="flex-1 lg:w-[55%] flex flex-col border-r border-zinc-100 dark:border-zinc-800" style={{ minHeight: 0 }}>
+              <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1 pb-6" style={{ minHeight: 0 }}>
                 {todosHorarios.map((horario) => {
                   const status = getSlotStatus(horario);
                   const agendamento = agendamentosPorHorario.get(horario);
@@ -337,8 +337,8 @@ export function DayGridDialog({
             </div>
             
             {/* Coluna Direita - Painel de Informações */}
-            <div className="lg:w-[45%] flex flex-col min-h-0 bg-zinc-50/50 dark:bg-zinc-900/50">
-              <div className="flex-1 h-0 overflow-y-auto">
+            <div className="lg:w-[45%] flex flex-col bg-zinc-50/50 dark:bg-zinc-900/50" style={{ minHeight: 0 }}>
+              <div className="flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
               <div className="p-4 space-y-4">
                 
                 {/* Resumo do Dia */}
