@@ -1756,6 +1756,16 @@ const Agenda = () => {
               <p className="text-sm text-muted-foreground">
                 Estender o atendimento de {selectedAgendamento.cliente_nome} por mais tempo
               </p>
+              
+              {/* Mostrar duração atual */}
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">Serviço atual</p>
+                <p className="font-medium">{selectedAgendamento.servico_nome}</p>
+                <p className="text-xs text-muted-foreground">
+                  Duração: {servicos.find(s => s.id === selectedAgendamento.servico_id)?.duracao || 60}min
+                </p>
+              </div>
+              
               <div className="grid grid-cols-2 gap-2">
                 {[30, 60, 90, 120].map((min) => (
                   <Button
@@ -1768,19 +1778,62 @@ const Agenda = () => {
                   </Button>
                 ))}
               </div>
+              
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setOpenEstenderDialog(false)}>Cancelar</Button>
                 <Button onClick={async () => {
-                  const servicoAtual = servicos.find(s => s.id === selectedAgendamento.servico_id);
-                  const novaDuracao = (servicoAtual?.duracao || 60) + extensaoMinutos;
-                  
-                  await updateAgendamento(selectedAgendamento.id, {
-                    observacoes: `${selectedAgendamento.observacoes || ''} [Estendido +${extensaoMinutos}min]`.trim()
-                  });
-                  
-                  toast.success(`Horário estendido em ${extensaoMinutos} minutos!`);
-                  setOpenEstenderDialog(false);
-                  refetchAgendamentos();
+                  try {
+                    const servicoAtual = servicos.find(s => s.id === selectedAgendamento.servico_id);
+                    const duracaoAtual = servicoAtual?.duracao || 60;
+                    const novaDuracao = duracaoAtual + extensaoMinutos;
+                    
+                    // Calcular novo horário de término
+                    const [h, m] = selectedAgendamento.horario.split(':').map(Number);
+                    const inicioMin = h * 60 + m;
+                    const novoFimMin = inicioMin + novaDuracao;
+                    const novoFimHorario = `${String(Math.floor(novoFimMin / 60)).padStart(2, '0')}:${String(novoFimMin % 60).padStart(2, '0')}`;
+                    
+                    // Atualizar agendamento com observação de extensão
+                    await updateAgendamento(selectedAgendamento.id, {
+                      observacoes: `${selectedAgendamento.observacoes || ''} [Estendido +${extensaoMinutos}min, término às ${novoFimHorario}]`.trim()
+                    });
+                    
+                    // Bloquear os horários extras na configuração do dia
+                    const dataStr = selectedAgendamento.data;
+                    const config = getConfig(dataStr);
+                    const horariosBloqueadosAtuais = config?.horarios_bloqueados || [];
+                    
+                    // Calcular horários que precisam ser bloqueados
+                    const novosHorariosBloqueados: string[] = [];
+                    const fimOriginalMin = inicioMin + duracaoAtual;
+                    
+                    for (let min = fimOriginalMin; min < novoFimMin; min += 30) {
+                      const hh = String(Math.floor(min / 60)).padStart(2, '0');
+                      const mm = String(min % 60).padStart(2, '0');
+                      const slot = `${hh}:${mm}`;
+                      if (!horariosBloqueadosAtuais.includes(slot)) {
+                        novosHorariosBloqueados.push(slot);
+                      }
+                    }
+                    
+                    // Salvar na configuração do dia se houver novos bloqueios
+                    if (novosHorariosBloqueados.length > 0) {
+                      await updateConfig(dataStr, {
+                        fechado: config?.fechado || false,
+                        horarios_bloqueados: [...horariosBloqueadosAtuais, ...novosHorariosBloqueados],
+                        horarios_extras: config?.horarios_extras || [],
+                      });
+                    }
+                    
+                    toast.success(`Horário estendido em ${extensaoMinutos} minutos! Término às ${novoFimHorario}`);
+                    setOpenEstenderDialog(false);
+                    setOpenDetalhesDialog(false);
+                    refetchAgendamentos();
+                    refetchConfig();
+                  } catch (error) {
+                    console.error("Erro ao estender horário:", error);
+                    toast.error("Erro ao estender horário");
+                  }
                 }}>
                   Confirmar Extensão
                 </Button>
@@ -1791,7 +1844,12 @@ const Agenda = () => {
       </Dialog>
 
       {/* Dialog Adicionar Serviço - Item 2B */}
-      <Dialog open={openAdicionarServicoDialog} onOpenChange={setOpenAdicionarServicoDialog}>
+      <Dialog open={openAdicionarServicoDialog} onOpenChange={(open) => {
+        setOpenAdicionarServicoDialog(open);
+        if (!open) {
+          setServicoAdicionalId("");
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Adicionar Serviço</DialogTitle>
@@ -1801,63 +1859,122 @@ const Agenda = () => {
               <p className="text-sm text-muted-foreground">
                 Adicionar outro serviço ao atendimento de {selectedAgendamento.cliente_nome}
               </p>
+              
+              {/* Mostrar serviço atual */}
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">Serviço atual</p>
+                <p className="font-medium">{selectedAgendamento.servico_nome}</p>
+                <p className="text-xs text-muted-foreground">
+                  Horário: {selectedAgendamento.horario.substring(0, 5)}
+                </p>
+              </div>
+              
               <div className="space-y-2">
-                <Label>Selecione o serviço</Label>
+                <Label>Selecione o serviço adicional</Label>
                 <Select value={servicoAdicionalId} onValueChange={setServicoAdicionalId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Escolha um serviço" />
                   </SelectTrigger>
                   <SelectContent>
-                    {servicos.filter(s => s.ativo !== false && s.id !== selectedAgendamento.servico_id).map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.nome} ({s.duracao}min - R$ {s.preco})
-                      </SelectItem>
-                    ))}
+                    {servicos
+                      .filter(s => s.ativo !== false)
+                      .map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.nome} ({s.duracao}min - R$ {s.preco})
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
+              
+              {/* Preview do novo horário */}
+              {servicoAdicionalId && (() => {
+                const servicoAtualDuracao = servicos.find(s => s.id === selectedAgendamento.servico_id)?.duracao || 60;
+                const horarioNorm = selectedAgendamento.horario.length > 5 
+                  ? selectedAgendamento.horario.substring(0, 5) 
+                  : selectedAgendamento.horario;
+                const [h, m] = horarioNorm.split(':').map(Number);
+                const inicioMin = h * 60 + m;
+                const novoHorarioMin = inicioMin + servicoAtualDuracao;
+                const novoHorario = `${String(Math.floor(novoHorarioMin / 60)).padStart(2, '0')}:${String(novoHorarioMin % 60).padStart(2, '0')}`;
+                const servicoNovo = servicos.find(s => s.id === servicoAdicionalId);
+                
+                return (
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                    <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">
+                      Novo serviço será agendado às {novoHorario}
+                    </p>
+                    {servicoNovo && (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-500">
+                        {servicoNovo.nome} • {servicoNovo.duracao}min • R$ {servicoNovo.preco}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+              
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setOpenAdicionarServicoDialog(false)}>Cancelar</Button>
+                <Button variant="outline" onClick={() => {
+                  setOpenAdicionarServicoDialog(false);
+                  setServicoAdicionalId("");
+                }}>
+                  Cancelar
+                </Button>
                 <Button onClick={async () => {
                   if (!servicoAdicionalId) {
                     toast.error("Selecione um serviço");
                     return;
                   }
                   
-                  const servicoAtual = servicos.find(s => s.id === selectedAgendamento.servico_id);
-                  const servicoNovo = servicos.find(s => s.id === servicoAdicionalId);
-                  
-                  if (!servicoAtual || !servicoNovo) {
-                    toast.error("Serviço não encontrado");
-                    return;
+                  try {
+                    // Buscar duração do serviço atual (usar valor padrão se não encontrado)
+                    const servicoAtual = servicos.find(s => s.id === selectedAgendamento.servico_id);
+                    const servicoAtualDuracao = servicoAtual?.duracao || 60;
+                    const servicoAtualNome = servicoAtual?.nome || selectedAgendamento.servico_nome || "Serviço anterior";
+                    
+                    const servicoNovo = servicos.find(s => s.id === servicoAdicionalId);
+                    
+                    if (!servicoNovo) {
+                      toast.error("Serviço selecionado não encontrado");
+                      return;
+                    }
+                    
+                    // Normalizar horário removendo segundos se houver
+                    const horarioNorm = selectedAgendamento.horario.length > 5 
+                      ? selectedAgendamento.horario.substring(0, 5) 
+                      : selectedAgendamento.horario;
+                    
+                    // Calcular novo horário após o serviço atual
+                    const [h, m] = horarioNorm.split(':').map(Number);
+                    const inicioMin = h * 60 + m;
+                    const novoHorarioMin = inicioMin + servicoAtualDuracao;
+                    const novoHorario = `${String(Math.floor(novoHorarioMin / 60)).padStart(2, '0')}:${String(novoHorarioMin % 60).padStart(2, '0')}`;
+                    
+                    // Criar novo agendamento consecutivo
+                    await addAgendamento({
+                      data: selectedAgendamento.data,
+                      horario: novoHorario,
+                      cliente_nome: selectedAgendamento.cliente_nome,
+                      cliente_telefone: selectedAgendamento.cliente_telefone,
+                      cliente_id: selectedAgendamento.cliente_id || null,
+                      servico_id: servicoNovo.id,
+                      servico_nome: servicoNovo.nome,
+                      profissional_id: selectedAgendamento.profissional_id || null,
+                      profissional_nome: selectedAgendamento.profissional_nome || null,
+                      status: "Confirmado",
+                      observacoes: `[Combo com ${servicoAtualNome}]`,
+                      origem: "manual",
+                    });
+                    
+                    toast.success(`Serviço ${servicoNovo.nome} adicionado às ${novoHorario}!`);
+                    setOpenAdicionarServicoDialog(false);
+                    setOpenDetalhesDialog(false);
+                    setServicoAdicionalId("");
+                    refetchAgendamentos();
+                  } catch (error) {
+                    console.error("Erro ao adicionar serviço:", error);
+                    toast.error("Erro ao adicionar serviço. Tente novamente.");
                   }
-                  
-                  // Calcular novo horário após o serviço atual
-                  const [h, m] = selectedAgendamento.horario.split(':').map(Number);
-                  const inicioMin = h * 60 + m;
-                  const novoHorarioMin = inicioMin + servicoAtual.duracao;
-                  const novoHorario = `${String(Math.floor(novoHorarioMin / 60)).padStart(2, '0')}:${String(novoHorarioMin % 60).padStart(2, '0')}`;
-                  
-                  // Criar novo agendamento consecutivo
-                  await addAgendamento({
-                    data: selectedAgendamento.data,
-                    horario: novoHorario,
-                    cliente_nome: selectedAgendamento.cliente_nome,
-                    cliente_telefone: selectedAgendamento.cliente_telefone,
-                    cliente_id: selectedAgendamento.cliente_id || null,
-                    servico_id: servicoNovo.id,
-                    servico_nome: servicoNovo.nome,
-                    profissional_id: selectedAgendamento.profissional_id || null,
-                    profissional_nome: selectedAgendamento.profissional_nome || null,
-                    status: "Confirmado",
-                    observacoes: `[Combo com ${servicoAtual.nome}]`,
-                    origem: "manual",
-                  });
-                  
-                  toast.success(`Serviço ${servicoNovo.nome} adicionado às ${novoHorario}!`);
-                  setOpenAdicionarServicoDialog(false);
-                  setServicoAdicionalId("");
-                  refetchAgendamentos();
                 }}>
                   Adicionar Serviço
                 </Button>

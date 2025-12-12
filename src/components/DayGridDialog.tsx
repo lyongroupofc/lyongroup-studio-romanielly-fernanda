@@ -4,7 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Settings, Lock, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Settings, Lock, User, Clock, DollarSign, CalendarCheck } from "lucide-react";
 import { type Agendamento } from "@/hooks/useAgendamentos";
 
 interface Servico {
@@ -34,7 +34,7 @@ interface DayGridDialogProps {
   highlightedAgendamento?: string | null;
 }
 
-const SLOT_HEIGHT = 40;
+const SLOT_HEIGHT = 36;
 
 export function DayGridDialog({
   open,
@@ -53,6 +53,11 @@ export function DayGridDialog({
   // Verificar se o dia está fechado (fechado=true E sem horariosExtras)
   const isDiaFechado = dayConfig.fechado && (!dayConfig.horariosExtras || dayConfig.horariosExtras.length === 0);
 
+  // Filtrar apenas agendamentos ativos
+  const agendamentosAtivos = useMemo(() => {
+    return agendamentosDia.filter(ag => ag.status !== 'Cancelado' && ag.status !== 'Excluido');
+  }, [agendamentosDia]);
+
   // Gerar todos os horários do dia (08:00 às 20:00)
   const todosHorarios = useMemo(() => {
     const slots: string[] = [];
@@ -70,59 +75,39 @@ export function DayGridDialog({
   // Mapear agendamentos por horário de início
   const agendamentosPorHorario = useMemo(() => {
     const map = new Map<string, Agendamento>();
-    agendamentosDia
-      .filter(ag => ag.status !== 'Cancelado' && ag.status !== 'Excluido')
-      .forEach(ag => {
-        const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
-        map.set(horarioNormalizado, ag);
-      });
+    agendamentosAtivos.forEach(ag => {
+      const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
+      map.set(horarioNormalizado, ag);
+    });
     return map;
-  }, [agendamentosDia]);
+  }, [agendamentosAtivos]);
 
   // Calcular horários ocupados por agendamentos (considerando duração)
   const horariosOcupadosPorAgendamento = useMemo(() => {
     const ocupados = new Set<string>();
-    agendamentosDia
-      .filter(ag => ag.status !== 'Cancelado' && ag.status !== 'Excluido')
-      .forEach(ag => {
-        const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
-        const servico = servicos.find(s => s.id === ag.servico_id);
-        const duracao = servico?.duracao || 60;
-        
-        const [h, m] = horarioNormalizado.split(':').map(Number);
-        const inicioMin = h * 60 + m;
-        
-        for (let min = inicioMin; min < inicioMin + duracao; min += 30) {
-          const hh = String(Math.floor(min / 60)).padStart(2, '0');
-          const mm = String(min % 60).padStart(2, '0');
-          ocupados.add(`${hh}:${mm}`);
-        }
-      });
+    agendamentosAtivos.forEach(ag => {
+      const horarioNormalizado = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
+      const servico = servicos.find(s => s.id === ag.servico_id);
+      const duracao = servico?.duracao || 60;
+      
+      const [h, m] = horarioNormalizado.split(':').map(Number);
+      const inicioMin = h * 60 + m;
+      
+      for (let min = inicioMin; min < inicioMin + duracao; min += 30) {
+        const hh = String(Math.floor(min / 60)).padStart(2, '0');
+        const mm = String(min % 60).padStart(2, '0');
+        ocupados.add(`${hh}:${mm}`);
+      }
+    });
     return ocupados;
-  }, [agendamentosDia, servicos]);
+  }, [agendamentosAtivos, servicos]);
 
   // Calcular status de cada slot
   const getSlotStatus = (horario: string): 'disponivel' | 'agendado' | 'bloqueado' | 'ocupado' => {
-    // Se dia está fechado, tudo é bloqueado
-    if (isDiaFechado) {
-      return 'bloqueado';
-    }
-    
-    // Verificar se é bloqueado manualmente
-    if (dayConfig.horariosBloqueados.includes(horario)) {
-      return 'bloqueado';
-    }
-    
-    // Verificar se tem agendamento iniciando neste horário
-    if (agendamentosPorHorario.has(horario)) {
-      return 'agendado';
-    }
-    
-    // Verificar se está ocupado por agendamento anterior (duração)
-    if (horariosOcupadosPorAgendamento.has(horario) && !agendamentosPorHorario.has(horario)) {
-      return 'ocupado';
-    }
-    
+    if (isDiaFechado) return 'bloqueado';
+    if (dayConfig.horariosBloqueados.includes(horario)) return 'bloqueado';
+    if (agendamentosPorHorario.has(horario)) return 'agendado';
+    if (horariosOcupadosPorAgendamento.has(horario) && !agendamentosPorHorario.has(horario)) return 'ocupado';
     return 'disponivel';
   };
 
@@ -131,7 +116,7 @@ export function DayGridDialog({
     const servico = servicos.find(s => s.id === ag.servico_id);
     const duracao = servico?.duracao || 60;
     const slots = Math.ceil(duracao / 30);
-    return slots * SLOT_HEIGHT - 8;
+    return slots * SLOT_HEIGHT - 4;
   };
 
   const navigatePrevDay = () => {
@@ -160,24 +145,31 @@ export function DayGridDialog({
       return { disponivel: 0, agendado: 0, bloqueado: todosHorarios.length };
     }
     const disponivel = todosHorarios.filter(h => getSlotStatus(h) === 'disponivel').length;
-    const agendado = agendamentosDia.filter(ag => ag.status !== 'Cancelado' && ag.status !== 'Excluido').length;
+    const agendado = agendamentosAtivos.length;
     const bloqueado = dayConfig.horariosBloqueados.length;
     return { disponivel, agendado, bloqueado };
-  }, [todosHorarios, agendamentosDia, dayConfig, isDiaFechado]);
+  }, [todosHorarios, agendamentosAtivos, dayConfig, isDiaFechado]);
+
+  // Calcular valor total estimado
+  const valorTotal = useMemo(() => {
+    return agendamentosAtivos.reduce((acc, ag) => {
+      const servico = servicos.find(s => s.id === ag.servico_id);
+      return acc + (servico?.preco || 0);
+    }, 0);
+  }, [agendamentosAtivos, servicos]);
+
+  // Próximo horário disponível
+  const proximoDisponivel = useMemo(() => {
+    return todosHorarios.find(h => getSlotStatus(h) === 'disponivel');
+  }, [todosHorarios, getSlotStatus]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-full w-full h-[100dvh] max-h-[100dvh] p-0 m-0 rounded-none sm:rounded-none border-0 bg-white dark:bg-zinc-950 overflow-hidden">
-        <div className="flex flex-col h-full relative">
+        <div className="flex flex-col h-full">
           
-          {/* Elementos decorativos sutis */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-20 right-10 w-20 h-20 rounded-full bg-amber-200/10 blur-2xl" />
-            <div className="absolute bottom-40 left-5 w-16 h-16 rounded-full bg-amber-300/10 blur-xl" />
-          </div>
-
           {/* Header Minimalista */}
-          <header className="relative flex-shrink-0 bg-white dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-800">
+          <header className="flex-shrink-0 bg-white dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-800">
             <div className="h-0.5 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400" />
             
             <div className="px-4 py-3">
@@ -210,39 +202,23 @@ export function DayGridDialog({
                 </Button>
               </div>
               
-              {/* Resumo compacto */}
-              <div className="flex justify-center gap-4 mt-2">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-xs text-zinc-600 dark:text-zinc-400">{totais.disponivel}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span className="text-xs text-zinc-600 dark:text-zinc-400">{totais.agendado}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-red-500" />
-                  <span className="text-xs text-zinc-600 dark:text-zinc-400">{totais.bloqueado}</span>
-                </div>
-              </div>
-              
               {/* Botões compactos */}
               <div className="flex gap-2 mt-3">
                 <Button 
                   onClick={onReservar} 
                   size="sm"
-                  className="flex-1 h-9 gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg"
+                  className="flex-1 h-8 gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium rounded-lg"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-3 h-3" />
                   Reservar
                 </Button>
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={onGerenciar} 
-                  className="flex-1 h-9 gap-1.5 border border-zinc-200 dark:border-zinc-700 text-sm font-medium rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                  className="flex-1 h-8 gap-1.5 border border-zinc-200 dark:border-zinc-700 text-xs font-medium rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800"
                 >
-                  <Settings className="w-3.5 h-3.5" />
+                  <Settings className="w-3 h-3" />
                   Gerenciar
                 </Button>
               </div>
@@ -257,94 +233,202 @@ export function DayGridDialog({
             </div>
           )}
 
-          {/* Grid de Horários */}
-          <div className="flex-1 overflow-y-auto overscroll-contain relative z-10">
-            <div className="px-4 py-3 space-y-2 pb-6">
-              {todosHorarios.map((horario) => {
-                const status = getSlotStatus(horario);
-                const agendamento = agendamentosPorHorario.get(horario);
-                const isHighlighted = agendamento?.id === highlightedAgendamento;
-                
-                if (status === 'ocupado') {
-                  return null;
-                }
-                
-                return (
-                  <div 
-                    key={horario} 
-                    className="flex gap-3 items-stretch"
-                    style={{ 
-                      minHeight: status === 'agendado' && agendamento 
-                        ? getAgendamentoHeight(agendamento) 
-                        : SLOT_HEIGHT - 8
-                    }}
-                  >
-                    {/* Coluna do horário */}
-                    <div className="w-14 flex-shrink-0 flex items-center justify-center">
-                      <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                        {horario}
-                      </span>
-                    </div>
-                    
-                    {/* Coluna do conteúdo */}
-                    <div className="flex-1">
-                      {/* SLOT DISPONÍVEL - VERDE */}
-                      {status === 'disponivel' && (
-                        <div 
-                          className="h-full min-h-[32px] rounded-lg border border-dashed border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/20 flex items-center justify-center cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:border-emerald-400 transition-colors"
-                          onClick={onReservar}
-                        >
-                          <span className="text-xs text-emerald-600 dark:text-emerald-400">
-                            Disponível
-                          </span>
-                        </div>
-                      )}
+          {/* Layout em Duas Colunas */}
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            
+            {/* Coluna Esquerda - Grid de Horários (scrollável) */}
+            <div className="flex-1 lg:w-[55%] overflow-y-auto overscroll-contain border-r border-zinc-100 dark:border-zinc-800">
+              <div className="px-3 py-3 space-y-1 pb-6">
+                {todosHorarios.map((horario) => {
+                  const status = getSlotStatus(horario);
+                  const agendamento = agendamentosPorHorario.get(horario);
+                  const isHighlighted = agendamento?.id === highlightedAgendamento;
+                  
+                  if (status === 'ocupado') {
+                    return null;
+                  }
+                  
+                  return (
+                    <div 
+                      key={horario} 
+                      className="flex gap-2 items-stretch"
+                      style={{ 
+                        minHeight: status === 'agendado' && agendamento 
+                          ? getAgendamentoHeight(agendamento) 
+                          : SLOT_HEIGHT - 4
+                      }}
+                    >
+                      {/* Coluna do horário */}
+                      <div className="w-12 flex-shrink-0 flex items-center justify-center">
+                        <span className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500">
+                          {horario}
+                        </span>
+                      </div>
                       
-                      {/* SLOT BLOQUEADO - VERMELHO */}
-                      {status === 'bloqueado' && (
-                        <div className="h-full min-h-[32px] rounded-lg border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20 flex items-center gap-2 px-3">
-                          <Lock className="w-3 h-3 text-red-400" />
-                          <span className="text-xs text-red-600 dark:text-red-400">
-                            Bloqueado
-                          </span>
-                        </div>
-                      )}
-                      
-                      {/* SLOT AGENDADO - DOURADO */}
-                      {status === 'agendado' && agendamento && (
-                        <div 
-                          className={`h-full rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
-                            isHighlighted 
-                              ? 'ring-2 ring-amber-400 bg-amber-100 dark:bg-amber-900/50 border-amber-400' 
-                              : 'border-amber-300 dark:border-amber-700 bg-amber-50/80 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40'
-                          }`}
-                          style={{ minHeight: getAgendamentoHeight(agendamento) }}
-                          onClick={() => onSelectAgendamento(agendamento)}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
-                              <User className="w-3 h-3 text-white" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-zinc-900 dark:text-white truncate">
-                                {agendamento.cliente_nome}
-                              </p>
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                                {agendamento.servico_nome}
-                              </p>
-                            </div>
-                            {agendamento.status && (
-                              <Badge className="text-[10px] px-1.5 py-0.5 bg-amber-500 text-white border-0">
-                                {agendamento.status}
-                              </Badge>
-                            )}
+                      {/* Coluna do conteúdo */}
+                      <div className="flex-1">
+                        {/* SLOT DISPONÍVEL - VERDE */}
+                        {status === 'disponivel' && (
+                          <div 
+                            className="h-full min-h-[28px] rounded border border-dashed border-emerald-200 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-950/10 flex items-center justify-center cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/20 transition-colors"
+                            onClick={onReservar}
+                          >
+                            <span className="text-[10px] text-emerald-500 dark:text-emerald-400">
+                              Disponível
+                            </span>
                           </div>
-                        </div>
-                      )}
+                        )}
+                        
+                        {/* SLOT BLOQUEADO - VERMELHO */}
+                        {status === 'bloqueado' && (
+                          <div className="h-full min-h-[28px] rounded border border-red-100 dark:border-red-900 bg-red-50/30 dark:bg-red-950/10 flex items-center gap-1.5 px-2">
+                            <Lock className="w-2.5 h-2.5 text-red-300" />
+                            <span className="text-[10px] text-red-400 dark:text-red-500">
+                              Bloqueado
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* SLOT AGENDADO - DOURADO (compacto) */}
+                        {status === 'agendado' && agendamento && (
+                          <div 
+                            className={`h-full rounded px-2 py-1.5 cursor-pointer transition-colors ${
+                              isHighlighted 
+                                ? 'ring-2 ring-amber-400 bg-amber-100 dark:bg-amber-900/50 border border-amber-400' 
+                                : 'border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/20 hover:bg-amber-100/80 dark:hover:bg-amber-900/30'
+                            }`}
+                            style={{ minHeight: getAgendamentoHeight(agendamento) }}
+                            onClick={() => onSelectAgendamento(agendamento)}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
+                                <User className="w-2.5 h-2.5 text-white" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-zinc-800 dark:text-white truncate leading-tight">
+                                  {agendamento.cliente_nome}
+                                </p>
+                                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate leading-tight">
+                                  {agendamento.servico_nome}
+                                </p>
+                              </div>
+                              {agendamento.status && (
+                                <Badge className="text-[9px] px-1 py-0 h-4 bg-amber-500 text-white border-0">
+                                  {agendamento.status === 'Confirmado' ? '✓' : agendamento.status.charAt(0)}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* Coluna Direita - Painel de Informações */}
+            <div className="lg:w-[45%] bg-zinc-50/50 dark:bg-zinc-900/50 overflow-y-auto">
+              <div className="p-4 space-y-4">
+                
+                {/* Resumo do Dia */}
+                <div className="bg-white dark:bg-zinc-900 rounded-lg p-3 border border-zinc-100 dark:border-zinc-800">
+                  <h3 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">
+                    Resumo do Dia
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="text-center p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded">
+                      <p className="text-lg font-bold text-emerald-600">{totais.disponivel}</p>
+                      <p className="text-[10px] text-emerald-600/70">Livres</p>
+                    </div>
+                    <div className="text-center p-2 bg-amber-50 dark:bg-amber-950/30 rounded">
+                      <p className="text-lg font-bold text-amber-600">{totais.agendado}</p>
+                      <p className="text-[10px] text-amber-600/70">Agendados</p>
+                    </div>
+                    <div className="text-center p-2 bg-red-50 dark:bg-red-950/30 rounded">
+                      <p className="text-lg font-bold text-red-500">{totais.bloqueado}</p>
+                      <p className="text-[10px] text-red-500/70">Bloqueados</p>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+
+                {/* Valor Estimado */}
+                <div className="bg-white dark:bg-zinc-900 rounded-lg p-3 border border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-amber-500" />
+                    <div>
+                      <p className="text-[10px] text-zinc-500 uppercase">Valor Estimado</p>
+                      <p className="text-lg font-bold text-zinc-900 dark:text-white">
+                        R$ {valorTotal.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Próximo Disponível */}
+                {proximoDisponivel && (
+                  <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3 border border-emerald-100 dark:border-emerald-900">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-emerald-500" />
+                      <div>
+                        <p className="text-[10px] text-emerald-600 uppercase">Próximo Disponível</p>
+                        <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
+                          {proximoDisponivel}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Lista de Agendamentos */}
+                <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                  <div className="p-3 border-b border-zinc-100 dark:border-zinc-800">
+                    <div className="flex items-center gap-2">
+                      <CalendarCheck className="w-4 h-4 text-amber-500" />
+                      <h3 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+                        Agendamentos ({agendamentosAtivos.length})
+                      </h3>
+                    </div>
+                  </div>
+                  
+                  <div className="max-h-[200px] overflow-y-auto">
+                    {agendamentosAtivos.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-zinc-400">
+                        Nenhum agendamento
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        {agendamentosAtivos
+                          .sort((a, b) => a.horario.localeCompare(b.horario))
+                          .map(ag => {
+                            const horarioNorm = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
+                            const servico = servicos.find(s => s.id === ag.servico_id);
+                            return (
+                              <div 
+                                key={ag.id}
+                                className="p-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                                onClick={() => onSelectAgendamento(ag)}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-amber-600 w-10">{horarioNorm}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium text-zinc-800 dark:text-white truncate">
+                                      {ag.cliente_nome}
+                                    </p>
+                                    <p className="text-[10px] text-zinc-500 truncate">
+                                      {ag.servico_nome} {servico && `• R$ ${servico.preco}`}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
         </div>
