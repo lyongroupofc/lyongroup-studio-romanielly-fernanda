@@ -106,14 +106,14 @@ const Fidelidade = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Heart className="w-8 h-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
             Programa de Fidelidade
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Gerencie pontos e recompensas dos clientes
           </p>
         </div>
@@ -196,7 +196,7 @@ const Fidelidade = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-2xl font-bold text-primary">{regras.pontos_por_real}</p>
                 <p className="text-sm text-muted-foreground">Pontos por R$</p>
@@ -217,7 +217,7 @@ const Fidelidade = () => {
       )}
 
       {/* Lista de Clientes com Fidelidade */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {fidelidades.map((fidelidade) => (
           <Card key={fidelidade.id} className="hover:shadow-lg transition-shadow">
             <CardHeader>

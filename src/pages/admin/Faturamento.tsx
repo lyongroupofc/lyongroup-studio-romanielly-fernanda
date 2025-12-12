@@ -289,18 +289,19 @@ const Faturamento = () => {
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 sm:space-y-8 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Fluxo de Caixa</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold">Fluxo de Caixa</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Gerencie entradas e saídas do salão
           </p>
         </div>
         <Button
           variant="outline"
           onClick={() => navigate("/admin/relatorios")}
-          className="gap-2"
+          className="gap-2 w-full sm:w-auto"
+          size="sm"
         >
           <BarChart3 className="w-4 h-4" />
           Ver Relatórios
@@ -308,7 +309,7 @@ const Faturamento = () => {
       </div>
 
       {/* Cards de Entradas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         <Card className="p-6 hover-lift">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-success/10 rounded-xl">
@@ -351,7 +352,7 @@ const Faturamento = () => {
       </div>
 
       {/* Cards de Saídas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         <Card className="p-6 hover-lift">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-destructive/10 rounded-xl">
@@ -394,7 +395,7 @@ const Faturamento = () => {
       </div>
 
       {/* Cards de Resultado (Entrada - Saída) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         <Card className="p-6 hover-lift border-2 border-primary/30">
           <div className="flex items-center gap-4">
             <div className={`p-3 rounded-xl ${(faturamentoHoje - despesasHoje) >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
