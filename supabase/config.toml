@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.processar-lyon-flow]
 verify_jwt = false
+
+[functions.chat-suporte]
+verify_jwt = false
