@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, TrendingDown, Calendar, CalendarIcon, Plus, Trash2, Lock, Package, BarChart3, Scale, Receipt, Users } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Calendar, CalendarIcon, Plus, Trash2, Lock, Package, BarChart3, Scale, Receipt, Users, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -26,7 +26,7 @@ const Faturamento = () => {
   const [authenticated, setAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const { agendamentos, loading: loadingAgendamentos, updateAgendamento, refetch: refetchAgendamentos } = useAgendamentos();
-  const { pagamentos, loading: loadingPagamentos, addPagamento, refetch: refetchPagamentos } = usePagamentos();
+  const { pagamentos, loading: loadingPagamentos, addPagamento, updatePagamento, deletePagamento, refetch: refetchPagamentos } = usePagamentos();
   const { despesas, loading: loadingDespesas, addDespesa, deleteDespesa, refetch: refetchDespesas } = useDespesas();
   const { servicos } = useServicos();
   const [openPagamentoDialog, setOpenPagamentoDialog] = useState(false);
@@ -46,6 +46,14 @@ const Faturamento = () => {
   const [usarCategoriaCustom, setUsarCategoriaCustom] = useState(false);
   const [dataDespesa, setDataDespesa] = useState<Date | undefined>(new Date());
   const [metodoDespesa, setMetodoDespesa] = useState("PIX");
+  
+  // Estados para editar pagamento
+  const [openEditarPagamentoDialog, setOpenEditarPagamentoDialog] = useState(false);
+  const [pagamentoEditando, setPagamentoEditando] = useState<any>(null);
+  const [editClienteNome, setEditClienteNome] = useState("");
+  const [editServico, setEditServico] = useState("");
+  const [editValor, setEditValor] = useState("");
+  const [editMetodo, setEditMetodo] = useState("");
   
   // Estado para comissões pagas
   const [comissoesPagas, setComissoesPagas] = useState<any[]>([]);
@@ -140,6 +148,35 @@ const Faturamento = () => {
     setValorEditado("");
     setObservacoes("");
     setOpenPagamentoDialog(true);
+  };
+
+  const abrirDialogEditarPagamento = (pagamento: any) => {
+    setPagamentoEditando(pagamento);
+    setEditClienteNome(pagamento.cliente_nome || "");
+    setEditServico(pagamento.servico || "");
+    setEditValor(String(pagamento.valor || ""));
+    setEditMetodo(pagamento.metodo_pagamento || "PIX");
+    setOpenEditarPagamentoDialog(true);
+  };
+
+  const handleEditarPagamento = async () => {
+    if (!pagamentoEditando) return;
+    
+    await updatePagamento(pagamentoEditando.id, {
+      cliente_nome: editClienteNome,
+      servico: editServico,
+      valor: parseFloat(editValor) || 0,
+      metodo_pagamento: editMetodo,
+    });
+    
+    setOpenEditarPagamentoDialog(false);
+    setPagamentoEditando(null);
+  };
+
+  const handleDeletePagamento = async (id: string) => {
+    if (confirm("Tem certeza que deseja apagar este pagamento?")) {
+      await deletePagamento(id);
+    }
   };
 
   const registrarPagamento = async () => {
@@ -669,6 +706,7 @@ const Faturamento = () => {
                   <th className="text-left p-3">Valor</th>
                   <th className="text-left p-3">Método</th>
                   <th className="text-left p-3">Data</th>
+                  <th className="text-left p-3">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -681,52 +719,24 @@ const Faturamento = () => {
                     </td>
                     <td className="p-3">{pag.metodo_pagamento || "-"}</td>
                     <td className="p-3 text-muted-foreground">{format(parseISO(pag.data), "dd/MM/yyyy")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-
-      {/* Histórico de Comissões Pagas */}
-      <Card className="p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Users className="w-5 h-5 text-primary" />
-          </div>
-          <h2 className="text-xl font-semibold">Histórico de Comissões Pagas</h2>
-        </div>
-        {loadingComissoes ? (
-          <p className="text-muted-foreground text-center py-8">Carregando...</p>
-        ) : comissoesPagas.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">Nenhuma comissão paga registrada</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3">Profissional</th>
-                  <th className="text-left p-3">Período</th>
-                  <th className="text-left p-3">Total Serviços</th>
-                  <th className="text-left p-3">Comissão</th>
-                  <th className="text-left p-3">Data Pgto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comissoesPagas.map((com) => (
-                  <tr key={com.id} className="border-b hover:bg-muted/50">
-                    <td className="p-3 font-medium">{com.profissional_nome}</td>
-                    <td className="p-3 text-sm text-muted-foreground">
-                      {format(parseISO(com.periodo_inicio), "dd/MM")} a {format(parseISO(com.periodo_fim), "dd/MM/yyyy")}
-                    </td>
                     <td className="p-3">
-                      {showTotal ? `R$ ${Number(com.valor_total_servicos).toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => abrirDialogEditarPagamento(pag)}
+                        >
+                          <Pencil className="w-4 h-4 text-primary" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeletePagamento(pag.id)}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
                     </td>
-                    <td className="p-3 font-semibold text-primary">
-                      {showTotal ? `R$ ${Number(com.valor_comissao).toFixed(2).replace(".", ",")} (${com.percentual_aplicado}%)` : "R$ •••,••"}
-                    </td>
-                    <td className="p-3 text-muted-foreground">{format(parseISO(com.created_at), "dd/MM/yyyy")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -773,6 +783,52 @@ const Faturamento = () => {
                         Registrar Pagamento
                       </Button>
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* Histórico de Comissões Pagas */}
+      <Card className="p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Users className="w-5 h-5 text-primary" />
+          </div>
+          <h2 className="text-xl font-semibold">Histórico de Comissões Pagas</h2>
+        </div>
+        {loadingComissoes ? (
+          <p className="text-muted-foreground text-center py-8">Carregando...</p>
+        ) : comissoesPagas.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">Nenhuma comissão paga registrada</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Profissional</th>
+                  <th className="text-left p-3">Período</th>
+                  <th className="text-left p-3">Total Serviços</th>
+                  <th className="text-left p-3">Comissão</th>
+                  <th className="text-left p-3">Data Pgto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comissoesPagas.map((com) => (
+                  <tr key={com.id} className="border-b hover:bg-muted/50">
+                    <td className="p-3 font-medium">{com.profissional_nome}</td>
+                    <td className="p-3 text-sm text-muted-foreground">
+                      {format(parseISO(com.periodo_inicio), "dd/MM")} a {format(parseISO(com.periodo_fim), "dd/MM/yyyy")}
+                    </td>
+                    <td className="p-3">
+                      {showTotal ? `R$ ${Number(com.valor_total_servicos).toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+                    </td>
+                    <td className="p-3 font-semibold text-primary">
+                      {showTotal ? `R$ ${Number(com.valor_comissao).toFixed(2).replace(".", ",")} (${com.percentual_aplicado}%)` : "R$ •••,••"}
+                    </td>
+                    <td className="p-3 text-muted-foreground">{format(parseISO(com.created_at), "dd/MM/yyyy")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -864,6 +920,68 @@ const Faturamento = () => {
                 Cancelar
               </Button>
               <Button onClick={registrarPagamento}>Registrar</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Editar Pagamento */}
+      <Dialog open={openEditarPagamentoDialog} onOpenChange={setOpenEditarPagamentoDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Pagamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Cliente</Label>
+              <Input
+                value={editClienteNome}
+                onChange={(e) => setEditClienteNome(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Serviço</Label>
+              <Select value={editServico} onValueChange={setEditServico}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o serviço" />
+                </SelectTrigger>
+                <SelectContent>
+                  {servicos.filter(s => s.ativo).map((servico) => (
+                    <SelectItem key={servico.id} value={servico.nome}>
+                      {servico.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Valor</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={editValor}
+                onChange={(e) => setEditValor(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Método de Pagamento</Label>
+              <Select value={editMetodo} onValueChange={setEditMetodo}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PIX">PIX</SelectItem>
+                  <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
+                  <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpenEditarPagamentoDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleEditarPagamento}>Salvar</Button>
             </div>
           </div>
         </DialogContent>
