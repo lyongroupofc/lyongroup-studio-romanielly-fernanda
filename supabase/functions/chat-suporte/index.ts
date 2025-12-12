@@ -165,20 +165,6 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "consultar_faturamento",
-      description: "Consulta o faturamento de um período",
-      parameters: {
-        type: "object",
-        properties: {
-          periodo: { type: "string", enum: ["hoje", "mes", "ano"], description: "Período do faturamento" },
-        },
-        required: ["periodo"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "bloquear_horario",
       description: "Bloqueia um horário específico na agenda",
       parameters: {
@@ -454,44 +440,6 @@ async function executarTool(supabase: any, toolName: string, args: any): Promise
         return `✅ Configuração do bot atualizada!\n${args.chave}: ${args.valor}`;
       }
 
-      case "consultar_faturamento": {
-        const hoje = new Date();
-        let dataInicio: string;
-        let dataFim: string;
-
-        if (args.periodo === "hoje") {
-          dataInicio = hoje.toISOString().split("T")[0];
-          dataFim = dataInicio;
-        } else if (args.periodo === "mes") {
-          dataInicio = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-01`;
-          dataFim = hoje.toISOString().split("T")[0];
-        } else {
-          dataInicio = `${hoje.getFullYear()}-01-01`;
-          dataFim = hoje.toISOString().split("T")[0];
-        }
-
-        const { data: pagamentos, error: pagError } = await supabase
-          .from("pagamentos")
-          .select("valor")
-          .gte("data", dataInicio)
-          .lte("data", dataFim)
-          .eq("status", "Pago");
-
-        const { data: despesas, error: despError } = await supabase
-          .from("despesas")
-          .select("valor")
-          .gte("data", dataInicio)
-          .lte("data", dataFim);
-
-        if (pagError || despError) throw pagError || despError;
-
-        const entradas = pagamentos?.reduce((sum: number, p: any) => sum + (p.valor || 0), 0) || 0;
-        const saidas = despesas?.reduce((sum: number, d: any) => sum + (d.valor || 0), 0) || 0;
-        const resultado = entradas - saidas;
-
-        return `📊 Faturamento (${args.periodo}):\n- Entradas: R$ ${entradas.toFixed(2)}\n- Saídas: R$ ${saidas.toFixed(2)}\n- Resultado: R$ ${resultado.toFixed(2)}`;
-      }
-
       case "bloquear_horario": {
         const { data: config } = await supabase
           .from("agenda_config")
@@ -628,9 +576,10 @@ Deno.serve(async (req) => {
 - Ativar ou desativar o bot
 - Atualizar mensagens de boas-vindas, ausência, etc.
 
-✅ FINANCEIRO:
-- Consultar faturamento (hoje, mês, ano)
-- Ver entradas, saídas e resultado
+❌ NÃO TENHO ACESSO A:
+- Fluxo de Caixa (informações financeiras)
+- Relatórios
+- Se perguntarem sobre isso, explique que você não tem acesso e sugira usar as respectivas abas do painel.
 
 **COMO USAR SUAS FERRAMENTAS:**
 
