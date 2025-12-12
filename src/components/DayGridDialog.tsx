@@ -361,7 +361,7 @@ export function DayGridDialog({
                             style={{ minHeight: getAgendamentoHeight(agendamento) }}
                             onClick={() => onSelectAgendamento(agendamento)}
                           >
-                            <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5">
                               <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
                                 <User className="w-2.5 h-2.5 text-white" />
                               </div>
@@ -373,11 +373,31 @@ export function DayGridDialog({
                                   {agendamento.servico_nome}
                                 </p>
                               </div>
-                              {agendamento.status && (
-                                <Badge className="text-[9px] px-1 py-0 h-4 bg-amber-500 text-white border-0">
-                                  {agendamento.status === 'Confirmado' ? '✓' : agendamento.status.charAt(0)}
-                                </Badge>
-                              )}
+                              <div className="flex gap-0.5 flex-shrink-0">
+                                {/* Badge de Status de Pagamento */}
+                                {agendamento.status_pagamento === 'pago' && (
+                                  <Badge className="text-[8px] px-1 py-0 h-3.5 bg-emerald-500 text-white border-0">
+                                    $
+                                  </Badge>
+                                )}
+                                {agendamento.status_pagamento === 'parcial' && (
+                                  <Badge className="text-[8px] px-1 py-0 h-3.5 bg-yellow-500 text-white border-0">
+                                    $?
+                                  </Badge>
+                                )}
+                                {/* Badge de Atendido */}
+                                {agendamento.atendido && (
+                                  <Badge className="text-[8px] px-1 py-0 h-3.5 bg-blue-500 text-white border-0">
+                                    ✓A
+                                  </Badge>
+                                )}
+                                {/* Badge de Status */}
+                                {agendamento.status && (
+                                  <Badge className="text-[9px] px-1 py-0 h-4 bg-amber-500 text-white border-0">
+                                    {agendamento.status === 'Confirmado' ? '✓' : agendamento.status.charAt(0)}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
                         )}

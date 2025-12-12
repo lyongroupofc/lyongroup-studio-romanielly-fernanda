@@ -46,10 +46,12 @@ export type Database = {
       }
       agendamentos: {
         Row: {
+          atendido: boolean | null
           bot_conversa_id: string | null
           cliente_id: string | null
           cliente_nome: string
           cliente_telefone: string
+          confirmado_cliente: boolean | null
           created_at: string | null
           data: string
           desconto_aplicado: number | null
@@ -64,12 +66,15 @@ export type Database = {
           servico_id: string | null
           servico_nome: string
           status: string | null
+          status_pagamento: string | null
         }
         Insert: {
+          atendido?: boolean | null
           bot_conversa_id?: string | null
           cliente_id?: string | null
           cliente_nome: string
           cliente_telefone: string
+          confirmado_cliente?: boolean | null
           created_at?: string | null
           data: string
           desconto_aplicado?: number | null
@@ -84,12 +89,15 @@ export type Database = {
           servico_id?: string | null
           servico_nome: string
           status?: string | null
+          status_pagamento?: string | null
         }
         Update: {
+          atendido?: boolean | null
           bot_conversa_id?: string | null
           cliente_id?: string | null
           cliente_nome?: string
           cliente_telefone?: string
+          confirmado_cliente?: boolean | null
           created_at?: string | null
           data?: string
           desconto_aplicado?: number | null
@@ -104,6 +112,7 @@ export type Database = {
           servico_id?: string | null
           servico_nome?: string
           status?: string | null
+          status_pagamento?: string | null
         }
         Relationships: [
           {

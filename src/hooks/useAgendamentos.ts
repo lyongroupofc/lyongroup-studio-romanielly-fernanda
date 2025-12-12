@@ -18,6 +18,9 @@ export type Agendamento = {
   origem: string | null;
   promocao_id?: string | null;
   desconto_aplicado?: number | null;
+  status_pagamento?: string | null;
+  confirmado_cliente?: boolean | null;
+  atendido?: boolean | null;
 };
 
 const CACHE_KEY = 'agendamentos_cache';
@@ -55,7 +58,7 @@ export const useAgendamentos = () => {
 
         const { data, error } = await supabase
           .from("agendamentos")
-          .select("id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem")
+          .select("id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem, status_pagamento, confirmado_cliente, atendido")
           .gte("data", dataLimiteStr)
           .order("data", { ascending: false })
           .order("horario", { ascending: true });
@@ -97,7 +100,7 @@ export const useAgendamentos = () => {
 
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem")
+        .select("id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem, status_pagamento, confirmado_cliente, atendido")
         .gte("data", dataLimiteStr)
         .order("data", { ascending: false })
         .order("horario", { ascending: true });

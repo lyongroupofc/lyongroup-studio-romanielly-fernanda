@@ -15,7 +15,7 @@ export type Pagamento = {
 };
 
 const CACHE_KEY = 'pagamentos_cache';
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
+const CACHE_DURATION = 30 * 1000; // 30 segundos (reduzido para sincronização rápida)
 
 export const usePagamentos = () => {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
@@ -125,7 +125,18 @@ export const usePagamentos = () => {
 
       if (error) throw error;
 
-      setPagamentos([data, ...pagamentos]);
+      // Se o pagamento está vinculado a um agendamento, atualizar status_pagamento
+      if (pagamento.agendamento_id && pagamento.status === 'Pago') {
+        await supabase
+          .from("agendamentos")
+          .update({ status_pagamento: 'pago' })
+          .eq("id", pagamento.agendamento_id);
+      }
+
+      // Invalidar cache e refetch
+      sessionStorage.removeItem(CACHE_KEY);
+      await refetch();
+      
       toast.success("Pagamento registrado com sucesso!");
       return data;
     } catch (error) {

@@ -78,7 +78,7 @@ const Agenda = () => {
         
         const { data: agendamentosDia, error } = await supabase
           .from('agendamentos')
-          .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem')
+          .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem, status_pagamento, confirmado_cliente, atendido')
           .eq('data', dateStr)
           .neq('status', 'Cancelado')
           .neq('status', 'Excluido')
@@ -489,7 +489,7 @@ const Agenda = () => {
     const dateStr = fmtKey(day);
     const { data: agendamentosRealTime, error } = await supabase
       .from('agendamentos')
-      .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem')
+      .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem, status_pagamento, confirmado_cliente, atendido')
       .eq('data', dateStr)
       .neq('status', 'Cancelado')
       .order('horario', { ascending: true });
@@ -1596,6 +1596,63 @@ const Agenda = () => {
                     Obs: {selectedAgendamento.observacoes}
                   </div>
                 )}
+              </div>
+
+              {/* Status de Pagamento, Confirmação e Atendimento */}
+              <div className="grid grid-cols-3 gap-2 p-3 bg-muted/50 rounded-lg">
+                <div 
+                  className={`flex flex-col items-center p-2 rounded cursor-pointer transition-colors ${
+                    selectedAgendamento.status_pagamento === 'pago' 
+                      ? 'bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300' 
+                      : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200'
+                  }`}
+                  onClick={async () => {
+                    const novoStatus = selectedAgendamento.status_pagamento === 'pago' ? 'pendente' : 'pago';
+                    await updateAgendamento(selectedAgendamento.id, { status_pagamento: novoStatus });
+                    setSelectedAgendamento({ ...selectedAgendamento, status_pagamento: novoStatus });
+                  }}
+                >
+                  <DollarSign className={`w-5 h-5 ${selectedAgendamento.status_pagamento === 'pago' ? 'text-emerald-600' : 'text-zinc-400'}`} />
+                  <span className={`text-[10px] font-medium mt-1 ${selectedAgendamento.status_pagamento === 'pago' ? 'text-emerald-700' : 'text-zinc-500'}`}>
+                    {selectedAgendamento.status_pagamento === 'pago' ? 'Pago' : selectedAgendamento.status_pagamento === 'parcial' ? 'Parcial' : 'Pendente'}
+                  </span>
+                </div>
+                
+                <div 
+                  className={`flex flex-col items-center p-2 rounded cursor-pointer transition-colors ${
+                    selectedAgendamento.confirmado_cliente 
+                      ? 'bg-blue-100 dark:bg-blue-950/50 border border-blue-300' 
+                      : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200'
+                  }`}
+                  onClick={async () => {
+                    const novoStatus = !selectedAgendamento.confirmado_cliente;
+                    await updateAgendamento(selectedAgendamento.id, { confirmado_cliente: novoStatus });
+                    setSelectedAgendamento({ ...selectedAgendamento, confirmado_cliente: novoStatus });
+                  }}
+                >
+                  <CheckCircle2 className={`w-5 h-5 ${selectedAgendamento.confirmado_cliente ? 'text-blue-600' : 'text-zinc-400'}`} />
+                  <span className={`text-[10px] font-medium mt-1 ${selectedAgendamento.confirmado_cliente ? 'text-blue-700' : 'text-zinc-500'}`}>
+                    {selectedAgendamento.confirmado_cliente ? 'Confirmado' : 'Não Confirmado'}
+                  </span>
+                </div>
+                
+                <div 
+                  className={`flex flex-col items-center p-2 rounded cursor-pointer transition-colors ${
+                    selectedAgendamento.atendido 
+                      ? 'bg-amber-100 dark:bg-amber-950/50 border border-amber-300' 
+                      : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200'
+                  }`}
+                  onClick={async () => {
+                    const novoStatus = !selectedAgendamento.atendido;
+                    await updateAgendamento(selectedAgendamento.id, { atendido: novoStatus });
+                    setSelectedAgendamento({ ...selectedAgendamento, atendido: novoStatus });
+                  }}
+                >
+                  <UserCheck className={`w-5 h-5 ${selectedAgendamento.atendido ? 'text-amber-600' : 'text-zinc-400'}`} />
+                  <span className={`text-[10px] font-medium mt-1 ${selectedAgendamento.atendido ? 'text-amber-700' : 'text-zinc-500'}`}>
+                    {selectedAgendamento.atendido ? 'Atendido' : 'Não Atendido'}
+                  </span>
+                </div>
               </div>
 
               {/* Botões de ação extras - Item 2 e 10 */}
