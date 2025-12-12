@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2, ChevronLeft, ChevronRight, DollarSign, Timer, PlusCircle, RefreshCw } from "lucide-react";
+import { DayGridDialog } from "@/components/DayGridDialog";
 import { toast } from "sonner";
 import { isBefore, startOfToday, isSunday, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -1048,96 +1048,39 @@ const Agenda = () => {
         </Card>
       </div>
 
-      {/* Sheet lateral para ações do dia */}
-      <Sheet open={openSideSheet} onOpenChange={setOpenSideSheet}>
-        <SheetContent side="left" className="w-[400px] sm:w-[540px]">
-          <SheetHeader>
-            <div className="flex items-center justify-between gap-2">
-              <Button 
-                variant="outline" 
-                size="icon"
-                onClick={() => {
-                  if (selectedDate) {
-                    const prevDay = new Date(selectedDate);
-                    prevDay.setDate(prevDay.getDate() - 1);
-                    setSelectedDate(prevDay);
-                  }
-                }}
-                className="hover:shadow-lg hover:shadow-primary/20"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <SheetTitle className="text-center flex-1">
-                {selectedDate && format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              </SheetTitle>
-              <Button 
-                variant="outline" 
-                size="icon"
-                onClick={() => {
-                  if (selectedDate) {
-                    const nextDay = new Date(selectedDate);
-                    nextDay.setDate(nextDay.getDate() + 1);
-                    setSelectedDate(nextDay);
-                  }
-                }}
-                className="hover:shadow-lg hover:shadow-primary/20"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </SheetHeader>
-          <div className="mt-6 space-y-4">
-            <Button className="w-full" onClick={handleReservar}>
-              <Plus className="w-4 h-4 mr-2" />
-              Reservar Horário
-            </Button>
-            <Button variant="outline" className="w-full" onClick={handleGerenciar}>
-              Gerenciar Dia
-            </Button>
-
-            {/* Agendamentos do dia selecionado */}
-            <div className="mt-6 flex flex-col gap-3">
-              <h3 className="font-semibold">Agendamentos deste dia</h3>
-              {agendamentosDia.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhum agendamento</p>
-              ) : (
-                <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 -mr-2">
-                  {agendamentosDia.map((agendamento) => (
-                    <Card 
-                      key={agendamento.id} 
-                      className={`p-3 hover-lift cursor-pointer transition-all ${
-                        highlightedAgendamento === agendamento.id 
-                          ? 'ring-2 ring-primary ring-offset-2 bg-primary/5 animate-pulse' 
-                          : ''
-                      }`}
-                      onClick={() => {
-                        setSelectedAgendamento(agendamento);
-                        setOpenDetalhesDialog(true);
-                        // NÃO fechar o side sheet - item 7
-                      }}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-3 h-3 text-primary" />
-                          <span className="font-semibold text-sm">{agendamento.horario}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs">
-                          <User className="w-3 h-3" />
-                          <span>{agendamento.cliente_nome}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Scissors className="w-3 h-3" />
-                          <span>{agendamento.servico_nome}</span>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Popup Fullscreen com Grid de Horários - Item 1 */}
+      <DayGridDialog
+        open={openSideSheet}
+        onOpenChange={setOpenSideSheet}
+        selectedDate={selectedDate}
+        onDateChange={(date) => {
+          setSelectedDate(date);
+          // Buscar agendamentos em tempo real para o novo dia
+          const fetchAgendamentos = async () => {
+            const dateStr = fmtKey(date);
+            const { data, error } = await supabase
+              .from('agendamentos')
+              .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem')
+              .eq('data', dateStr)
+              .neq('status', 'Cancelado')
+              .order('horario', { ascending: true });
+            if (!error && data) {
+              setAgendamentosDataAtual(data);
+            }
+          };
+          fetchAgendamentos();
+        }}
+        agendamentosDia={agendamentosDia}
+        dayConfig={selectedDate ? getDayData(selectedDate) : { fechado: false, horariosBloqueados: [], horariosExtras: [] }}
+        servicos={servicos}
+        onReservar={handleReservar}
+        onGerenciar={handleGerenciar}
+        onSelectAgendamento={(ag) => {
+          setSelectedAgendamento(ag);
+          setOpenDetalhesDialog(true);
+        }}
+        highlightedAgendamento={highlightedAgendamento}
+      />
 
       {/* Dialog Escolha de Cliente (Novo ou Cadastrado) */}
       <Dialog open={openEscolhaClienteDialog} onOpenChange={setOpenEscolhaClienteDialog}>
@@ -1949,6 +1892,27 @@ const Agenda = () => {
                 }
                 
                 const profissional = formData.profissional ? profissionais.find((p) => p.id === formData.profissional) : null;
+
+                // Item 8: Detectar mudança de serviço e criar card no Fluxo de Caixa
+                const servicoOriginalId = selectedAgendamento.servico_id;
+                const servicoOriginal = servicos.find((s) => s.id === servicoOriginalId);
+                
+                if (servicoOriginalId !== servicoId && servicoOriginal && servico) {
+                  const diferencaValor = servico.preco - servicoOriginal.preco;
+                  
+                  // Criar registro no Fluxo de Caixa se houve mudança de serviço
+                  await addPagamento({
+                    cliente_nome: selectedAgendamento.cliente_nome,
+                    servico: `Alteração: ${servicoOriginal.nome} → ${servico.nome}`,
+                    valor: Math.abs(diferencaValor),
+                    metodo_pagamento: "Ajuste",
+                    status: diferencaValor > 0 ? "Pendente" : "Ajuste",
+                    data: format(new Date(), "yyyy-MM-dd"),
+                    agendamento_id: selectedAgendamento.id,
+                  });
+                  
+                  toast.info(`Ajuste de R$ ${Math.abs(diferencaValor).toFixed(2)} ${diferencaValor > 0 ? 'a receber' : 'registrado'} no Fluxo de Caixa`);
+                }
 
                 await updateAgendamento(selectedAgendamento.id, {
                   servico_id: servico.id,
