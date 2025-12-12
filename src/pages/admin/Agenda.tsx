@@ -1890,7 +1890,15 @@ const Agenda = () => {
               
               {/* Preview do novo horário */}
               {servicoAdicionalId && (() => {
-                const servicoAtualDuracao = servicos.find(s => s.id === selectedAgendamento.servico_id)?.duracao || 60;
+                // Buscar serviço atual pelo ID ou nome
+                let servicoAtual = servicos.find(s => s.id === selectedAgendamento.servico_id);
+                if (!servicoAtual && selectedAgendamento.servico_nome) {
+                  const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                  const nomeAlvo = normalize(selectedAgendamento.servico_nome.split(',')[0]);
+                  servicoAtual = servicos.find(s => normalize(s.nome).includes(nomeAlvo) || nomeAlvo.includes(normalize(s.nome)));
+                }
+                const servicoAtualDuracao = servicoAtual?.duracao || 60;
+                
                 const horarioNorm = selectedAgendamento.horario.length > 5 
                   ? selectedAgendamento.horario.substring(0, 5) 
                   : selectedAgendamento.horario;
@@ -1928,8 +1936,13 @@ const Agenda = () => {
                   }
                   
                   try {
-                    // Buscar duração do serviço atual (usar valor padrão se não encontrado)
-                    const servicoAtual = servicos.find(s => s.id === selectedAgendamento.servico_id);
+                    // Buscar duração do serviço atual pelo ID ou nome
+                    let servicoAtual = servicos.find(s => s.id === selectedAgendamento.servico_id);
+                    if (!servicoAtual && selectedAgendamento.servico_nome) {
+                      const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                      const nomeAlvo = normalize(selectedAgendamento.servico_nome.split(',')[0]);
+                      servicoAtual = servicos.find(s => normalize(s.nome).includes(nomeAlvo) || nomeAlvo.includes(normalize(s.nome)));
+                    }
                     const servicoAtualDuracao = servicoAtual?.duracao || 60;
                     const servicoAtualNome = servicoAtual?.nome || selectedAgendamento.servico_nome || "Serviço anterior";
                     
