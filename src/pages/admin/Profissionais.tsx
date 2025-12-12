@@ -1,22 +1,196 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, User, Phone, Edit, Trash2, Loader2 } from "lucide-react";
+import { Plus, User, Phone, Edit, Trash2, Loader2, DollarSign, Calendar, Percent, ChevronDown, ChevronUp } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
-import { useProfissionais } from "@/hooks/useProfissionais";
+import { useState, useEffect } from "react";
+import { useProfissionais, Profissional } from "@/hooks/useProfissionais";
+import { useDespesas } from "@/hooks/useDespesas";
+import { supabase } from "@/integrations/supabase/client";
+import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+type ServicoDetalhado = {
+  servico_nome: string;
+  quantidade: number;
+  valor_total: number;
+};
+
+type ComissaoData = {
+  totalServicos: number;
+  comissaoAPagar: number;
+  servicosDetalhados: ServicoDetalhado[];
+};
 
 const Profissionais = () => {
   const [openNovoProfissional, setOpenNovoProfissional] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [profissionalEditando, setProfissionalEditando] = useState<any>(null);
-  const { profissionais, loading, addProfissional, updateProfissional, deleteProfissional } = useProfissionais();
+  const { profissionais, loading, addProfissional, updateProfissional, deleteProfissional, refetch } = useProfissionais();
+  const { addDespesa } = useDespesas();
+  
+  // Estado para comissões expandidas
+  const [comissoesExpandidas, setComissoesExpandidas] = useState<Record<string, boolean>>({});
+  const [comissoesData, setComissoesData] = useState<Record<string, ComissaoData>>({});
+  const [periodos, setPeriodos] = useState<Record<string, { inicio: string; fim: string }>>({});
+  const [percentuais, setPercentuais] = useState<Record<string, number>>({});
+  const [salvandoComissao, setSalvandoComissao] = useState<string | null>(null);
+  
+  // Inicializar períodos e percentuais quando profissionais carregam
+  useEffect(() => {
+    const hoje = new Date();
+    const inicioMes = format(startOfMonth(hoje), 'yyyy-MM-dd');
+    const fimMes = format(endOfMonth(hoje), 'yyyy-MM-dd');
+    
+    const novosPeridos: Record<string, { inicio: string; fim: string }> = {};
+    const novosPercentuais: Record<string, number> = {};
+    
+    profissionais.forEach(prof => {
+      if (!periodos[prof.id]) {
+        novosPeridos[prof.id] = { inicio: inicioMes, fim: fimMes };
+      }
+      if (percentuais[prof.id] === undefined) {
+        novosPercentuais[prof.id] = prof.comissao_percentual || 0;
+      }
+    });
+    
+    if (Object.keys(novosPeridos).length > 0) {
+      setPeriodos(prev => ({ ...prev, ...novosPeridos }));
+    }
+    if (Object.keys(novosPercentuais).length > 0) {
+      setPercentuais(prev => ({ ...prev, ...novosPercentuais }));
+    }
+  }, [profissionais]);
   
   const getIniciais = (nome: string) => {
     const partes = nome.split(" ");
     return partes.length > 1 ? `${partes[0][0]}${partes[partes.length - 1][0]}` : partes[0][0] + partes[0][1];
+  };
+
+  const calcularComissao = async (profissionalId: string) => {
+    const periodo = periodos[profissionalId];
+    const percentual = percentuais[profissionalId] || 0;
+    
+    if (!periodo) return;
+    
+    try {
+      // Buscar agendamentos pagos do profissional no período
+      const { data: agendamentos, error } = await supabase
+        .from('agendamentos')
+        .select('servico_nome, servico_id')
+        .eq('profissional_id', profissionalId)
+        .eq('status_pagamento', 'pago')
+        .gte('data', periodo.inicio)
+        .lte('data', periodo.fim)
+        .not('status', 'in', '("Cancelado","Excluido")');
+      
+      if (error) throw error;
+      
+      // Buscar preços dos serviços
+      const { data: servicos } = await supabase
+        .from('servicos')
+        .select('id, nome, preco');
+      
+      const servicosMap = new Map(servicos?.map(s => [s.id, s]) || []);
+      
+      // Agrupar serviços
+      const servicosAgrupados: Record<string, { quantidade: number; valor_total: number }> = {};
+      let totalGeral = 0;
+      
+      agendamentos?.forEach(ag => {
+        const servico = servicosMap.get(ag.servico_id);
+        const preco = servico?.preco || 0;
+        const nome = ag.servico_nome || servico?.nome || 'Serviço';
+        
+        if (!servicosAgrupados[nome]) {
+          servicosAgrupados[nome] = { quantidade: 0, valor_total: 0 };
+        }
+        servicosAgrupados[nome].quantidade += 1;
+        servicosAgrupados[nome].valor_total += Number(preco);
+        totalGeral += Number(preco);
+      });
+      
+      const servicosDetalhados: ServicoDetalhado[] = Object.entries(servicosAgrupados).map(([nome, dados]) => ({
+        servico_nome: nome,
+        quantidade: dados.quantidade,
+        valor_total: dados.valor_total
+      }));
+      
+      setComissoesData(prev => ({
+        ...prev,
+        [profissionalId]: {
+          totalServicos: totalGeral,
+          comissaoAPagar: (totalGeral * percentual) / 100,
+          servicosDetalhados
+        }
+      }));
+    } catch (error) {
+      console.error('Erro ao calcular comissão:', error);
+      toast.error('Erro ao calcular comissão');
+    }
+  };
+  
+  const handleToggleComissao = async (profissionalId: string) => {
+    const novoEstado = !comissoesExpandidas[profissionalId];
+    setComissoesExpandidas(prev => ({ ...prev, [profissionalId]: novoEstado }));
+    
+    if (novoEstado) {
+      await calcularComissao(profissionalId);
+    }
+  };
+  
+  const handleSalvarPercentual = async (profissionalId: string) => {
+    const percentual = percentuais[profissionalId];
+    await updateProfissional(profissionalId, { comissao_percentual: percentual });
+    await calcularComissao(profissionalId);
+  };
+  
+  const handlePagarComissao = async (profissional: Profissional) => {
+    const comissao = comissoesData[profissional.id];
+    const periodo = periodos[profissional.id];
+    
+    if (!comissao || comissao.comissaoAPagar <= 0) {
+      toast.error('Não há comissão a pagar');
+      return;
+    }
+    
+    setSalvandoComissao(profissional.id);
+    
+    try {
+      // 1. Criar despesa no Fluxo de Caixa
+      const dataInicio = format(parseISO(periodo.inicio), 'dd/MM', { locale: ptBR });
+      const dataFim = format(parseISO(periodo.fim), 'dd/MM', { locale: ptBR });
+      
+      await addDespesa({
+        descricao: `Comissão - ${profissional.nome} (${dataInicio} a ${dataFim})`,
+        valor: comissao.comissaoAPagar,
+        categoria: 'Comissão de Profissional',
+        data: format(new Date(), 'yyyy-MM-dd'),
+        metodo_pagamento: 'PIX'
+      });
+      
+      // 2. Registrar no histórico de comissões
+      await supabase.from('comissoes_pagas').insert({
+        profissional_id: profissional.id,
+        profissional_nome: profissional.nome,
+        valor_total_servicos: comissao.totalServicos,
+        percentual_aplicado: percentuais[profissional.id],
+        valor_comissao: comissao.comissaoAPagar,
+        periodo_inicio: periodo.inicio,
+        periodo_fim: periodo.fim
+      });
+      
+      toast.success(`Comissão de R$ ${comissao.comissaoAPagar.toFixed(2)} paga para ${profissional.nome}!`);
+    } catch (error) {
+      console.error('Erro ao pagar comissão:', error);
+      toast.error('Erro ao registrar pagamento de comissão');
+    } finally {
+      setSalvandoComissao(null);
+    }
   };
 
   const handleNovoProfissional = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -113,7 +287,7 @@ const Profissionais = () => {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
         {profissionais.map((profissional) => (
           <Card key={profissional.id} className="p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-start gap-4">
@@ -164,6 +338,144 @@ const Profissionais = () => {
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
+
+            {/* Card de Comissões */}
+            <Collapsible 
+              open={comissoesExpandidas[profissional.id]} 
+              onOpenChange={() => handleToggleComissao(profissional.id)}
+              className="mt-4"
+            >
+              <CollapsibleTrigger asChild>
+                <Button variant="secondary" className="w-full justify-between">
+                  <span className="flex items-center">
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Comissões
+                  </span>
+                  {comissoesExpandidas[profissional.id] ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="mt-4 space-y-4">
+                {/* Percentual de Comissão */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1 text-sm">
+                    <Percent className="w-3 h-3" />
+                    Percentual de Comissão
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={percentuais[profissional.id] || 0}
+                      onChange={(e) => setPercentuais(prev => ({
+                        ...prev,
+                        [profissional.id]: Number(e.target.value)
+                      }))}
+                      className="w-24"
+                    />
+                    <span className="flex items-center text-muted-foreground">%</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleSalvarPercentual(profissional.id)}
+                    >
+                      Salvar
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Período */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1 text-sm">
+                    <Calendar className="w-3 h-3" />
+                    Período
+                  </Label>
+                  <div className="flex gap-2 flex-wrap">
+                    <Input
+                      type="date"
+                      value={periodos[profissional.id]?.inicio || ''}
+                      onChange={(e) => {
+                        setPeriodos(prev => ({
+                          ...prev,
+                          [profissional.id]: { ...prev[profissional.id], inicio: e.target.value }
+                        }));
+                      }}
+                      className="w-36"
+                    />
+                    <span className="flex items-center text-muted-foreground">a</span>
+                    <Input
+                      type="date"
+                      value={periodos[profissional.id]?.fim || ''}
+                      onChange={(e) => {
+                        setPeriodos(prev => ({
+                          ...prev,
+                          [profissional.id]: { ...prev[profissional.id], fim: e.target.value }
+                        }));
+                      }}
+                      className="w-36"
+                    />
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => calcularComissao(profissional.id)}
+                    >
+                      Calcular
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Resumo */}
+                {comissoesData[profissional.id] && (
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Total de Serviços Prestados:</span>
+                      <span className="font-semibold">
+                        R$ {comissoesData[profissional.id].totalServicos.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-primary">
+                      <span className="text-sm font-medium">Comissão a Pagar ({percentuais[profissional.id]}%):</span>
+                      <span className="font-bold text-lg">
+                        R$ {comissoesData[profissional.id].comissaoAPagar.toFixed(2)}
+                      </span>
+                    </div>
+
+                    {/* Lista de Serviços */}
+                    {comissoesData[profissional.id].servicosDetalhados.length > 0 && (
+                      <div className="pt-2 border-t border-border">
+                        <p className="text-xs text-muted-foreground mb-2">Serviços no Período:</p>
+                        <ul className="space-y-1 text-xs">
+                          {comissoesData[profissional.id].servicosDetalhados.map((s, idx) => (
+                            <li key={idx} className="flex justify-between">
+                              <span>{s.quantidade}x {s.servico_nome}</span>
+                              <span>R$ {s.valor_total.toFixed(2)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <Button 
+                      className="w-full mt-2"
+                      onClick={() => handlePagarComissao(profissional)}
+                      disabled={salvandoComissao === profissional.id || comissoesData[profissional.id].comissaoAPagar <= 0}
+                    >
+                      {salvandoComissao === profissional.id ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <DollarSign className="w-4 h-4 mr-2" />
+                      )}
+                      Pagar Comissão R$ {comissoesData[profissional.id].comissaoAPagar.toFixed(2)}
+                    </Button>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
           </Card>
         ))}
       </div>

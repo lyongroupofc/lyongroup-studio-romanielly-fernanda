@@ -9,6 +9,7 @@ export type Profissional = {
   telefone: string | null;
   especialidades: string[] | null;
   ativo: boolean;
+  comissao_percentual: number | null;
 };
 
 const CACHE_KEY = 'profissionais_cache';
@@ -96,7 +97,7 @@ export const useProfissionais = () => {
     }
   };
 
-  const addProfissional = async (profissional: Omit<Profissional, "id" | "ativo">) => {
+  const addProfissional = async (profissional: Omit<Profissional, "id" | "ativo" | "comissao_percentual">) => {
     try {
       const { data, error } = await supabase
         .from("profissionais")

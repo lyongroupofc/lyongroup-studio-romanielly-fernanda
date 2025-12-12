@@ -401,6 +401,50 @@ export type Database = {
         }
         Relationships: []
       }
+      comissoes_pagas: {
+        Row: {
+          created_at: string | null
+          id: string
+          percentual_aplicado: number
+          periodo_fim: string
+          periodo_inicio: string
+          profissional_id: string | null
+          profissional_nome: string
+          valor_comissao: number
+          valor_total_servicos: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          percentual_aplicado: number
+          periodo_fim: string
+          periodo_inicio: string
+          profissional_id?: string | null
+          profissional_nome: string
+          valor_comissao: number
+          valor_total_servicos: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          percentual_aplicado?: number
+          periodo_fim?: string
+          periodo_inicio?: string
+          profissional_id?: string | null
+          profissional_nome?: string
+          valor_comissao?: number
+          valor_total_servicos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_pagas_profissional_id_fkey"
+            columns: ["profissional_id"]
+            isOneToOne: false
+            referencedRelation: "profissionais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       despesas: {
         Row: {
           categoria: string | null
@@ -692,6 +736,7 @@ export type Database = {
       profissionais: {
         Row: {
           ativo: boolean | null
+          comissao_percentual: number | null
           created_at: string | null
           email: string | null
           especialidades: string[] | null
@@ -701,6 +746,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean | null
+          comissao_percentual?: number | null
           created_at?: string | null
           email?: string | null
           especialidades?: string[] | null
@@ -710,6 +756,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean | null
+          comissao_percentual?: number | null
           created_at?: string | null
           email?: string | null
           especialidades?: string[] | null
