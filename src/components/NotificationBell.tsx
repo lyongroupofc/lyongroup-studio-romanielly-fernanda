@@ -1,4 +1,4 @@
-import { Bell, X, Bot, Link2, UserPlus, Cake } from "lucide-react";
+import { Bell, X, Bot, Link2, UserPlus, Cake, XCircle, Trash2, DollarSign, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { useAgendamentoNotifications } from "@/hooks/useAgendamentoNotifications";
+import { useAgendamentoNotifications, AgendamentoNotification } from "@/hooks/useAgendamentoNotifications";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -62,6 +62,47 @@ export const NotificationBell = () => {
       label: 'Manual',
       className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
     };
+  };
+
+  const getEventTypeInfo = (eventType: AgendamentoNotification['eventType']) => {
+    switch (eventType) {
+      case 'cancelado':
+        return {
+          icon: XCircle,
+          label: 'Agendamento Cancelado',
+          className: 'text-destructive',
+          bgClass: 'bg-destructive/10'
+        };
+      case 'excluido':
+        return {
+          icon: Trash2,
+          label: 'Agendamento Excluído',
+          className: 'text-muted-foreground',
+          bgClass: 'bg-muted'
+        };
+      case 'pagamento':
+        return {
+          icon: DollarSign,
+          label: 'Pagamento Registrado',
+          className: 'text-success',
+          bgClass: 'bg-success/10'
+        };
+      case 'atualizado':
+        return {
+          icon: RefreshCw,
+          label: 'Agendamento Atualizado',
+          className: 'text-primary',
+          bgClass: 'bg-primary/10'
+        };
+      case 'novo':
+      default:
+        return {
+          icon: UserPlus,
+          label: 'Novo Agendamento',
+          className: 'text-primary',
+          bgClass: 'bg-primary/10'
+        };
+    }
   };
 
   return (
@@ -161,7 +202,8 @@ export const NotificationBell = () => {
                 // Notificação de agendamento
                 const [yyyy, mm, dd] = notification.agendamento.data.split('-');
                 const origemInfo = getOrigemInfo(notification.agendamento.origem);
-                const OrigemIcon = origemInfo.icon;
+                const eventInfo = getEventTypeInfo(notification.eventType);
+                const EventIcon = eventInfo.icon;
                 
                 return (
                   <div
@@ -188,12 +230,11 @@ export const NotificationBell = () => {
                       )}
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium">
-                            Novo Agendamento
+                          <p className={`text-sm font-medium ${eventInfo.className}`}>
+                            {eventInfo.label}
                           </p>
-                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${origemInfo.className}`}>
-                            <OrigemIcon className="w-3 h-3" />
-                            <span>{origemInfo.label}</span>
+                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${eventInfo.bgClass} ${eventInfo.className}`}>
+                            <EventIcon className="w-3 h-3" />
                           </div>
                         </div>
                         <p className="text-sm text-muted-foreground">
