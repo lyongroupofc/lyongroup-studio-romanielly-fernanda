@@ -1,8 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, TrendingDown, Calendar, CalendarIcon, Plus, Trash2, Lock, Package, BarChart3 } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Calendar, CalendarIcon, Plus, Trash2, Lock, Package, BarChart3, Scale } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -41,8 +41,20 @@ const Faturamento = () => {
   const [descricaoDespesa, setDescricaoDespesa] = useState("");
   const [valorDespesa, setValorDespesa] = useState("");
   const [categoriaDespesa, setCategoriaDespesa] = useState("Outros");
+  const [categoriaCustom, setCategoriaCustom] = useState("");
+  const [usarCategoriaCustom, setUsarCategoriaCustom] = useState(false);
   const [dataDespesa, setDataDespesa] = useState<Date | undefined>(new Date());
   const [metodoDespesa, setMetodoDespesa] = useState("PIX");
+
+  // Categorias padrão + categorias customizadas extraídas das despesas existentes
+  const categoriasDisponiveis = useMemo(() => {
+    const categoriasBase = ["Aluguel", "Produtos", "Manutenção", "Marketing", "Outros"];
+    const categoriasExistentes = despesas
+      .map(d => d.categoria)
+      .filter((c): c is string => !!c && !categoriasBase.includes(c));
+    const todasCategorias = [...new Set([...categoriasBase, ...categoriasExistentes])];
+    return todasCategorias.sort();
+  }, [despesas]);
 
   const handlePasswordSubmit = () => {
     if (passwordInput === "RF9646") {
@@ -174,6 +186,8 @@ const Faturamento = () => {
     setDescricaoDespesa("");
     setValorDespesa("");
     setCategoriaDespesa("Outros");
+    setCategoriaCustom("");
+    setUsarCategoriaCustom(false);
     setDataDespesa(new Date());
     setMetodoDespesa("PIX");
     setOpenDespesaDialog(true);
@@ -185,10 +199,14 @@ const Faturamento = () => {
       return;
     }
 
+    const categoriaFinal = usarCategoriaCustom && categoriaCustom.trim() 
+      ? categoriaCustom.trim() 
+      : categoriaDespesa;
+
     await addDespesa({
       descricao: descricaoDespesa,
       valor: parseFloat(valorDespesa),
-      categoria: categoriaDespesa,
+      categoria: categoriaFinal,
       data: format(dataDespesa, "yyyy-MM-dd"),
       metodo_pagamento: metodoDespesa,
     });
@@ -306,6 +324,58 @@ const Faturamento = () => {
             </div>
           </Card>
         ))}
+      </div>
+
+      {/* Cards de Resultado (Entrada - Saída) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="p-6 hover-lift border-2 border-primary/30">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${saldoHoje >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+              <Scale className={`w-6 h-6 ${saldoHoje >= 0 ? 'text-success' : 'text-destructive'}`} />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground font-medium">Resultado do Dia</p>
+              <p className={`text-2xl font-bold ${saldoHoje >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {showTotal ? `R$ ${saldoHoje.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Entrada: R$ {faturamentoHoje.toFixed(2).replace(".", ",")} | Saída: R$ {despesasHoje.toFixed(2).replace(".", ",")}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-6 hover-lift border-2 border-primary/30">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${saldoMes >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+              <Scale className={`w-6 h-6 ${saldoMes >= 0 ? 'text-success' : 'text-destructive'}`} />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground font-medium">Resultado do Mês</p>
+              <p className={`text-2xl font-bold ${saldoMes >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {showTotal ? `R$ ${saldoMes.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Entrada: R$ {faturamentoMes.toFixed(2).replace(".", ",")} | Saída: R$ {despesasMes.toFixed(2).replace(".", ",")}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-6 hover-lift border-2 border-primary/30">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${saldoAno >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+              <Scale className={`w-6 h-6 ${saldoAno >= 0 ? 'text-success' : 'text-destructive'}`} />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground font-medium">Resultado do Ano</p>
+              <p className={`text-2xl font-bold ${saldoAno >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {showTotal ? `R$ ${saldoAno.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Entrada: R$ {faturamentoAno.toFixed(2).replace(".", ",")} | Saída: R$ {despesasAno.toFixed(2).replace(".", ",")}
+              </p>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Cards de Saídas */}
@@ -681,20 +751,40 @@ const Faturamento = () => {
                 required
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label>Categoria</Label>
-              <Select value={categoriaDespesa} onValueChange={setCategoriaDespesa}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Aluguel">Aluguel</SelectItem>
-                  <SelectItem value="Produtos">Produtos</SelectItem>
-                  <SelectItem value="Manutenção">Manutenção</SelectItem>
-                  <SelectItem value="Marketing">Marketing</SelectItem>
-                  <SelectItem value="Outros">Outros</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2 mb-2">
+                <input
+                  type="checkbox"
+                  id="usarCategoriaCustom"
+                  checked={usarCategoriaCustom}
+                  onChange={(e) => setUsarCategoriaCustom(e.target.checked)}
+                  className="h-4 w-4 rounded border-border"
+                />
+                <label htmlFor="usarCategoriaCustom" className="text-sm text-muted-foreground">
+                  Criar nova categoria
+                </label>
+              </div>
+              {usarCategoriaCustom ? (
+                <Input
+                  placeholder="Digite o nome da nova categoria"
+                  value={categoriaCustom}
+                  onChange={(e) => setCategoriaCustom(e.target.value)}
+                />
+              ) : (
+                <Select value={categoriaDespesa} onValueChange={setCategoriaDespesa}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoriasDisponiveis.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div>
               <Label htmlFor="valor-despesa">Valor *</Label>
