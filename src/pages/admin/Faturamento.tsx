@@ -1,8 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, TrendingDown, Calendar, CalendarIcon, Plus, Trash2, Lock, Package, BarChart3, Scale } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Calendar, CalendarIcon, Plus, Trash2, Lock, Package, BarChart3, Scale, Receipt, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const Faturamento = () => {
   const navigate = useNavigate();
@@ -45,6 +46,33 @@ const Faturamento = () => {
   const [usarCategoriaCustom, setUsarCategoriaCustom] = useState(false);
   const [dataDespesa, setDataDespesa] = useState<Date | undefined>(new Date());
   const [metodoDespesa, setMetodoDespesa] = useState("PIX");
+  
+  // Estado para comissões pagas
+  const [comissoesPagas, setComissoesPagas] = useState<any[]>([]);
+  const [loadingComissoes, setLoadingComissoes] = useState(false);
+
+  // Buscar comissões pagas quando autenticado
+  useEffect(() => {
+    if (authenticated) {
+      const fetchComissoes = async () => {
+        setLoadingComissoes(true);
+        try {
+          const { data, error } = await supabase
+            .from('comissoes_pagas')
+            .select('*')
+            .order('created_at', { ascending: false });
+          
+          if (error) throw error;
+          setComissoesPagas(data || []);
+        } catch (error) {
+          console.error('Erro ao buscar comissões:', error);
+        } finally {
+          setLoadingComissoes(false);
+        }
+      };
+      fetchComissoes();
+    }
+  }, [authenticated]);
 
   // Categorias padrão + categorias customizadas extraídas das despesas existentes
   const categoriasDisponiveis = useMemo(() => {
@@ -611,6 +639,94 @@ const Faturamento = () => {
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* Histórico de Pagamentos Recebidos */}
+      <Card className="p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-success/10 rounded-lg">
+            <Receipt className="w-5 h-5 text-success" />
+          </div>
+          <h2 className="text-xl font-semibold">Histórico de Pagamentos Recebidos</h2>
+        </div>
+        {loadingPagamentos ? (
+          <p className="text-muted-foreground text-center py-8">Carregando...</p>
+        ) : pagamentos.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">Nenhum pagamento registrado</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Cliente</th>
+                  <th className="text-left p-3">Serviço</th>
+                  <th className="text-left p-3">Valor</th>
+                  <th className="text-left p-3">Método</th>
+                  <th className="text-left p-3">Data</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagamentos.map((pag) => (
+                  <tr key={pag.id} className="border-b hover:bg-muted/50">
+                    <td className="p-3">{pag.cliente_nome}</td>
+                    <td className="p-3">{pag.servico}</td>
+                    <td className="p-3 font-semibold text-success">
+                      {showTotal ? `R$ ${Number(pag.valor).toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+                    </td>
+                    <td className="p-3">{pag.metodo_pagamento || "-"}</td>
+                    <td className="p-3 text-muted-foreground">{format(parseISO(pag.data), "dd/MM/yyyy")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* Histórico de Comissões Pagas */}
+      <Card className="p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Users className="w-5 h-5 text-primary" />
+          </div>
+          <h2 className="text-xl font-semibold">Histórico de Comissões Pagas</h2>
+        </div>
+        {loadingComissoes ? (
+          <p className="text-muted-foreground text-center py-8">Carregando...</p>
+        ) : comissoesPagas.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">Nenhuma comissão paga registrada</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Profissional</th>
+                  <th className="text-left p-3">Período</th>
+                  <th className="text-left p-3">Total Serviços</th>
+                  <th className="text-left p-3">Comissão</th>
+                  <th className="text-left p-3">Data Pgto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comissoesPagas.map((com) => (
+                  <tr key={com.id} className="border-b hover:bg-muted/50">
+                    <td className="p-3 font-medium">{com.profissional_nome}</td>
+                    <td className="p-3 text-sm text-muted-foreground">
+                      {format(parseISO(com.periodo_inicio), "dd/MM")} a {format(parseISO(com.periodo_fim), "dd/MM/yyyy")}
+                    </td>
+                    <td className="p-3">
+                      {showTotal ? `R$ ${Number(com.valor_total_servicos).toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+                    </td>
+                    <td className="p-3 font-semibold text-primary">
+                      {showTotal ? `R$ ${Number(com.valor_comissao).toFixed(2).replace(".", ",")} (${com.percentual_aplicado}%)` : "R$ •••,••"}
+                    </td>
+                    <td className="p-3 text-muted-foreground">{format(parseISO(com.created_at), "dd/MM/yyyy")}</td>
                   </tr>
                 ))}
               </tbody>
