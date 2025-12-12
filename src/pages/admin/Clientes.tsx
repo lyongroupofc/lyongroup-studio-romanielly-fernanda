@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useClientes } from "@/hooks/useClientes";
 import { useAgendamentos } from "@/hooks/useAgendamentos";
+import { usePagamentos } from "@/hooks/usePagamentos";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +18,7 @@ import type { Cliente } from "@/hooks/useClientes";
 const Clientes = () => {
   const { clientes, loading, refetch, criarOuAtualizarCliente } = useClientes();
   const { agendamentos } = useAgendamentos();
+  const { pagamentos } = usePagamentos();
   const [searchTerm, setSearchTerm] = useState("");
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openNewDialog, setOpenNewDialog] = useState(false);
@@ -43,16 +45,23 @@ const Clientes = () => {
     );
   });
 
-  // Calcular total de atendimentos por cliente
+  // Calcular total de atendimentos por cliente baseado em PAGAMENTOS CONFIRMADOS
   const atendimentosPorCliente = useMemo(() => {
     const contagem: Record<string, number> = {};
-    agendamentos.forEach(a => {
-      if (a.cliente_id && a.status === 'Concluído') {
-        contagem[a.cliente_id] = (contagem[a.cliente_id] || 0) + 1;
+    
+    // Para cada pagamento com status 'Pago', encontrar o cliente_id via agendamento
+    pagamentos.forEach(pag => {
+      if (pag.status === 'Pago' && pag.agendamento_id) {
+        // Buscar o agendamento para pegar o cliente_id
+        const agendamento = agendamentos.find(a => a.id === pag.agendamento_id);
+        if (agendamento?.cliente_id) {
+          contagem[agendamento.cliente_id] = (contagem[agendamento.cliente_id] || 0) + 1;
+        }
       }
     });
+    
     return contagem;
-  }, [agendamentos]);
+  }, [pagamentos, agendamentos]);
 
   const handleEditClick = (cliente: Cliente) => {
     setSelectedCliente(cliente);
