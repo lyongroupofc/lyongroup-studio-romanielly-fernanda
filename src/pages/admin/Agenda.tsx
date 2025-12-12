@@ -389,27 +389,6 @@ const Agenda = () => {
     if (!serv) return base;
 
     const steps = Math.ceil(serv.duracao / 30); // número de slots de 30min necessários
-    
-    // Determina horário de fechamento baseado no dia da semana OU horários extras
-    const dayData = getDayData(d);
-    const dayOfWeek = d.getDay();
-    let limiteMinutos = 13 * 60; // Padrão sábado
-    
-    // Se o dia tem horários extras, calcular limite baseado no maior horário extra
-    if (dayData.horariosExtras.length > 0) {
-      const ultimoHorarioExtra = dayData.horariosExtras[dayData.horariosExtras.length - 1];
-      const [h, m] = ultimoHorarioExtra.split(':').map(Number);
-      limiteMinutos = h * 60 + m + 30; // +30 para permitir agendamentos até o último slot
-    } else {
-      // Se não tem horários extras, usar horários padrão do dia da semana
-      if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
-        limiteMinutos = 20 * 60;
-      } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
-        limiteMinutos = 19 * 60;
-      } else if (dayOfWeek === 6) { // Sábado
-        limiteMinutos = 13 * 60;
-      }
-    }
 
     const toMin = (t: string) => {
       const [h, m] = t.split(":").map(Number);
@@ -417,13 +396,18 @@ const Agenda = () => {
     };
     const toHHMM = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
+    // No admin, permitir agendamentos que começam no último horário disponível
+    // independente de quando terminam (ex: serviço às 20:00 que termina às 22:00)
     return base.filter((start) => {
       const inicio = toMin(start);
-      const fim = inicio + serv.duracao;
-      if (fim > limiteMinutos) return false; // precisa terminar antes do horário de fechamento
+      // Verificar apenas se os slots iniciais estão disponíveis (não bloquear pelo fim)
       for (let k = 0; k < steps; k++) {
         const slot = toHHMM(inicio + k * 30);
-        if (!baseSet.has(slot)) return false;
+        // Só verificar conflito com horários já ocupados, não com limite de fechamento
+        if (baseSet.has(slot) === false && k === 0) {
+          // O primeiro slot DEVE estar disponível
+          return false;
+        }
       }
       return true;
     });
@@ -444,20 +428,6 @@ const Agenda = () => {
     if (duracaoTotal === 0) return base;
 
     const steps = Math.ceil(duracaoTotal / 30);
-    
-    const dayData = getDayData(d);
-    const dayOfWeek = d.getDay();
-    let limiteMinutos = 13 * 60;
-    
-    if (dayData.horariosExtras.length > 0) {
-      const ultimoHorarioExtra = dayData.horariosExtras[dayData.horariosExtras.length - 1];
-      const [h, m] = ultimoHorarioExtra.split(':').map(Number);
-      limiteMinutos = h * 60 + m + 30;
-    } else {
-      if (dayOfWeek === 2 || dayOfWeek === 3) limiteMinutos = 20 * 60;
-      else if (dayOfWeek === 4 || dayOfWeek === 5) limiteMinutos = 19 * 60;
-      else if (dayOfWeek === 6) limiteMinutos = 13 * 60;
-    }
 
     const toMin = (t: string) => {
       const [h, m] = t.split(":").map(Number);
@@ -465,13 +435,16 @@ const Agenda = () => {
     };
     const toHHMM = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
+    // No admin, permitir agendamentos que começam no último horário disponível
+    // independente de quando terminam (ex: serviço às 20:00 que termina às 22:00)
     return base.filter((start) => {
       const inicio = toMin(start);
-      const fim = inicio + duracaoTotal;
-      if (fim > limiteMinutos) return false;
+      // Verificar apenas se o primeiro slot está disponível
       for (let k = 0; k < steps; k++) {
         const slot = toHHMM(inicio + k * 30);
-        if (!baseSet.has(slot)) return false;
+        if (baseSet.has(slot) === false && k === 0) {
+          return false;
+        }
       }
       return true;
     });
