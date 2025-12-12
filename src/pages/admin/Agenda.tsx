@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2, ChevronLeft, ChevronRight, DollarSign, Timer, PlusCircle, RefreshCw } from "lucide-react";
+import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2, ChevronLeft, ChevronRight, DollarSign, Timer, PlusCircle, RefreshCw, CalendarDays, Lock } from "lucide-react";
+import { addDays, eachDayOfInterval, getDay, parseISO } from "date-fns";
 import { DayGridDialog } from "@/components/DayGridDialog";
 import { toast } from "sonner";
 import { isBefore, startOfToday, isSunday, format } from "date-fns";
@@ -59,6 +60,17 @@ const Agenda = () => {
   const [pagamentoData, setPagamentoData] = useState({ valor: "", metodo: "PIX" });
   const [extensaoMinutos, setExtensaoMinutos] = useState(30);
   const [servicoAdicionalId, setServicoAdicionalId] = useState<string>("");
+
+  // Estados para bloqueio em lote
+  const [openBloqueioLoteDialog, setOpenBloqueioLoteDialog] = useState(false);
+  const [bloqueioLoteData, setBloqueioLoteData] = useState({
+    dataInicio: "",
+    dataFim: "",
+    horariosSelecionados: [] as string[],
+    descricao: "",
+    diasSemana: [1, 2, 3, 4, 5, 6] as number[], // seg=1 ... sáb=6
+  });
+  const [salvandoBloqueioLote, setSalvandoBloqueioLote] = useState(false);
 
   // Estado para agendamentos em tempo real da data selecionada
   const [agendamentosDataAtual, setAgendamentosDataAtual] = useState<Agendamento[]>([]);
@@ -882,6 +894,10 @@ const Agenda = () => {
         <Button onClick={() => setOpenEscolhaClienteDialog(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Novo Agendamento
+        </Button>
+        <Button variant="outline" onClick={() => setOpenBloqueioLoteDialog(true)}>
+          <Lock className="w-4 h-4 mr-2" />
+          Bloquear em Lote
         </Button>
       </div>
 
@@ -2228,6 +2244,273 @@ const Agenda = () => {
               className="w-full sm:w-auto"
             >
               OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Dialog Bloqueio em Lote */}
+      <Dialog open={openBloqueioLoteDialog} onOpenChange={setOpenBloqueioLoteDialog}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5" />
+              Bloquear Horários em Lote
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5">
+            {/* Período */}
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
+                <CalendarDays className="w-4 h-4" />
+                Período
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Data Início</Label>
+                  <Input
+                    type="date"
+                    value={bloqueioLoteData.dataInicio}
+                    onChange={(e) => setBloqueioLoteData({ ...bloqueioLoteData, dataInicio: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Data Fim</Label>
+                  <Input
+                    type="date"
+                    value={bloqueioLoteData.dataFim}
+                    onChange={(e) => setBloqueioLoteData({ ...bloqueioLoteData, dataFim: e.target.value })}
+                    min={bloqueioLoteData.dataInicio}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Dias da Semana */}
+            <div className="space-y-3">
+              <Label>Dias da Semana</Label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 1, label: "Seg" },
+                  { value: 2, label: "Ter" },
+                  { value: 3, label: "Qua" },
+                  { value: 4, label: "Qui" },
+                  { value: 5, label: "Sex" },
+                  { value: 6, label: "Sáb" },
+                  { value: 0, label: "Dom" },
+                ].map((dia) => (
+                  <label
+                    key={dia.value}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${
+                      bloqueioLoteData.diasSemana.includes(dia.value)
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border hover:bg-accent"
+                    }`}
+                  >
+                    <Checkbox
+                      checked={bloqueioLoteData.diasSemana.includes(dia.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setBloqueioLoteData({
+                            ...bloqueioLoteData,
+                            diasSemana: [...bloqueioLoteData.diasSemana, dia.value],
+                          });
+                        } else {
+                          setBloqueioLoteData({
+                            ...bloqueioLoteData,
+                            diasSemana: bloqueioLoteData.diasSemana.filter((d) => d !== dia.value),
+                          });
+                        }
+                      }}
+                      className="sr-only"
+                    />
+                    <span className="text-sm">{dia.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Horários a Bloquear */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Horários a Bloquear
+                </Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const todosHorarios: string[] = [];
+                      for (let h = 8; h <= 19; h++) {
+                        todosHorarios.push(`${h.toString().padStart(2, "0")}:00`);
+                        if (h < 19) todosHorarios.push(`${h.toString().padStart(2, "0")}:30`);
+                      }
+                      setBloqueioLoteData({ ...bloqueioLoteData, horariosSelecionados: todosHorarios });
+                    }}
+                  >
+                    Todos
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setBloqueioLoteData({ ...bloqueioLoteData, horariosSelecionados: [] })}
+                  >
+                    Limpar
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1">
+                {(() => {
+                  const horarios: string[] = [];
+                  for (let h = 8; h <= 19; h++) {
+                    horarios.push(`${h.toString().padStart(2, "0")}:00`);
+                    if (h < 19) horarios.push(`${h.toString().padStart(2, "0")}:30`);
+                  }
+                  return horarios.map((horario) => (
+                    <label
+                      key={horario}
+                      className={`flex items-center justify-center px-2 py-2 rounded border cursor-pointer transition-colors text-sm ${
+                        bloqueioLoteData.horariosSelecionados.includes(horario)
+                          ? "bg-destructive text-destructive-foreground border-destructive"
+                          : "border-border hover:bg-accent"
+                      }`}
+                    >
+                      <Checkbox
+                        checked={bloqueioLoteData.horariosSelecionados.includes(horario)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setBloqueioLoteData({
+                              ...bloqueioLoteData,
+                              horariosSelecionados: [...bloqueioLoteData.horariosSelecionados, horario].sort(),
+                            });
+                          } else {
+                            setBloqueioLoteData({
+                              ...bloqueioLoteData,
+                              horariosSelecionados: bloqueioLoteData.horariosSelecionados.filter((h) => h !== horario),
+                            });
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                      {horario}
+                    </label>
+                  ));
+                })()}
+              </div>
+            </div>
+
+            {/* Descrição/Motivo */}
+            <div className="space-y-2">
+              <Label>Motivo do Bloqueio (opcional)</Label>
+              <Textarea
+                placeholder="Ex: Horário de almoço, Compromisso pessoal, Férias..."
+                value={bloqueioLoteData.descricao}
+                onChange={(e) => setBloqueioLoteData({ ...bloqueioLoteData, descricao: e.target.value })}
+                className="resize-none"
+                rows={2}
+              />
+            </div>
+
+            {/* Preview */}
+            {bloqueioLoteData.dataInicio && bloqueioLoteData.dataFim && bloqueioLoteData.horariosSelecionados.length > 0 && (
+              <div className="p-3 bg-muted rounded-lg text-sm">
+                <p className="font-medium mb-1">Resumo:</p>
+                <p className="text-muted-foreground">
+                  {(() => {
+                    try {
+                      const inicio = parseISO(bloqueioLoteData.dataInicio);
+                      const fim = parseISO(bloqueioLoteData.dataFim);
+                      const dias = eachDayOfInterval({ start: inicio, end: fim }).filter((d) =>
+                        bloqueioLoteData.diasSemana.includes(getDay(d))
+                      );
+                      return `${bloqueioLoteData.horariosSelecionados.length} horário(s) em ${dias.length} dia(s)`;
+                    } catch {
+                      return "";
+                    }
+                  })()}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setOpenBloqueioLoteDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={
+                !bloqueioLoteData.dataInicio ||
+                !bloqueioLoteData.dataFim ||
+                bloqueioLoteData.horariosSelecionados.length === 0 ||
+                bloqueioLoteData.diasSemana.length === 0 ||
+                salvandoBloqueioLote
+              }
+              onClick={async () => {
+                try {
+                  setSalvandoBloqueioLote(true);
+                  const inicio = parseISO(bloqueioLoteData.dataInicio);
+                  const fim = parseISO(bloqueioLoteData.dataFim);
+                  const diasNoIntervalo = eachDayOfInterval({ start: inicio, end: fim }).filter((d) =>
+                    bloqueioLoteData.diasSemana.includes(getDay(d))
+                  );
+
+                  let diasAtualizados = 0;
+                  for (const dia of diasNoIntervalo) {
+                    const dataStr = format(dia, "yyyy-MM-dd");
+                    const configExistente = getConfig(dataStr);
+
+                    const horariosAtuais = configExistente?.horarios_bloqueados || [];
+                    const novosHorarios = Array.from(
+                      new Set([...horariosAtuais, ...bloqueioLoteData.horariosSelecionados])
+                    ).sort();
+
+                    const observacoesAtuais = configExistente?.observacoes || "";
+                    const novaObservacao = bloqueioLoteData.descricao
+                      ? observacoesAtuais
+                        ? `${observacoesAtuais}; ${bloqueioLoteData.descricao}`
+                        : bloqueioLoteData.descricao
+                      : observacoesAtuais;
+
+                    await updateConfig(dataStr, {
+                      horarios_bloqueados: novosHorarios,
+                      observacoes: novaObservacao || null,
+                    });
+                    diasAtualizados++;
+                  }
+
+                  toast.success(`Horários bloqueados em ${diasAtualizados} dia(s)`);
+                  setOpenBloqueioLoteDialog(false);
+                  setBloqueioLoteData({
+                    dataInicio: "",
+                    dataFim: "",
+                    horariosSelecionados: [],
+                    descricao: "",
+                    diasSemana: [1, 2, 3, 4, 5, 6],
+                  });
+                  refetchConfig();
+                } catch (error) {
+                  console.error("Erro ao bloquear horários:", error);
+                  toast.error("Erro ao bloquear horários");
+                } finally {
+                  setSalvandoBloqueioLote(false);
+                }
+              }}
+            >
+              {salvandoBloqueioLote ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Bloqueando...
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Bloquear Horários
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
