@@ -174,7 +174,7 @@ export function DayGridDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-full w-full h-[100dvh] max-h-[100dvh] p-0 m-0 rounded-none sm:rounded-none border-0 bg-white dark:bg-zinc-950 overflow-hidden">
+      <DialogContent className="max-w-full w-full h-[100dvh] max-h-[100dvh] p-0 m-0 rounded-none sm:rounded-none border-0 bg-white dark:bg-zinc-950 overflow-y-auto">
         <div className="flex flex-col h-full">
           
           {/* Header Minimalista */}
@@ -298,7 +298,7 @@ export function DayGridDialog({
             </div>
             
             {/* Grid de Horários */}
-            <div className="flex-1 lg:w-[55%] lg:border-r border-zinc-100 dark:border-zinc-800 lg:overflow-y-auto lg:max-h-[calc(100vh-200px)]">
+            <div className="flex-1 lg:w-[55%] lg:border-r border-zinc-100 dark:border-zinc-800 lg:overflow-y-auto lg:max-h-[calc(100vh-200px)] pb-20">
               <div className="px-3 py-3 space-y-1 pb-6">
                 {todosHorarios.map((horario) => {
                   const status = getSlotStatus(horario);
