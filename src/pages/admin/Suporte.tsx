@@ -3,8 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Headphones, Send, Loader2, Phone } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Headphones, Send, Loader2, Phone, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 
@@ -17,7 +16,7 @@ const Suporte = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Olá! 👋 Sou o Léo, seu assistente de suporte do Full Beauty System. Como posso ajudar você hoje?"
+      content: "Olá! 👋 Sou o Léo, seu assistente de suporte do Full Beauty System.\n\n🎯 **Agora posso fazer tudo por você!**\n\nPosso gerenciar agendamentos, clientes, serviços, configurações do bot e muito mais. É só pedir!\n\nExemplos:\n- \"Quais agendamentos tem hoje?\"\n- \"Cancela o agendamento da Maria\"\n- \"Fecha o dia 25/12\"\n- \"Qual o faturamento do mês?\"\n\nComo posso ajudar?"
     }
   ]);
   const [input, setInput] = useState("");
@@ -55,97 +54,29 @@ const Suporte = () => {
       if (!resp.ok) {
         if (resp.status === 429) {
           toast.error("Limite de requisições excedido. Tente novamente mais tarde.");
+          setMessages((prev) => prev.slice(0, -1));
           return;
         }
         if (resp.status === 402) {
           toast.error("Créditos insuficientes. Adicione créditos ao workspace.");
+          setMessages((prev) => prev.slice(0, -1));
           return;
         }
         throw new Error("Erro ao processar resposta");
       }
 
-      if (!resp.body) throw new Error("Sem corpo de resposta");
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let textBuffer = "";
-      let streamDone = false;
-      let assistantContent = "";
-
-      // Criar mensagem assistente vazia
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-
-      while (!streamDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        textBuffer += decoder.decode(value, { stream: true });
-
-        let newlineIndex: number;
-        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-          let line = textBuffer.slice(0, newlineIndex);
-          textBuffer = textBuffer.slice(newlineIndex + 1);
-
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
-
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") {
-            streamDone = true;
-            break;
-          }
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) {
-              assistantContent += content;
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = {
-                  role: "assistant",
-                  content: assistantContent,
-                };
-                return newMessages;
-              });
-            }
-          } catch {
-            textBuffer = line + "\n" + textBuffer;
-            break;
-          }
-        }
+      const data = await resp.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
       }
 
-      // Flush final
-      if (textBuffer.trim()) {
-        for (let raw of textBuffer.split("\n")) {
-          if (!raw) continue;
-          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
-          if (raw.startsWith(":") || raw.trim() === "") continue;
-          if (!raw.startsWith("data: ")) continue;
-          const jsonStr = raw.slice(6).trim();
-          if (jsonStr === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) {
-              assistantContent += content;
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = {
-                  role: "assistant",
-                  content: assistantContent,
-                };
-                return newMessages;
-              });
-            }
-          } catch {}
-        }
-      }
+      setMessages((prev) => [...prev, { role: "assistant", content: data.response }]);
+
     } catch (error) {
       console.error("Erro no chat:", error);
       toast.error("Erro ao processar mensagem. Tente novamente.");
-      setMessages((prev) => prev.slice(0, -1)); // Remove mensagem vazia
+      setMessages((prev) => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
     }
@@ -154,6 +85,24 @@ const Suporte = () => {
   const abrirWhatsAppSuporte = () => {
     const mensagem = "Olá! Preciso de suporte humano para o Full Beauty System.";
     window.open(`https://wa.me/5531991625182?text=${encodeURIComponent(mensagem)}`, '_blank');
+  };
+
+  const formatMessage = (content: string) => {
+    // Converter **texto** em negrito e formatar quebras de linha
+    return content.split('\n').map((line, i) => {
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      return (
+        <span key={i}>
+          {parts.map((part, j) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={j}>{part.slice(2, -2)}</strong>;
+            }
+            return part;
+          })}
+          {i < content.split('\n').length - 1 && <br />}
+        </span>
+      );
+    });
   };
 
   return (
@@ -165,9 +114,10 @@ const Suporte = () => {
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Headphones className="w-8 h-8 text-primary" />
             Suporte - Léo
+            <Sparkles className="w-5 h-5 text-amber-500" />
           </h1>
           <p className="text-muted-foreground mt-1">
-            Assistente inteligente para ajudar com o painel
+            Assistente inteligente com poderes totais no painel
           </p>
         </div>
         <Button onClick={abrirWhatsAppSuporte} variant="outline" className="gap-2">
@@ -191,14 +141,17 @@ const Suporte = () => {
                       : "bg-muted text-foreground"
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  <div className="text-sm whitespace-pre-wrap">
+                    {formatMessage(msg.content)}
+                  </div>
                 </div>
               </div>
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-muted">
+                <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-muted flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Léo está trabalhando...</span>
                 </div>
               </div>
             )}
@@ -215,7 +168,7 @@ const Suporte = () => {
                 handleSend();
               }
             }}
-            placeholder="Digite sua dúvida..."
+            placeholder="Digite sua dúvida ou peça uma ação..."
             disabled={isLoading}
           />
           <Button onClick={handleSend} disabled={isLoading || !input.trim()}>
@@ -224,10 +177,10 @@ const Suporte = () => {
         </div>
       </Card>
 
-      <Card className="mt-4 p-4 bg-muted/50">
+      <Card className="mt-4 p-4 bg-gradient-to-r from-amber-500/10 to-primary/10 border-amber-500/20">
         <p className="text-sm text-muted-foreground">
-          💡 <strong>Léo</strong> pode ajudar com dúvidas sobre o painel, diagnosticar problemas e orientar sobre funcionalidades. 
-          Ele NÃO pode alterar senhas ou layout do sistema.
+          ✨ <strong>Léo Turbinado!</strong> Agora pode gerenciar agendamentos, clientes, serviços, configurar o bot, bloquear horários, fechar dias e consultar faturamento. 
+          Basta pedir em linguagem natural!
         </p>
       </Card>
     </div>
