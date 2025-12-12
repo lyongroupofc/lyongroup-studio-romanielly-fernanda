@@ -271,8 +271,9 @@ const Agenda = () => {
     
     const horariosBloqueados: string[] = [];
     
-    // Gera todos os slots de 30 em 30 minutos desde o início até o fim
-    for (let min = inicioEmMinutos; min <= fimEmMinutos; min += 30) {
+    // Gera todos os slots de 30 em 30 minutos desde o início até ANTES do fim
+    // Exemplo: serviço de 75min às 17:30 bloqueia 17:30, 18:00, 18:30 (próximo disponível 19:00)
+    for (let min = inicioEmMinutos; min < fimEmMinutos; min += 30) {
       const h = Math.floor(min / 60);
       const m = min % 60;
       const horario = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
