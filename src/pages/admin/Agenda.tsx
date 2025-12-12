@@ -81,6 +81,7 @@ const Agenda = () => {
           .select('id, data, horario, cliente_nome, cliente_telefone, cliente_id, servico_id, servico_nome, profissional_id, profissional_nome, status, observacoes, origem')
           .eq('data', dateStr)
           .neq('status', 'Cancelado')
+          .neq('status', 'Excluido')
           .order('horario', { ascending: true });
 
         if (error) {

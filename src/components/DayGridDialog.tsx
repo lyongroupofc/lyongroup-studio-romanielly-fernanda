@@ -1,10 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Settings, Lock, User, Clock, DollarSign, CalendarCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Settings, Lock, User, Clock, DollarSign, CalendarCheck, Eye, EyeOff } from "lucide-react";
 import { type Agendamento } from "@/hooks/useAgendamentos";
 
 interface Servico {
@@ -49,6 +49,9 @@ export function DayGridDialog({
   onSelectAgendamento,
   highlightedAgendamento,
 }: DayGridDialogProps) {
+  
+  // Estado para toggle de visibilidade do valor estimado
+  const [valorVisivel, setValorVisivel] = useState(true);
   
   // Verificar se o dia está fechado (fechado=true E sem horariosExtras)
   const isDiaFechado = dayConfig.fechado && (!dayConfig.horariosExtras || dayConfig.horariosExtras.length === 0);
@@ -150,10 +153,16 @@ export function DayGridDialog({
     return { disponivel, agendado, bloqueado };
   }, [todosHorarios, agendamentosAtivos, dayConfig, isDiaFechado]);
 
-  // Calcular valor total estimado
+  // Calcular valor total estimado - busca por ID ou nome do serviço
   const valorTotal = useMemo(() => {
     return agendamentosAtivos.reduce((acc, ag) => {
-      const servico = servicos.find(s => s.id === ag.servico_id);
+      let servico = servicos.find(s => s.id === ag.servico_id);
+      // Fallback: buscar pelo nome se não encontrou pelo ID
+      if (!servico && ag.servico_nome) {
+        const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        const nomeAlvo = normalize(ag.servico_nome.split(',')[0]);
+        servico = servicos.find(s => normalize(s.nome).includes(nomeAlvo) || nomeAlvo.includes(normalize(s.nome)));
+      }
       return acc + (servico?.preco || 0);
     }, 0);
   }, [agendamentosAtivos, servicos]);
@@ -234,11 +243,11 @@ export function DayGridDialog({
           )}
 
           {/* Layout em Duas Colunas */}
-          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
             
             {/* Coluna Esquerda - Grid de Horários (scrollável) */}
-            <div className="flex-1 lg:w-[55%] overflow-y-auto overscroll-contain border-r border-zinc-100 dark:border-zinc-800">
-              <div className="px-3 py-3 space-y-1 pb-6">
+            <div className="flex-1 lg:w-[55%] flex flex-col min-h-0 border-r border-zinc-100 dark:border-zinc-800">
+              <div className="flex-1 h-0 overflow-y-auto overscroll-contain px-3 py-3 space-y-1 pb-6">
                 {todosHorarios.map((horario) => {
                   const status = getSlotStatus(horario);
                   const agendamento = agendamentosPorHorario.get(horario);
@@ -328,7 +337,8 @@ export function DayGridDialog({
             </div>
             
             {/* Coluna Direita - Painel de Informações */}
-            <div className="lg:w-[45%] bg-zinc-50/50 dark:bg-zinc-900/50 overflow-y-auto">
+            <div className="lg:w-[45%] flex flex-col min-h-0 bg-zinc-50/50 dark:bg-zinc-900/50">
+              <div className="flex-1 h-0 overflow-y-auto">
               <div className="p-4 space-y-4">
                 
                 {/* Resumo do Dia */}
@@ -341,9 +351,9 @@ export function DayGridDialog({
                       <p className="text-lg font-bold text-emerald-600">{totais.disponivel}</p>
                       <p className="text-[10px] text-emerald-600/70">Livres</p>
                     </div>
-                    <div className="text-center p-2 bg-amber-50 dark:bg-amber-950/30 rounded">
-                      <p className="text-lg font-bold text-amber-600">{totais.agendado}</p>
-                      <p className="text-[10px] text-amber-600/70">Agendados</p>
+                    <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950/30 rounded">
+                      <p className="text-lg font-bold text-yellow-600">{totais.agendado}</p>
+                      <p className="text-[10px] text-yellow-600/70">Agendados</p>
                     </div>
                     <div className="text-center p-2 bg-red-50 dark:bg-red-950/30 rounded">
                       <p className="text-lg font-bold text-red-500">{totais.bloqueado}</p>
@@ -354,14 +364,24 @@ export function DayGridDialog({
 
                 {/* Valor Estimado */}
                 <div className="bg-white dark:bg-zinc-900 rounded-lg p-3 border border-zinc-100 dark:border-zinc-800">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-amber-500" />
-                    <div>
-                      <p className="text-[10px] text-zinc-500 uppercase">Valor Estimado</p>
-                      <p className="text-lg font-bold text-zinc-900 dark:text-white">
-                        R$ {valorTotal.toFixed(2)}
-                      </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-yellow-500" />
+                      <div>
+                        <p className="text-[10px] text-zinc-500 uppercase">Valor Estimado</p>
+                        <p className="text-lg font-bold text-zinc-900 dark:text-white">
+                          {valorVisivel ? `R$ ${valorTotal.toFixed(2)}` : "•••••"}
+                        </p>
+                      </div>
                     </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => setValorVisivel(!valorVisivel)}
+                      className="w-8 h-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      {valorVisivel ? <Eye className="w-4 h-4 text-zinc-400" /> : <EyeOff className="w-4 h-4 text-zinc-400" />}
+                    </Button>
                   </div>
                 </div>
 
@@ -384,7 +404,7 @@ export function DayGridDialog({
                 <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-100 dark:border-zinc-800">
                   <div className="p-3 border-b border-zinc-100 dark:border-zinc-800">
                     <div className="flex items-center gap-2">
-                      <CalendarCheck className="w-4 h-4 text-amber-500" />
+                      <CalendarCheck className="w-4 h-4 text-yellow-500" />
                       <h3 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
                         Agendamentos ({agendamentosAtivos.length})
                       </h3>
@@ -402,21 +422,27 @@ export function DayGridDialog({
                           .sort((a, b) => a.horario.localeCompare(b.horario))
                           .map(ag => {
                             const horarioNorm = ag.horario.length > 5 ? ag.horario.substring(0, 5) : ag.horario;
-                            const servico = servicos.find(s => s.id === ag.servico_id);
+                            // Buscar serviço por ID ou nome
+                            let servico = servicos.find(s => s.id === ag.servico_id);
+                            if (!servico && ag.servico_nome) {
+                              const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                              const nomeAlvo = normalize(ag.servico_nome.split(',')[0]);
+                              servico = servicos.find(s => normalize(s.nome).includes(nomeAlvo) || nomeAlvo.includes(normalize(s.nome)));
+                            }
                             return (
                               <div 
                                 key={ag.id}
-                                className="p-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                                className="p-2.5 hover:bg-yellow-50 dark:hover:bg-yellow-950/30 cursor-pointer transition-colors"
                                 onClick={() => onSelectAgendamento(ag)}
                               >
                                 <div className="flex items-center gap-2">
-                                  <span className="text-xs font-bold text-amber-600 w-10">{horarioNorm}</span>
+                                  <span className="text-xs font-bold text-yellow-600 w-10">{horarioNorm}</span>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-xs font-medium text-zinc-800 dark:text-white truncate">
                                       {ag.cliente_nome}
                                     </p>
                                     <p className="text-[10px] text-zinc-500 truncate">
-                                      {ag.servico_nome} {servico && `• R$ ${servico.preco}`}
+                                      {ag.servico_nome} {servico ? `• R$ ${servico.preco.toFixed(2)}` : ''}
                                     </p>
                                   </div>
                                 </div>
@@ -428,6 +454,7 @@ export function DayGridDialog({
                   </div>
                 </div>
 
+              </div>
               </div>
             </div>
           </div>
