@@ -166,18 +166,18 @@ const BotWhatsApp = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto p-4 sm:p-6 space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Bot WhatsApp</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Bot WhatsApp</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Configure e gerencie o assistente virtual
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setOpenInformacoes(true)} variant="outline">
-            <FileText className="h-4 w-4 mr-2" />
-            Adicionar Informação
+          <Button onClick={() => setOpenInformacoes(true)} variant="outline" size="sm" className="sm:size-default">
+            <FileText className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Adicionar Informação</span>
           </Button>
           <Button onClick={refetch} variant="outline" size="icon">
             <RefreshCw className="h-4 w-4" />
@@ -356,7 +356,7 @@ const BotWhatsApp = () => {
               <p>Nenhuma conversa encontrada para esse filtro</p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Lista de Conversas */}
               <ScrollArea className="h-[500px] pr-4 bg-white rounded-lg p-2">
                 <div className="space-y-2">

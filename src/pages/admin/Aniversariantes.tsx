@@ -87,17 +87,17 @@ const Aniversariantes = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20">
       <div>
-        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           Aniversariantes
         </h1>
-        <div className="flex items-center gap-4">
-          <p className="text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Acompanhe os aniversários dos seus clientes
           </p>
-          <div className="px-4 py-2 bg-primary/20 rounded-lg border-2 border-primary">
-            <p className="text-lg font-bold text-primary">
+          <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-primary/20 rounded-lg border-2 border-primary w-fit">
+            <p className="text-sm sm:text-lg font-bold text-primary">
               {aniversariantesDoMes.length} {aniversariantesDoMes.length === 1 ? 'aniversariante' : 'aniversariantes'} este mês
             </p>
           </div>
