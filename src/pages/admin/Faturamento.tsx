@@ -307,62 +307,43 @@ const Faturamento = () => {
         </Button>
       </div>
 
-      {/* Cards de Saldo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="p-6 hover-lift">
-            <div className="flex items-center gap-4">
-              <div className={`p-3 bg-primary/10 rounded-xl`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className="text-2xl font-bold">
-                  {showTotal ? stat.value : "R$ •••,••"}
-                </p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Cards de Resultado (Entrada - Saída) */}
+      {/* Cards de Entradas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 hover-lift border-2 border-primary/30">
+        <Card className="p-6 hover-lift">
           <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-xl ${saldoHoje >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
-              <Scale className={`w-6 h-6 ${saldoHoje >= 0 ? 'text-success' : 'text-destructive'}`} />
+            <div className="p-3 bg-success/10 rounded-xl">
+              <TrendingUp className="w-6 h-6 text-success" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Resultado do Dia</p>
-              <p className={`text-2xl font-bold ${saldoHoje >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {showTotal ? `R$ ${saldoHoje.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              <p className="text-sm text-muted-foreground">Entradas Hoje</p>
+              <p className="text-2xl font-bold text-success">
+                {showTotal ? `R$ ${faturamentoHoje.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
               </p>
             </div>
           </div>
         </Card>
-        <Card className="p-6 hover-lift border-2 border-primary/30">
+        <Card className="p-6 hover-lift">
           <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-xl ${saldoMes >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
-              <Scale className={`w-6 h-6 ${saldoMes >= 0 ? 'text-success' : 'text-destructive'}`} />
+            <div className="p-3 bg-success/10 rounded-xl">
+              <TrendingUp className="w-6 h-6 text-success" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Resultado do Mês</p>
-              <p className={`text-2xl font-bold ${saldoMes >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {showTotal ? `R$ ${saldoMes.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              <p className="text-sm text-muted-foreground">Entradas do Mês</p>
+              <p className="text-2xl font-bold text-success">
+                {showTotal ? `R$ ${faturamentoMes.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
               </p>
             </div>
           </div>
         </Card>
-        <Card className="p-6 hover-lift border-2 border-primary/30">
+        <Card className="p-6 hover-lift">
           <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-xl ${saldoAno >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
-              <Scale className={`w-6 h-6 ${saldoAno >= 0 ? 'text-success' : 'text-destructive'}`} />
+            <div className="p-3 bg-success/10 rounded-xl">
+              <TrendingUp className="w-6 h-6 text-success" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Resultado do Ano</p>
-              <p className={`text-2xl font-bold ${saldoAno >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {showTotal ? `R$ ${saldoAno.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              <p className="text-sm text-muted-foreground">Entradas do Ano</p>
+              <p className="text-2xl font-bold text-success">
+                {showTotal ? `R$ ${faturamentoAno.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
               </p>
             </div>
           </div>
@@ -378,7 +359,7 @@ const Faturamento = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Saídas Hoje</p>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-bold text-destructive">
                 {showTotal ? `R$ ${despesasHoje.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
               </p>
             </div>
@@ -391,7 +372,7 @@ const Faturamento = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Saídas do Mês</p>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-bold text-destructive">
                 {showTotal ? `R$ ${despesasMes.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
               </p>
             </div>
@@ -404,8 +385,51 @@ const Faturamento = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Saídas do Ano</p>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-bold text-destructive">
                 {showTotal ? `R$ ${despesasAno.toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Cards de Resultado (Entrada - Saída) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="p-6 hover-lift border-2 border-primary/30">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${(faturamentoHoje - despesasHoje) >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+              <Scale className={`w-6 h-6 ${(faturamentoHoje - despesasHoje) >= 0 ? 'text-success' : 'text-destructive'}`} />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground font-medium">Resultado do Dia</p>
+              <p className={`text-2xl font-bold ${(faturamentoHoje - despesasHoje) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {showTotal ? `R$ ${(faturamentoHoje - despesasHoje).toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-6 hover-lift border-2 border-primary/30">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${(faturamentoMes - despesasMes) >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+              <Scale className={`w-6 h-6 ${(faturamentoMes - despesasMes) >= 0 ? 'text-success' : 'text-destructive'}`} />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground font-medium">Resultado do Mês</p>
+              <p className={`text-2xl font-bold ${(faturamentoMes - despesasMes) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {showTotal ? `R$ ${(faturamentoMes - despesasMes).toFixed(2).replace(".", ",")}` : "R$ •••,••"}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-6 hover-lift border-2 border-primary/30">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${(faturamentoAno - despesasAno) >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+              <Scale className={`w-6 h-6 ${(faturamentoAno - despesasAno) >= 0 ? 'text-success' : 'text-destructive'}`} />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground font-medium">Resultado do Ano</p>
+              <p className={`text-2xl font-bold ${(faturamentoAno - despesasAno) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {showTotal ? `R$ ${(faturamentoAno - despesasAno).toFixed(2).replace(".", ",")}` : "R$ •••,••"}
               </p>
             </div>
           </div>
