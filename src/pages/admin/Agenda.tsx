@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2, ChevronLeft, ChevronRight, DollarSign, Timer, PlusCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { isBefore, startOfToday, isSunday, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,9 +20,11 @@ import { useServicos } from "@/hooks/useServicos";
 import { useProfissionais } from "@/hooks/useProfissionais";
 import { useClientes } from "@/hooks/useClientes";
 import { usePromocoes } from "@/hooks/usePromocoes";
+import { usePagamentos } from "@/hooks/usePagamentos";
 import { useSearchParams } from "react-router-dom";
 import { isFeriado } from "@/lib/feriados";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 // Component - Agenda Admin
 const Agenda = () => {
@@ -48,6 +50,15 @@ const Agenda = () => {
   const { profissionais, loading: loadingProfissionais, refetch: refetchProfissionais } = useProfissionais();
   const { clientes } = useClientes();
   const { promocoes } = usePromocoes();
+  const { addPagamento } = usePagamentos();
+
+  // Estados para funcionalidades extras
+  const [openPagamentoDialog, setOpenPagamentoDialog] = useState(false);
+  const [openEstenderDialog, setOpenEstenderDialog] = useState(false);
+  const [openAdicionarServicoDialog, setOpenAdicionarServicoDialog] = useState(false);
+  const [pagamentoData, setPagamentoData] = useState({ valor: "", metodo: "PIX" });
+  const [extensaoMinutos, setExtensaoMinutos] = useState(30);
+  const [servicoAdicionalId, setServicoAdicionalId] = useState<string>("");
 
   // Estado para agendamentos em tempo real da data selecionada
   const [agendamentosDataAtual, setAgendamentosDataAtual] = useState<Agendamento[]>([]);
@@ -1102,7 +1113,7 @@ const Agenda = () => {
                       onClick={() => {
                         setSelectedAgendamento(agendamento);
                         setOpenDetalhesDialog(true);
-                        setOpenSideSheet(false);
+                        // NÃO fechar o side sheet - item 7
                       }}
                     >
                       <div className="space-y-1">
@@ -1576,12 +1587,25 @@ const Agenda = () => {
 
       {/* Dialog Detalhes do Agendamento */}
       <Dialog open={openDetalhesDialog} onOpenChange={setOpenDetalhesDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Detalhes do Agendamento</DialogTitle>
           </DialogHeader>
           {selectedAgendamento && (
             <div className="space-y-4">
+              {/* Badge de Reagendamento - Item 4 */}
+              {selectedAgendamento.observacoes?.includes('Reagendado') && (
+                <div className="flex items-center gap-2 p-2 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                  <RefreshCw className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-medium text-amber-600">Reagendado</span>
+                  <span className="text-xs text-amber-600/80 ml-auto">
+                    {selectedAgendamento.observacoes.match(/Reagendado de (\d{2}\/\d{2}\/\d{4})/)?.[0] || 
+                     selectedAgendamento.observacoes.match(/Reagendado a partir do dia: (\d{2}\/\d{2}\/\d{4})/)?.[0] ||
+                     'Data anterior não registrada'}
+                  </span>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-primary" />
@@ -1628,6 +1652,43 @@ const Agenda = () => {
                   </div>
                 )}
               </div>
+
+              {/* Botões de ação extras - Item 2 e 10 */}
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setOpenEstenderDialog(true)}
+                  className="gap-1"
+                >
+                  <Timer className="w-4 h-4" />
+                  Estender Horário
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setOpenAdicionarServicoDialog(true)}
+                  className="gap-1"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  Adicionar Serviço
+                </Button>
+              </div>
+
+              {/* Botão Registrar Pagamento - Item 10 */}
+              <Button 
+                onClick={() => {
+                  const servico = servicos.find(s => s.id === selectedAgendamento.servico_id);
+                  setPagamentoData({ valor: servico?.preco?.toString() || "", metodo: "PIX" });
+                  setOpenPagamentoDialog(true);
+                }}
+                className="w-full gap-2"
+                variant="default"
+              >
+                <DollarSign className="w-4 h-4" />
+                Registrar Pagamento
+              </Button>
+
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setOpenDetalhesDialog(false)}>Fechar</Button>
                 <Button 
@@ -1667,6 +1728,196 @@ const Agenda = () => {
                     Cancelar Agendamento
                   </Button>
                 )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Registrar Pagamento no card - Item 10 */}
+      <Dialog open={openPagamentoDialog} onOpenChange={setOpenPagamentoDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Pagamento</DialogTitle>
+          </DialogHeader>
+          {selectedAgendamento && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">Cliente</p>
+                <p className="font-medium">{selectedAgendamento.cliente_nome}</p>
+              </div>
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">Serviço</p>
+                <p className="font-medium">{selectedAgendamento.servico_nome}</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Valor *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={pagamentoData.valor}
+                  onChange={(e) => setPagamentoData({ ...pagamentoData, valor: e.target.value })}
+                  placeholder="0,00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Método de Pagamento</Label>
+                <Select value={pagamentoData.metodo} onValueChange={(v) => setPagamentoData({ ...pagamentoData, metodo: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PIX">PIX</SelectItem>
+                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
+                    <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setOpenPagamentoDialog(false)}>Cancelar</Button>
+                <Button onClick={async () => {
+                  if (!pagamentoData.valor) {
+                    toast.error("Informe o valor do pagamento");
+                    return;
+                  }
+                  await addPagamento({
+                    agendamento_id: selectedAgendamento.id,
+                    cliente_nome: selectedAgendamento.cliente_nome,
+                    servico: selectedAgendamento.servico_nome,
+                    valor: parseFloat(pagamentoData.valor),
+                    metodo_pagamento: pagamentoData.metodo,
+                    status: "Pago",
+                    data: selectedAgendamento.data,
+                  });
+                  toast.success("Pagamento registrado com sucesso!");
+                  setOpenPagamentoDialog(false);
+                  setOpenDetalhesDialog(false);
+                }}>
+                  Registrar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Estender Horário - Item 2A */}
+      <Dialog open={openEstenderDialog} onOpenChange={setOpenEstenderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Estender Horário</DialogTitle>
+          </DialogHeader>
+          {selectedAgendamento && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Estender o atendimento de {selectedAgendamento.cliente_nome} por mais tempo
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {[30, 60, 90, 120].map((min) => (
+                  <Button
+                    key={min}
+                    variant={extensaoMinutos === min ? "default" : "outline"}
+                    onClick={() => setExtensaoMinutos(min)}
+                    className="w-full"
+                  >
+                    +{min >= 60 ? `${min / 60}h` : `${min}min`}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setOpenEstenderDialog(false)}>Cancelar</Button>
+                <Button onClick={async () => {
+                  const servicoAtual = servicos.find(s => s.id === selectedAgendamento.servico_id);
+                  const novaDuracao = (servicoAtual?.duracao || 60) + extensaoMinutos;
+                  
+                  await updateAgendamento(selectedAgendamento.id, {
+                    observacoes: `${selectedAgendamento.observacoes || ''} [Estendido +${extensaoMinutos}min]`.trim()
+                  });
+                  
+                  toast.success(`Horário estendido em ${extensaoMinutos} minutos!`);
+                  setOpenEstenderDialog(false);
+                  refetchAgendamentos();
+                }}>
+                  Confirmar Extensão
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Adicionar Serviço - Item 2B */}
+      <Dialog open={openAdicionarServicoDialog} onOpenChange={setOpenAdicionarServicoDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Serviço</DialogTitle>
+          </DialogHeader>
+          {selectedAgendamento && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Adicionar outro serviço ao atendimento de {selectedAgendamento.cliente_nome}
+              </p>
+              <div className="space-y-2">
+                <Label>Selecione o serviço</Label>
+                <Select value={servicoAdicionalId} onValueChange={setServicoAdicionalId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Escolha um serviço" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {servicos.filter(s => s.ativo !== false && s.id !== selectedAgendamento.servico_id).map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.nome} ({s.duracao}min - R$ {s.preco})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setOpenAdicionarServicoDialog(false)}>Cancelar</Button>
+                <Button onClick={async () => {
+                  if (!servicoAdicionalId) {
+                    toast.error("Selecione um serviço");
+                    return;
+                  }
+                  
+                  const servicoAtual = servicos.find(s => s.id === selectedAgendamento.servico_id);
+                  const servicoNovo = servicos.find(s => s.id === servicoAdicionalId);
+                  
+                  if (!servicoAtual || !servicoNovo) {
+                    toast.error("Serviço não encontrado");
+                    return;
+                  }
+                  
+                  // Calcular novo horário após o serviço atual
+                  const [h, m] = selectedAgendamento.horario.split(':').map(Number);
+                  const inicioMin = h * 60 + m;
+                  const novoHorarioMin = inicioMin + servicoAtual.duracao;
+                  const novoHorario = `${String(Math.floor(novoHorarioMin / 60)).padStart(2, '0')}:${String(novoHorarioMin % 60).padStart(2, '0')}`;
+                  
+                  // Criar novo agendamento consecutivo
+                  await addAgendamento({
+                    data: selectedAgendamento.data,
+                    horario: novoHorario,
+                    cliente_nome: selectedAgendamento.cliente_nome,
+                    cliente_telefone: selectedAgendamento.cliente_telefone,
+                    cliente_id: selectedAgendamento.cliente_id || null,
+                    servico_id: servicoNovo.id,
+                    servico_nome: servicoNovo.nome,
+                    profissional_id: selectedAgendamento.profissional_id || null,
+                    profissional_nome: selectedAgendamento.profissional_nome || null,
+                    status: "Confirmado",
+                    observacoes: `[Combo com ${servicoAtual.nome}]`,
+                    origem: "manual",
+                  });
+                  
+                  toast.success(`Serviço ${servicoNovo.nome} adicionado às ${novoHorario}!`);
+                  setOpenAdicionarServicoDialog(false);
+                  setServicoAdicionalId("");
+                  refetchAgendamentos();
+                }}>
+                  Adicionar Serviço
+                </Button>
               </div>
             </div>
           )}

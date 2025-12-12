@@ -1091,7 +1091,21 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             }
           });
 
-          (config?.horarios_bloqueados || []).forEach((h: string) => slotsOcupados.add(h));
+          // Adicionar horários bloqueados manualmente como intervalos ocupados
+          (config?.horarios_bloqueados || []).forEach((h: string) => {
+            slotsOcupados.add(h);
+            // Tratar horário bloqueado como intervalo de 30 minutos
+            const [hh, mm] = h.split(':').map(Number);
+            const bloqueadoInicio = hh * 60 + mm;
+            const bloqueadoFim = bloqueadoInicio + 30;
+            intervalosOcupados.push({
+              inicio: bloqueadoInicio,
+              fim: bloqueadoFim,
+              servico: 'Horário Bloqueado',
+              cliente: 'Manual'
+            });
+            console.log(`🔒 Horário bloqueado manualmente: ${h}`);
+          });
 
           // Verificar horário de funcionamento
           const [h, m] = args.horario.split(':').map(Number);
@@ -1809,14 +1823,24 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
           let clienteId = clienteBuscado?.id;
 
           if (clienteBuscado) {
-            // Atualizar cliente existente apenas se houver novos dados
-            await supabase
-              .from('clientes')
-              .update({
-                nome: args.cliente_nome || clienteBuscado.nome,
-                data_nascimento: dataNascimentoFormatada,
-              })
-              .eq('id', clienteBuscado.id);
+            // CORREÇÃO: MANTER O NOME CADASTRADO, NÃO SOBRESCREVER COM NOME DO BOT
+            // Atualizar cliente existente apenas se houver novos dados de nascimento
+            const updateData: any = {};
+            
+            // Só atualiza data_nascimento se for diferente e válida
+            if (dataNascimentoFormatada && dataNascimentoFormatada !== clienteBuscado.data_nascimento) {
+              updateData.data_nascimento = dataNascimentoFormatada;
+            }
+            
+            // NUNCA sobrescrever o nome do cliente cadastrado
+            // O nome que o bot recebe pode ser o nome do WhatsApp, não o nome correto
+            
+            if (Object.keys(updateData).length > 0) {
+              await supabase
+                .from('clientes')
+                .update(updateData)
+                .eq('id', clienteBuscado.id);
+            }
           } else {
             // Criar novo cliente com telefone normalizado
             const { data: novoCliente } = await supabase

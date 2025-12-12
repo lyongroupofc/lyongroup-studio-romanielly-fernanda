@@ -552,7 +552,12 @@ const Faturamento = () => {
               <tbody>
                 {agendamentosPendentes.map((ag) => (
                   <tr key={ag.id} className="border-b hover:bg-muted/50">
-                    <td className="p-3">{ag.cliente_nome}</td>
+                    <td 
+                      className="p-3 text-primary hover:underline cursor-pointer"
+                      onClick={() => navigate(`/admin/agenda?date=${ag.data}&highlight=${ag.id}`)}
+                    >
+                      {ag.cliente_nome}
+                    </td>
                     <td className="p-3">{ag.servico_nome}</td>
                     <td className="p-3">{format(parseISO(ag.data), "dd/MM/yyyy")}</td>
                     <td className="p-3">{ag.horario ? ag.horario.substring(0, 5) : "-"}</td>

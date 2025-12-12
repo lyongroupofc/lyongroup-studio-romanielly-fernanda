@@ -6,6 +6,7 @@ import { Cliente } from "./useClientes";
 export type AgendamentoNotification = {
   id: string;
   type: 'agendamento';
+  eventType: 'novo' | 'cancelado' | 'excluido' | 'atualizado' | 'pagamento';
   agendamento: Agendamento;
   timestamp: Date;
   read: boolean;
@@ -80,12 +81,38 @@ export const useAgendamentoNotifications = () => {
         (payload) => {
           console.log('📬 Nova notificação de agendamento:', payload);
           
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          if (payload.eventType === 'INSERT') {
             const agendamento = payload.new as Agendamento;
             
             const newNotification: AgendamentoNotification = {
-              id: agendamento.id,
+              id: `${agendamento.id}-${Date.now()}`,
               type: 'agendamento',
+              eventType: 'novo',
+              agendamento: agendamento,
+              timestamp: new Date(),
+              read: false
+            };
+            
+            setNotifications(prev => [newNotification, ...prev]);
+            setUnreadCount(prev => prev + 1);
+            playNotificationSound();
+          } else if (payload.eventType === 'UPDATE') {
+            const agendamento = payload.new as Agendamento;
+            const oldAgendamento = payload.old as Agendamento;
+            
+            // Determinar o tipo de evento
+            let eventType: 'cancelado' | 'excluido' | 'atualizado' | 'pagamento' = 'atualizado';
+            
+            if (agendamento.status === 'Cancelado' && oldAgendamento.status !== 'Cancelado') {
+              eventType = 'cancelado';
+            } else if (agendamento.status === 'Excluido' && oldAgendamento.status !== 'Excluido') {
+              eventType = 'excluido';
+            }
+            
+            const newNotification: AgendamentoNotification = {
+              id: `${agendamento.id}-${Date.now()}`,
+              type: 'agendamento',
+              eventType: eventType,
               agendamento: agendamento,
               timestamp: new Date(),
               read: false
@@ -137,9 +164,50 @@ export const useAgendamentoNotifications = () => {
       )
       .subscribe();
 
+    // Subscription para pagamentos
+    const pagamentosChannel = supabase
+      .channel('pagamentos-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'pagamentos'
+        },
+        async (payload) => {
+          const pagamento = payload.new as any;
+          
+          // Buscar agendamento relacionado
+          if (pagamento.agendamento_id) {
+            const { data: agendamento } = await supabase
+              .from('agendamentos')
+              .select('*')
+              .eq('id', pagamento.agendamento_id)
+              .single();
+            
+            if (agendamento) {
+              const newNotification: AgendamentoNotification = {
+                id: `pagamento-${pagamento.id}-${Date.now()}`,
+                type: 'agendamento',
+                eventType: 'pagamento',
+                agendamento: agendamento as Agendamento,
+                timestamp: new Date(),
+                read: false
+              };
+              
+              setNotifications(prev => [newNotification, ...prev]);
+              setUnreadCount(prev => prev + 1);
+              playNotificationSound();
+            }
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
       supabase.removeChannel(clientesChannel);
+      supabase.removeChannel(pagamentosChannel);
     };
   }, [playNotificationSound]);
 
