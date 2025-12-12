@@ -24,9 +24,9 @@ const Faturamento = () => {
   const [showTotal, setShowTotal] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
-  const { agendamentos, loading: loadingAgendamentos, updateAgendamento } = useAgendamentos();
-  const { pagamentos, loading: loadingPagamentos, addPagamento } = usePagamentos();
-  const { despesas, loading: loadingDespesas, addDespesa, deleteDespesa } = useDespesas();
+  const { agendamentos, loading: loadingAgendamentos, updateAgendamento, refetch: refetchAgendamentos } = useAgendamentos();
+  const { pagamentos, loading: loadingPagamentos, addPagamento, refetch: refetchPagamentos } = usePagamentos();
+  const { despesas, loading: loadingDespesas, addDespesa, deleteDespesa, refetch: refetchDespesas } = useDespesas();
   const { servicos } = useServicos();
   const [openPagamentoDialog, setOpenPagamentoDialog] = useState(false);
   const [openDespesaDialog, setOpenDespesaDialog] = useState(false);
@@ -56,11 +56,13 @@ const Faturamento = () => {
     return todasCategorias.sort();
   }, [despesas]);
 
-  const handlePasswordSubmit = () => {
+  const handlePasswordSubmit = async () => {
     if (passwordInput === "RF9646") {
       setAuthenticated(true);
       setPasswordInput("");
       toast.success("Acesso liberado!");
+      // Refetch dados ao autenticar para garantir dados atualizados
+      await Promise.all([refetchPagamentos(), refetchDespesas(), refetchAgendamentos()]);
     } else {
       toast.error("Senha incorreta!");
       setPasswordInput("");

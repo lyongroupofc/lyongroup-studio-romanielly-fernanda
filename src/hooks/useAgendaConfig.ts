@@ -93,32 +93,44 @@ export const useAgendaConfig = () => {
     return configs[data] || null;
   };
 
-  const updateConfig = async (data: string, updates: Partial<Omit<AgendaConfig, "id" | "data">>) => {
+  const updateConfig = async (dataStr: string, updates: Partial<Omit<AgendaConfig, "id" | "data">>) => {
     try {
-      const existing = configs[data];
+      const existing = configs[dataStr];
       
       if (existing) {
         const { data: updated, error } = await supabase
           .from("agenda_config")
           .update(updates)
-          .eq("data", data)
+          .eq("data", dataStr)
           .select()
           .single();
 
         if (error) throw error;
         
-        setConfigs({ ...configs, [data]: updated });
+        // Atualizar state local imediatamente
+        const newConfig = {
+          ...updated,
+          horarios_bloqueados: updated.horarios_bloqueados || [],
+          horarios_extras: updated.horarios_extras || []
+        };
+        setConfigs(prev => ({ ...prev, [dataStr]: newConfig }));
         return updated;
       } else {
         const { data: created, error } = await supabase
           .from("agenda_config")
-          .insert([{ data, ...updates }])
+          .insert([{ data: dataStr, ...updates }])
           .select()
           .single();
 
         if (error) throw error;
         
-        setConfigs({ ...configs, [data]: created });
+        // Atualizar state local imediatamente
+        const newConfig = {
+          ...created,
+          horarios_bloqueados: created.horarios_bloqueados || [],
+          horarios_extras: created.horarios_extras || []
+        };
+        setConfigs(prev => ({ ...prev, [dataStr]: newConfig }));
         return created;
       }
     } catch (error) {
