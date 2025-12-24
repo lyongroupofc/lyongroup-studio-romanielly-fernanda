@@ -121,30 +121,36 @@ serve(async (req) => {
     console.log('📱 Telefone BÁSICO normalizado (DDD + número):', telefoneBasico);
     console.log('📱 ========================================================');
 
-    // Instâncias de automação que sempre funcionam (ignoram config global)
+    // Instâncias de AUTOMAÇÃO que continuam funcionando mesmo com bot desligado
+    // (disparos programados, lembretes, etc.)
     const instanciasAutomacao = ['Bot disparo', 'Automações Agencia', 'Automações-Agencia', 'Automacoes-Agencia'];
     const isInstanciaAutomacao = instanciasAutomacao.includes(instancia || '');
 
-    // Verificar se bot está ativo globalmente (EXCETO para instâncias de automação)
-    if (!isInstanciaAutomacao) {
-      const { data: configAtivo } = await supabase
-        .from('bot_config')
-        .select('valor')
-        .eq('chave', 'ativo')
-        .maybeSingle();
+    // Verificar se bot está ativo globalmente para CONVERSAS (não automação)
+    const { data: configAtivo } = await supabase
+      .from('bot_config')
+      .select('valor')
+      .eq('chave', 'ativo')
+      .maybeSingle();
 
-      // Verificar se está desativado (valor pode ser direto ou aninhado)
-      const valorAtivo = configAtivo?.valor;
-      const botGlobalAtivo = valorAtivo === true || valorAtivo?.valor === true;
-      
-      if (!configAtivo || !botGlobalAtivo) {
-        console.log('🤖 Bot desativado globalmente (configAtivo:', configAtivo, ')');
-        return new Response(JSON.stringify({ resposta: 'Bot desativado' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    } else {
-      console.log(`✅ Instância de automação (${instancia}) - ignorando config global`);
+    // Verificar se está desativado (valor pode ser direto ou aninhado)
+    const valorAtivo = configAtivo?.valor;
+    const botGlobalAtivo = valorAtivo === true || (typeof valorAtivo === 'object' && valorAtivo?.valor === true);
+    
+    console.log('🔧 Config ativo:', JSON.stringify(configAtivo));
+    console.log('🔧 valorAtivo:', valorAtivo, '| botGlobalAtivo:', botGlobalAtivo);
+    console.log('🔧 isInstanciaAutomacao:', isInstanciaAutomacao, '| instancia:', instancia);
+
+    // Se o bot está desligado E NÃO é instância de automação, bloquear
+    if (!botGlobalAtivo && !isInstanciaAutomacao) {
+      console.log('🤖 Bot desativado globalmente - bloqueando conversa');
+      return new Response(JSON.stringify({ resposta: 'Bot desativado' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    if (isInstanciaAutomacao) {
+      console.log(`✅ Instância de automação (${instancia}) - continua funcionando`);
     }
 
     // Verificar se número está bloqueado
