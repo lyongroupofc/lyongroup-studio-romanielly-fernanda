@@ -8,13 +8,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBotWhatsApp } from "@/hooks/useBotWhatsApp";
 import { useBotConversas } from "@/hooks/useBotConversas";
 import { useNumerosBloqueados } from "@/hooks/useNumerosBloqueados";
-import { MessageCircle, TrendingUp, Calendar, RefreshCw, Phone, MessageSquare, Ban, Plus, X, Eraser, FileText, Lock } from "lucide-react";
+import { MessageCircle, TrendingUp, Calendar, RefreshCw, Phone, MessageSquare, Ban, Plus, X, Eraser, FileText, Lock, QrCode, Wifi, WifiOff, Loader2, Power } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -51,6 +51,110 @@ const BotWhatsApp = () => {
   const [passwordInput, setPasswordInput] = useState("");
   const [informacoesAdicionais, setInformacoesAdicionais] = useState("");
   const [filtroConversa, setFiltroConversa] = useState("");
+  
+  // Estados para Evolution API QR Code
+  const [evolutionStatus, setEvolutionStatus] = useState<'conectado' | 'desconectado' | 'conectando' | 'erro'>('desconectado');
+  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
+  const [loadingQR, setLoadingQR] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+
+  // Função para verificar status da Evolution API
+  const checkEvolutionStatus = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('evolution-qrcode', {
+        body: {},
+      });
+
+      // Adicionar query param via URL não funciona com invoke, então precisamos usar outro método
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-qrcode?action=status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+      });
+
+      const statusData = await response.json();
+      console.log('📊 Status Evolution:', statusData);
+
+      if (statusData.status === 'conectado') {
+        setEvolutionStatus('conectado');
+        setQrCodeBase64(null);
+      } else if (statusData.state === 'connecting') {
+        setEvolutionStatus('conectando');
+      } else {
+        setEvolutionStatus('desconectado');
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status Evolution:', error);
+      setEvolutionStatus('erro');
+    } finally {
+      setLoadingStatus(false);
+    }
+  }, []);
+
+  // Função para gerar QR Code
+  const generateQRCode = async () => {
+    setLoadingQR(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-qrcode?action=qrcode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+      });
+
+      const data = await response.json();
+      console.log('📱 QR Code Response:', data);
+
+      if (data.qrcode) {
+        setQrCodeBase64(data.qrcode);
+        setEvolutionStatus('conectando');
+        toast.success('QR Code gerado! Escaneie com seu WhatsApp.');
+      } else if (data.error) {
+        toast.error(`Erro: ${data.error}`);
+      } else {
+        toast.info('Verifique se já está conectado');
+        checkEvolutionStatus();
+      }
+    } catch (error) {
+      console.error('Erro ao gerar QR Code:', error);
+      toast.error('Erro ao gerar QR Code');
+    } finally {
+      setLoadingQR(false);
+    }
+  };
+
+  // Função para desconectar
+  const disconnectEvolution = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-qrcode?action=disconnect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setEvolutionStatus('desconectado');
+        setQrCodeBase64(null);
+        toast.success('WhatsApp desconectado');
+      }
+    } catch (error) {
+      console.error('Erro ao desconectar:', error);
+      toast.error('Erro ao desconectar');
+    }
+  };
+
+  // Verificar status ao carregar e periodicamente
+  useEffect(() => {
+    checkEvolutionStatus();
+    const interval = setInterval(checkEvolutionStatus, 15000); // A cada 15 segundos
+    return () => clearInterval(interval);
+  }, [checkEvolutionStatus]);
 
   const conversasFiltradas = useMemo(() => {
     if (!filtroConversa.trim()) return conversas;
@@ -230,6 +334,126 @@ const BotWhatsApp = () => {
             </div>
             <Switch id="bot-ativo" checked={config.ativo} onCheckedChange={ativarBot} />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Evolution API - QR Code WhatsApp */}
+      <Card className="border-2 border-[#25d366]">
+        <CardHeader className="bg-gradient-to-r from-[#25d366] to-[#128c7e] text-white rounded-t-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <QrCode className="h-5 w-5" />
+                Conexão WhatsApp - Evolution API
+              </CardTitle>
+              <CardDescription className="text-white/80">
+                Conecte seu WhatsApp escaneando o QR Code
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              {evolutionStatus === 'conectado' && (
+                <Badge className="bg-white text-[#25d366]">
+                  <Wifi className="h-3 w-3 mr-1" />
+                  Conectado
+                </Badge>
+              )}
+              {evolutionStatus === 'desconectado' && (
+                <Badge variant="destructive">
+                  <WifiOff className="h-3 w-3 mr-1" />
+                  Desconectado
+                </Badge>
+              )}
+              {evolutionStatus === 'conectando' && (
+                <Badge className="bg-yellow-500">
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  Conectando...
+                </Badge>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          {loadingStatus ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-[#25d366]" />
+            </div>
+          ) : evolutionStatus === 'conectado' ? (
+            <div className="text-center py-8 space-y-4">
+              <div className="bg-[#25d366]/10 p-6 rounded-full w-24 h-24 mx-auto flex items-center justify-center">
+                <Wifi className="h-12 w-12 text-[#25d366]" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-[#25d366]">WhatsApp Conectado!</h3>
+                <p className="text-muted-foreground mt-1">
+                  Seu bot está pronto para receber mensagens
+                </p>
+              </div>
+              <Button 
+                variant="destructive" 
+                onClick={disconnectEvolution}
+                className="mt-4"
+              >
+                <Power className="h-4 w-4 mr-2" />
+                Desconectar
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {qrCodeBase64 ? (
+                <div className="text-center space-y-4">
+                  <div className="bg-white p-4 rounded-lg inline-block shadow-lg border">
+                    <img 
+                      src={qrCodeBase64.startsWith('data:') ? qrCodeBase64 : `data:image/png;base64,${qrCodeBase64}`}
+                      alt="QR Code WhatsApp"
+                      className="w-64 h-64 mx-auto"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Abra o WhatsApp no seu celular → Menu (⋮) → Aparelhos conectados → Conectar
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      O QR Code expira em 60 segundos. Clique em "Atualizar QR Code" se necessário.
+                    </p>
+                  </div>
+                  <div className="flex justify-center gap-2">
+                    <Button onClick={generateQRCode} disabled={loadingQR} variant="outline">
+                      {loadingQR ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      Atualizar QR Code
+                    </Button>
+                    <Button onClick={checkEvolutionStatus} variant="ghost">
+                      Verificar Conexão
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 space-y-4">
+                  <div className="bg-muted p-6 rounded-full w-24 h-24 mx-auto flex items-center justify-center">
+                    <QrCode className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">Conectar WhatsApp</h3>
+                    <p className="text-muted-foreground mt-1">
+                      Clique no botão abaixo para gerar o QR Code de conexão
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={generateQRCode} 
+                    disabled={loadingQR}
+                    className="bg-[#25d366] hover:bg-[#128c7e]"
+                    size="lg"
+                  >
+                    {loadingQR ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <QrCode className="h-4 w-4 mr-2" />
+                    )}
+                    Gerar QR Code
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
