@@ -41,9 +41,22 @@ export const useBotWhatsApp = () => {
 
       if (error) throw error;
 
-      const configObj: any = {};
+      const configObj: any = {
+        ativo: false,
+        horario_funcionamento: { inicio: '08:00', fim: '18:00' },
+        mensagem_boas_vindas: { texto: 'Olá! Bem-vindo ao nosso salão.' },
+        mensagem_ausencia: { texto: 'Fora do horário de atendimento.' },
+        lembretes_ativos: { valor: true },
+      };
+      
       data?.forEach(item => {
-        configObj[item.chave] = item.valor;
+        if (item.chave === 'ativo') {
+          // Normalizar: valor pode ser direto (true/false) ou aninhado ({ valor: true })
+          const val = item.valor as any;
+          configObj.ativo = val === true || (typeof val === 'object' && val?.valor === true);
+        } else {
+          configObj[item.chave] = item.valor;
+        }
       });
 
       setConfig(configObj);
@@ -120,10 +133,26 @@ export const useBotWhatsApp = () => {
 
   const ativarBot = async (ativo: boolean) => {
     try {
-      const { error } = await supabase
+      // Primeiro verificar se o registro existe
+      const { data: existing } = await supabase
         .from('bot_config')
-        .update({ valor: { valor: ativo } })
-        .eq('chave', 'ativo');
+        .select('id')
+        .eq('chave', 'ativo')
+        .maybeSingle();
+
+      let error;
+      if (existing) {
+        // Atualizar registro existente com valor direto (não aninhado)
+        ({ error } = await supabase
+          .from('bot_config')
+          .update({ valor: ativo, updated_at: new Date().toISOString() })
+          .eq('chave', 'ativo'));
+      } else {
+        // Criar registro se não existe
+        ({ error } = await supabase
+          .from('bot_config')
+          .insert({ chave: 'ativo', valor: ativo }));
+      }
 
       if (error) throw error;
       
