@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.chat-suporte]
 verify_jwt = false
+
+[functions.evolution-qrcode]
+verify_jwt = false
