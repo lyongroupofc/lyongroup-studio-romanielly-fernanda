@@ -121,36 +121,27 @@ serve(async (req) => {
     console.log('📱 Telefone BÁSICO normalizado (DDD + número):', telefoneBasico);
     console.log('📱 ========================================================');
 
-    // Instâncias de AUTOMAÇÃO que continuam funcionando mesmo com bot desligado
-    // (disparos programados, lembretes, etc.)
-    const instanciasAutomacao = ['Bot disparo', 'Automações Agencia', 'Automações-Agencia', 'Automacoes-Agencia'];
-    const isInstanciaAutomacao = instanciasAutomacao.includes(instancia || '');
-
-    // Verificar se bot está ativo globalmente para CONVERSAS (não automação)
+    // Verificar se bot está ativo globalmente (para mensagens recebidas)
     const { data: configAtivo } = await supabase
       .from('bot_config')
       .select('valor')
       .eq('chave', 'ativo')
       .maybeSingle();
 
-    // Verificar se está desativado (valor pode ser direto ou aninhado)
+    // Se não existir configuração ainda, assume ATIVO (não bloqueia por padrão)
     const valorAtivo = configAtivo?.valor;
-    const botGlobalAtivo = valorAtivo === true || (typeof valorAtivo === 'object' && valorAtivo?.valor === true);
-    
+    const botGlobalAtivo = configAtivo
+      ? (valorAtivo === true || (typeof valorAtivo === 'object' && valorAtivo?.valor === true))
+      : true;
+
     console.log('🔧 Config ativo:', JSON.stringify(configAtivo));
     console.log('🔧 valorAtivo:', valorAtivo, '| botGlobalAtivo:', botGlobalAtivo);
-    console.log('🔧 isInstanciaAutomacao:', isInstanciaAutomacao, '| instancia:', instancia);
+    console.log('🔧 instancia:', instancia);
 
-    // Se o bot está desligado E NÃO é instância de automação, bloquear
-    if (!botGlobalAtivo && !isInstanciaAutomacao) {
-      console.log('🤖 Bot desativado globalmente - bloqueando conversa');
-      return new Response(JSON.stringify({ resposta: 'Bot desativado' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    
-    if (isInstanciaAutomacao) {
-      console.log(`✅ Instância de automação (${instancia}) - continua funcionando`);
+    // Se o bot está desligado, não responder (conversas)
+    if (!botGlobalAtivo) {
+      console.log('🤖 Bot desativado globalmente - bloqueando resposta');
+      return new Response(null, { status: 204, headers: corsHeaders });
     }
 
     // Verificar se número está bloqueado
