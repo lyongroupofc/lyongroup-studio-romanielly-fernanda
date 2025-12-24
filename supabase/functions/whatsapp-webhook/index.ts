@@ -133,8 +133,12 @@ serve(async (req) => {
         .eq('chave', 'ativo')
         .maybeSingle();
 
-      if (configAtivo?.valor?.valor === false) {
-        console.log('🤖 Bot desativado globalmente');
+      // Verificar se está desativado (valor pode ser direto ou aninhado)
+      const valorAtivo = configAtivo?.valor;
+      const botGlobalAtivo = valorAtivo === true || valorAtivo?.valor === true;
+      
+      if (!configAtivo || !botGlobalAtivo) {
+        console.log('🤖 Bot desativado globalmente (configAtivo:', configAtivo, ')');
         return new Response(JSON.stringify({ resposta: 'Bot desativado' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
