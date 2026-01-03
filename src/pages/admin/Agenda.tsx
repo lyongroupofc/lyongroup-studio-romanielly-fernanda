@@ -229,30 +229,28 @@ const Agenda = () => {
     
     const dayOfWeek = d.getDay();
     
-    // Segunda (1): Fechado
-    // Terça (2) e Quarta (3): 13:00 às 20:00
+    // Domingo (0): FECHADO
+    // Segunda (1): FECHADO
+    // Terça (2): FECHADO
+    // Quarta (3): 13:00 às 19:00
     // Quinta (4) e Sexta (5): 09:00 às 19:00
-    // Sábado (6): 08:00 às 13:00
-    // Domingo (0): Fechado
+    // Sábado (6): FECHADO
     
-    let startHour = 8;
+    let startHour = 13;
     let endHour = 19;
     
-    if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
+    if (dayOfWeek === 3) { // Quarta
       startHour = 13;
-      endHour = 20;
+      endHour = 19;
     } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
       startHour = 9;
       endHour = 19;
-    } else if (dayOfWeek === 6) { // Sábado
-      startHour = 8;
-      endHour = 13;
     } else if (forceGenerate) {
-      // Para datas passadas no admin, gerar horários padrão 08:00-19:00
-      startHour = 8;
+      // Para datas passadas no admin, gerar horários padrão 09:00-19:00
+      startHour = 9;
       endHour = 19;
     } else {
-      return []; // Segunda e Domingo fechados
+      return []; // Domingo, Segunda, Terça e Sábado fechados
     }
     
     for (let h = startHour; h <= endHour; h++) {
@@ -271,8 +269,8 @@ const Agenda = () => {
     const config = getConfig(fmtKey(d));
     const dayOfWeek = d.getDay();
     
-    // Fechado se: domingo (0) ou segunda (1) OU se configuração manual diz fechado
-    const fechadoPorDia = dayOfWeek === 0 || dayOfWeek === 1;
+    // Fechado se: domingo (0), segunda (1), terça (2) ou sábado (6) OU se configuração manual diz fechado
+    const fechadoPorDia = dayOfWeek === 0 || dayOfWeek === 1 || dayOfWeek === 2 || dayOfWeek === 6;
     
     return {
       fechado: config?.fechado || fechadoPorDia,

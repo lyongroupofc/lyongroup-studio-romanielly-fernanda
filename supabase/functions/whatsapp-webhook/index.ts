@@ -613,11 +613,12 @@ ${servicosFormatados}
 ${profissionaisFormatados}
 
 **Horário de Funcionamento:**
-- Segunda-feira: FECHADO
-- Terça e Quarta: 13:00 às 20:00
-- Quinta e Sexta: 09:00 às 19:00
-- Sábado: 08:00 às 13:00
 - Domingo: FECHADO
+- Segunda-feira: FECHADO
+- Terça-feira: FECHADO
+- Quarta: 13:00 às 19:00
+- Quinta e Sexta: 09:00 às 19:00
+- Sábado: FECHADO
 
 **Localização:**
 📍 Rua Jordano Mafra, 1015 - São Bernardo
@@ -1121,15 +1122,12 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
           
           if (!diaEstaFechado) {
             // Dia aberto: verificar horários de funcionamento normais
-            if (dayOfWeek === 2 || dayOfWeek === 3) {
+            if (dayOfWeek === 3) { // Quarta
               startHour = 13;
-              endHour = 20;
-            } else if (dayOfWeek === 4 || dayOfWeek === 5) {
+              endHour = 19;
+            } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
               startHour = 9;
               endHour = 19;
-            } else if (dayOfWeek === 6) {
-              startHour = 8;
-              endHour = 13;
             }
           } else {
             // Dia fechado: calcular limite baseado no maior horário extra
@@ -1602,15 +1600,12 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
           let startHour = 8;
           let endHour = 13;
           
-          if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
+          if (dayOfWeek === 3) { // Quarta
             startHour = 13;
-            endHour = 20;
+            endHour = 19;
           } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
             startHour = 9;
             endHour = 19;
-          } else if (dayOfWeek === 6) { // Sábado
-            startHour = 8;
-            endHour = 13;
           }
           
           // Verificar se está dentro do horário de funcionamento
@@ -1639,24 +1634,22 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
             let startHour = 8;
             let endHour = 13;
             
-            // Segunda (1): Fechado
-            // Terça (2) e Quarta (3): 13:00 às 20:00
+            // Domingo (0): FECHADO
+            // Segunda (1): FECHADO
+            // Terça (2): FECHADO
+            // Quarta (3): 13:00 às 19:00
             // Quinta (4) e Sexta (5): 09:00 às 19:00
-            // Sábado (6): 08:00 às 13:00
-            // Domingo (0): Fechado
+            // Sábado (6): FECHADO
             
-            if (dayOfWeek === 1) { // Segunda
-              resposta = 'Desculpa amor, não funcionamos às segundas-feiras. Pode escolher outro dia? 💜';
+            if (dayOfWeek === 0 || dayOfWeek === 1 || dayOfWeek === 2 || dayOfWeek === 6) {
+              resposta = 'Desculpa amor, só funcionamos quarta, quinta e sexta. Pode escolher um desses dias? 💜';
               continue;
-            } else if (dayOfWeek === 2 || dayOfWeek === 3) { // Terça e Quarta
+            } else if (dayOfWeek === 3) { // Quarta
               startHour = 13;
-              endHour = 20;
+              endHour = 19;
             } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
               startHour = 9;
               endHour = 19;
-            } else if (dayOfWeek === 6) { // Sábado
-              startHour = 8;
-              endHour = 13;
             }
             
             // Gerar sugestões de horários disponíveis dentro do horário de funcionamento
@@ -1991,15 +1984,12 @@ ${promocoesTexto ? `${promocoesTexto}` : ''}`;
 
           if (!diaEstaFechado) {
             // Dia aberto: usar horários normais de funcionamento
-            if (dayOfWeek === 2 || dayOfWeek === 3) {
+            if (dayOfWeek === 3) { // Quarta
               startHour = 13;
-              endHour = 20;
-            } else if (dayOfWeek === 4 || dayOfWeek === 5) {
+              endHour = 19;
+            } else if (dayOfWeek === 4 || dayOfWeek === 5) { // Quinta e Sexta
               startHour = 9;
               endHour = 19;
-            } else if (dayOfWeek === 6) {
-              startHour = 8;
-              endHour = 13;
             }
           } else {
             // Dia fechado: usar apenas horários extras, se existirem

@@ -139,7 +139,13 @@ ${profissionais || 'Nenhum profissional cadastrado no momento'}
   - 25/12 (Natal)
 - Se cliente pedir agendamento em feriado, responda: "Esse dia é feriado e o studio estará fechado, amor 💜 Que tal escolher outra data?"
 
-**Horário:** Segunda a sábado, 08:00 às 21:00
+**Horário de Funcionamento:**
+- Domingo: FECHADO
+- Segunda-feira: FECHADO
+- Terça-feira: FECHADO
+- Quarta: 13:00 às 19:00
+- Quinta e Sexta: 09:00 às 19:00
+- Sábado: FECHADO
 **Endereço:** Praça Leste de Minas, 85 – Centro - Santa Barbara-Mg
 
 **Como conduzir a conversa:**
