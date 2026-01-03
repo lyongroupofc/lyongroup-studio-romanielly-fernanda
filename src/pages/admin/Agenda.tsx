@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2, ChevronLeft, ChevronRight, DollarSign, Timer, PlusCircle, RefreshCw, CalendarDays, Lock } from "lucide-react";
+import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2, ChevronLeft, ChevronRight, DollarSign, Timer, PlusCircle, RefreshCw, CalendarDays, Lock, Unlock } from "lucide-react";
 import { addDays, eachDayOfInterval, getDay, parseISO } from "date-fns";
 import { DayGridDialog } from "@/components/DayGridDialog";
 import { toast } from "sonner";
@@ -71,6 +71,13 @@ const Agenda = () => {
     diasSemana: [1, 2, 3, 4, 5, 6] as number[], // seg=1 ... sáb=6
   });
   const [salvandoBloqueioLote, setSalvandoBloqueioLote] = useState(false);
+
+  // Estados para abertura em lote
+  const [openAberturaLoteDialog, setOpenAberturaLoteDialog] = useState(false);
+  const [diasBloqueados, setDiasBloqueados] = useState<Array<{data: string, horarios: string[]}>>([]);
+  const [diasSelecionadosParaAbrir, setDiasSelecionadosParaAbrir] = useState<string[]>([]);
+  const [salvandoAberturaLote, setSalvandoAberturaLote] = useState(false);
+  const [loadingDiasBloqueados, setLoadingDiasBloqueados] = useState(false);
 
   // Estado para agendamentos em tempo real da data selecionada
   const [agendamentosDataAtual, setAgendamentosDataAtual] = useState<Agendamento[]>([]);
@@ -872,19 +879,52 @@ const Agenda = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold">Agenda</h1>
           <p className="text-muted-foreground mt-1">Gerencie os agendamentos do salão</p>
         </div>
-        <Button onClick={() => setOpenEscolhaClienteDialog(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Agendamento
-        </Button>
-        <Button variant="outline" onClick={() => setOpenBloqueioLoteDialog(true)}>
-          <Lock className="w-4 h-4 mr-2" />
-          Bloquear em Lote
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={() => setOpenEscolhaClienteDialog(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Agendamento
+          </Button>
+          <Button variant="outline" onClick={() => setOpenBloqueioLoteDialog(true)}>
+            <Lock className="w-4 h-4 mr-2" />
+            Bloquear em Lote
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={async () => {
+              setOpenAberturaLoteDialog(true);
+              setLoadingDiasBloqueados(true);
+              try {
+                const { data, error } = await supabase
+                  .from('agenda_config')
+                  .select('data, horarios_bloqueados')
+                  .gte('data', format(new Date(), 'yyyy-MM-dd'))
+                  .order('data', { ascending: true });
+                
+                if (error) throw error;
+                
+                const diasComBloqueio = (data || [])
+                  .filter(d => d.horarios_bloqueados && d.horarios_bloqueados.length > 0)
+                  .map(d => ({ data: d.data, horarios: d.horarios_bloqueados }));
+                
+                setDiasBloqueados(diasComBloqueio);
+                setDiasSelecionadosParaAbrir([]);
+              } catch (error) {
+                console.error('Erro ao carregar dias bloqueados:', error);
+                toast.error('Erro ao carregar dias bloqueados');
+              } finally {
+                setLoadingDiasBloqueados(false);
+              }
+            }}
+          >
+            <Unlock className="w-4 h-4 mr-2" />
+            Abrir em Lote
+          </Button>
+        </div>
       </div>
 
       {/* Barra de Busca */}
@@ -2495,6 +2535,154 @@ const Agenda = () => {
                 <>
                   <Lock className="w-4 h-4 mr-2" />
                   Bloquear Horários
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Abertura em Lote */}
+      <Dialog open={openAberturaLoteDialog} onOpenChange={setOpenAberturaLoteDialog}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Unlock className="w-5 h-5" />
+              Abrir Horários Bloqueados
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {loadingDiasBloqueados ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                <span>Carregando dias bloqueados...</span>
+              </div>
+            ) : diasBloqueados.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Unlock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Nenhum dia com horários bloqueados encontrado</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <Label>Dias com horários bloqueados ({diasBloqueados.length})</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDiasSelecionadosParaAbrir(diasBloqueados.map(d => d.data))}
+                    >
+                      Todos
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDiasSelecionadosParaAbrir([])}
+                    >
+                      Limpar
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {diasBloqueados.map((dia) => {
+                    const [ano, mes, diaNum] = dia.data.split('-');
+                    const dataFormatada = `${diaNum}/${mes}/${ano}`;
+                    const isSelected = diasSelecionadosParaAbrir.includes(dia.data);
+                    
+                    return (
+                      <label
+                        key={dia.data}
+                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                          isSelected
+                            ? "bg-primary/10 border-primary"
+                            : "border-border hover:bg-accent"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setDiasSelecionadosParaAbrir([...diasSelecionadosParaAbrir, dia.data]);
+                              } else {
+                                setDiasSelecionadosParaAbrir(diasSelecionadosParaAbrir.filter(d => d !== dia.data));
+                              }
+                            }}
+                          />
+                          <div>
+                            <p className="font-medium">{dataFormatada}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {dia.horarios.length} horário(s) bloqueado(s)
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1 max-w-[150px]">
+                          {dia.horarios.slice(0, 3).map(h => (
+                            <Badge key={h} variant="secondary" className="text-xs">{h}</Badge>
+                          ))}
+                          {dia.horarios.length > 3 && (
+                            <Badge variant="outline" className="text-xs">+{dia.horarios.length - 3}</Badge>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {diasSelecionadosParaAbrir.length > 0 && (
+                  <div className="p-3 bg-muted rounded-lg text-sm">
+                    <p className="font-medium mb-1">Resumo:</p>
+                    <p className="text-muted-foreground">
+                      {diasSelecionadosParaAbrir.length} dia(s) selecionado(s) para abertura
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setOpenAberturaLoteDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={diasSelecionadosParaAbrir.length === 0 || salvandoAberturaLote}
+              onClick={async () => {
+                try {
+                  setSalvandoAberturaLote(true);
+                  
+                  for (const dataStr of diasSelecionadosParaAbrir) {
+                    await updateConfig(dataStr, {
+                      horarios_bloqueados: [],
+                      fechado: false,
+                    });
+                  }
+                  
+                  toast.success(`Horários abertos em ${diasSelecionadosParaAbrir.length} dia(s)`);
+                  setOpenAberturaLoteDialog(false);
+                  setDiasSelecionadosParaAbrir([]);
+                  refetchConfig();
+                } catch (error) {
+                  console.error('Erro ao abrir horários:', error);
+                  toast.error('Erro ao abrir horários');
+                } finally {
+                  setSalvandoAberturaLote(false);
+                }
+              }}
+            >
+              {salvandoAberturaLote ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Abrindo...
+                </>
+              ) : (
+                <>
+                  <Unlock className="w-4 h-4 mr-2" />
+                  Abrir Horários
                 </>
               )}
             </Button>
