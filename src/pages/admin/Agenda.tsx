@@ -74,8 +74,10 @@ const Agenda = () => {
 
   // Estados para abertura em lote
   const [openAberturaLoteDialog, setOpenAberturaLoteDialog] = useState(false);
-  const [diasBloqueados, setDiasBloqueados] = useState<Array<{data: string, horarios: string[]}>>([]);
+  const [diasBloqueados, setDiasBloqueados] = useState<Array<{data: string, horarios: string[], fechado: boolean}>>([]);
   const [diasSelecionadosParaAbrir, setDiasSelecionadosParaAbrir] = useState<string[]>([]);
+  const [horariosParaAbrir, setHorariosParaAbrir] = useState<Record<string, string[]>>({});
+  const [diaExpandido, setDiaExpandido] = useState<string | null>(null);
   const [salvandoAberturaLote, setSalvandoAberturaLote] = useState(false);
   const [loadingDiasBloqueados, setLoadingDiasBloqueados] = useState(false);
 
@@ -901,18 +903,23 @@ const Agenda = () => {
               try {
                 const { data, error } = await supabase
                   .from('agenda_config')
-                  .select('data, horarios_bloqueados')
+                  .select('data, horarios_bloqueados, fechado')
                   .gte('data', format(new Date(), 'yyyy-MM-dd'))
                   .order('data', { ascending: true });
                 
                 if (error) throw error;
                 
                 const diasComBloqueio = (data || [])
-                  .filter(d => d.horarios_bloqueados && d.horarios_bloqueados.length > 0)
-                  .map(d => ({ data: d.data, horarios: d.horarios_bloqueados }));
+                  .filter(d => (d.horarios_bloqueados && d.horarios_bloqueados.length > 0) || d.fechado)
+                  .map(d => ({ 
+                    data: d.data, 
+                    horarios: d.horarios_bloqueados || [],
+                    fechado: d.fechado || false
+                  }));
                 
                 setDiasBloqueados(diasComBloqueio);
                 setDiasSelecionadosParaAbrir([]);
+                setHorariosParaAbrir({});
               } catch (error) {
                 console.error('Erro ao carregar dias bloqueados:', error);
                 toast.error('Erro ao carregar dias bloqueados');
@@ -1122,6 +1129,22 @@ const Agenda = () => {
         onSelectAgendamento={(ag) => {
           setSelectedAgendamento(ag);
           setOpenDetalhesDialog(true);
+        }}
+        onLiberarHorario={async (horario) => {
+          if (!selectedDate) return;
+          const dateStr = fmtKey(selectedDate);
+          const config = getConfig(dateStr);
+          const horariosAtuais = config?.horarios_bloqueados || [];
+          const novosHorarios = horariosAtuais.filter(h => h !== horario);
+          
+          await updateConfig(dateStr, {
+            horarios_bloqueados: novosHorarios,
+            fechado: config?.fechado || false,
+            horarios_extras: config?.horarios_extras || [],
+          });
+          
+          toast.success(`Horário ${horario} liberado!`);
+          refetchConfig();
         }}
         highlightedAgendamento={highlightedAgendamento}
       />
@@ -1465,7 +1488,7 @@ const Agenda = () => {
 
       {/* Dialog Gerenciar Dia */}
       <Dialog open={openGerenciarDialog} onOpenChange={setOpenGerenciarDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Gerenciar Dia - {selectedDate && format(selectedDate, "dd/MM/yyyy")}</DialogTitle>
           </DialogHeader>
@@ -1480,89 +1503,159 @@ const Agenda = () => {
               </Button>
             </div>
 
-            <div className="space-y-2">
-              <Label>Bloquear Horários</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Ex: 14:00"
-                  value={gerenciarData.novoHorarioBloqueado}
-                  onChange={(e) => setGerenciarData({ ...gerenciarData, novoHorarioBloqueado: e.target.value })}
-                />
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (gerenciarData.novoHorarioBloqueado) {
-                      setGerenciarData({
-                        ...gerenciarData,
-                        horariosBloqueados: [...gerenciarData.horariosBloqueados, gerenciarData.novoHorarioBloqueado],
-                        novoHorarioBloqueado: "",
-                      });
+            {/* Grade Visual de Horários Extras (quando dia fechado) */}
+            {gerenciarData.fechado && (
+              <div className="space-y-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <Label className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                  <Clock className="w-4 h-4" />
+                  Abrir Horários Específicos
+                </Label>
+                <p className="text-xs text-emerald-600 dark:text-emerald-500">
+                  O dia está fechado. Clique nos horários que deseja liberar para agendamento:
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {(() => {
+                    const horariosGrade: string[] = [];
+                    for (let h = 9; h <= 19; h++) {
+                      horariosGrade.push(`${h.toString().padStart(2, "0")}:00`);
+                      if (h < 19) horariosGrade.push(`${h.toString().padStart(2, "0")}:30`);
                     }
-                  }}
-                >
-                  Adicionar
-                </Button>
+                    return horariosGrade.map((horario) => (
+                      <label
+                        key={horario}
+                        className={`flex items-center justify-center px-2 py-2 rounded border cursor-pointer transition-colors text-sm ${
+                          gerenciarData.horariosExtras.includes(horario)
+                            ? "bg-emerald-500 text-white border-emerald-500"
+                            : "border-border hover:bg-accent bg-white dark:bg-zinc-900"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={gerenciarData.horariosExtras.includes(horario)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setGerenciarData({
+                                ...gerenciarData,
+                                horariosExtras: [...gerenciarData.horariosExtras, horario].sort(),
+                              });
+                            } else {
+                              setGerenciarData({
+                                ...gerenciarData,
+                                horariosExtras: gerenciarData.horariosExtras.filter((h) => h !== horario),
+                              });
+                            }
+                          }}
+                          className="sr-only"
+                        />
+                        {horario}
+                      </label>
+                    ));
+                  })()}
+                </div>
+                {gerenciarData.horariosExtras.length > 0 && (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-500 font-medium">
+                    {gerenciarData.horariosExtras.length} horário(s) liberado(s)
+                  </p>
+                )}
               </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {gerenciarData.horariosBloqueados.map((h) => (
-                  <span key={h} className="px-2 py-1 bg-destructive/10 text-destructive rounded text-sm flex items-center gap-1">
-                    {h}
-                    <button
-                      type="button"
-                      onClick={() => setGerenciarData({
-                        ...gerenciarData,
-                        horariosBloqueados: gerenciarData.horariosBloqueados.filter((x) => x !== h),
-                      })}
-                      className="ml-1 hover:text-destructive"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
+            )}
 
-            <div className="space-y-2">
-              <Label>Adicionar Horários Extras</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Ex: 19:00"
-                  value={gerenciarData.novoHorarioExtra}
-                  onChange={(e) => setGerenciarData({ ...gerenciarData, novoHorarioExtra: e.target.value })}
-                />
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (gerenciarData.novoHorarioExtra) {
-                      setGerenciarData({
-                        ...gerenciarData,
-                        horariosExtras: [...gerenciarData.horariosExtras, gerenciarData.novoHorarioExtra],
-                        novoHorarioExtra: "",
-                      });
+            {/* Bloquear Horários (quando dia aberto) */}
+            {!gerenciarData.fechado && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  Bloquear Horários
+                </Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {(() => {
+                    const horariosGrade: string[] = [];
+                    for (let h = 9; h <= 19; h++) {
+                      horariosGrade.push(`${h.toString().padStart(2, "0")}:00`);
+                      if (h < 19) horariosGrade.push(`${h.toString().padStart(2, "0")}:30`);
                     }
-                  }}
-                >
-                  Adicionar
-                </Button>
+                    return horariosGrade.map((horario) => (
+                      <label
+                        key={horario}
+                        className={`flex items-center justify-center px-2 py-2 rounded border cursor-pointer transition-colors text-sm ${
+                          gerenciarData.horariosBloqueados.includes(horario)
+                            ? "bg-destructive text-destructive-foreground border-destructive"
+                            : "border-border hover:bg-accent"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={gerenciarData.horariosBloqueados.includes(horario)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setGerenciarData({
+                                ...gerenciarData,
+                                horariosBloqueados: [...gerenciarData.horariosBloqueados, horario].sort(),
+                              });
+                            } else {
+                              setGerenciarData({
+                                ...gerenciarData,
+                                horariosBloqueados: gerenciarData.horariosBloqueados.filter((h) => h !== horario),
+                              });
+                            }
+                          }}
+                          className="sr-only"
+                        />
+                        {horario}
+                      </label>
+                    ));
+                  })()}
+                </div>
+                {gerenciarData.horariosBloqueados.length > 0 && (
+                  <p className="text-xs text-destructive font-medium">
+                    {gerenciarData.horariosBloqueados.length} horário(s) bloqueado(s)
+                  </p>
+                )}
               </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {gerenciarData.horariosExtras.map((h) => (
-                  <span key={h} className="px-2 py-1 bg-success/10 text-success rounded text-sm flex items-center gap-1">
-                    {h}
-                    <button
-                      type="button"
-                      onClick={() => setGerenciarData({
-                        ...gerenciarData,
-                        horariosExtras: gerenciarData.horariosExtras.filter((x) => x !== h),
-                      })}
-                      className="ml-1 hover:text-success"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+            )}
+
+            {/* Horários Extras (quando dia aberto) */}
+            {!gerenciarData.fechado && (
+              <div className="space-y-2">
+                <Label>Adicionar Horários Extras</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ex: 19:30"
+                    value={gerenciarData.novoHorarioExtra}
+                    onChange={(e) => setGerenciarData({ ...gerenciarData, novoHorarioExtra: e.target.value })}
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (gerenciarData.novoHorarioExtra) {
+                        setGerenciarData({
+                          ...gerenciarData,
+                          horariosExtras: [...gerenciarData.horariosExtras, gerenciarData.novoHorarioExtra].sort(),
+                          novoHorarioExtra: "",
+                        });
+                      }
+                    }}
+                  >
+                    Adicionar
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {gerenciarData.horariosExtras.map((h) => (
+                    <span key={h} className="px-2 py-1 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 rounded text-sm flex items-center gap-1">
+                      {h}
+                      <button
+                        type="button"
+                        onClick={() => setGerenciarData({
+                          ...gerenciarData,
+                          horariosExtras: gerenciarData.horariosExtras.filter((x) => x !== h),
+                        })}
+                        className="ml-1 hover:text-emerald-900"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpenGerenciarDialog(false)}>Cancelar</Button>
@@ -2543,7 +2636,13 @@ const Agenda = () => {
       </Dialog>
 
       {/* Dialog Abertura em Lote */}
-      <Dialog open={openAberturaLoteDialog} onOpenChange={setOpenAberturaLoteDialog}>
+      <Dialog open={openAberturaLoteDialog} onOpenChange={(open) => {
+        setOpenAberturaLoteDialog(open);
+        if (!open) {
+          setDiaExpandido(null);
+          setHorariosParaAbrir({});
+        }
+      }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -2565,80 +2664,147 @@ const Agenda = () => {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between">
-                  <Label>Dias com horários bloqueados ({diasBloqueados.length})</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDiasSelecionadosParaAbrir(diasBloqueados.map(d => d.data))}
-                    >
-                      Todos
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDiasSelecionadosParaAbrir([])}
-                    >
-                      Limpar
-                    </Button>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Clique em um dia para expandir e selecionar horários específicos, ou marque para abrir o dia inteiro.
+                </p>
                 
-                <div className="space-y-2 max-h-80 overflow-y-auto">
+                <div className="space-y-2 max-h-[50vh] overflow-y-auto">
                   {diasBloqueados.map((dia) => {
                     const [ano, mes, diaNum] = dia.data.split('-');
                     const dataFormatada = `${diaNum}/${mes}/${ano}`;
                     const isSelected = diasSelecionadosParaAbrir.includes(dia.data);
+                    const isExpanded = diaExpandido === dia.data;
+                    const horariosDodia = horariosParaAbrir[dia.data] || [];
                     
                     return (
-                      <label
-                        key={dia.data}
-                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                          isSelected
-                            ? "bg-primary/10 border-primary"
-                            : "border-border hover:bg-accent"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setDiasSelecionadosParaAbrir([...diasSelecionadosParaAbrir, dia.data]);
-                              } else {
-                                setDiasSelecionadosParaAbrir(diasSelecionadosParaAbrir.filter(d => d !== dia.data));
-                              }
-                            }}
-                          />
-                          <div>
-                            <p className="font-medium">{dataFormatada}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {dia.horarios.length} horário(s) bloqueado(s)
-                            </p>
+                      <div key={dia.data} className="border rounded-lg overflow-hidden">
+                        <div
+                          className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
+                            isSelected
+                              ? "bg-primary/10 border-primary"
+                              : "hover:bg-accent"
+                          }`}
+                          onClick={() => setDiaExpandido(isExpanded ? null : dia.data)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setDiasSelecionadosParaAbrir([...diasSelecionadosParaAbrir, dia.data]);
+                                  // Limpar horários específicos quando selecionar dia inteiro
+                                  setHorariosParaAbrir(prev => {
+                                    const newState = { ...prev };
+                                    delete newState[dia.data];
+                                    return newState;
+                                  });
+                                } else {
+                                  setDiasSelecionadosParaAbrir(diasSelecionadosParaAbrir.filter(d => d !== dia.data));
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <div>
+                              <p className="font-medium">{dataFormatada}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {dia.fechado ? "Dia fechado" : `${dia.horarios.length} horário(s) bloqueado(s)`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {horariosDodia.length > 0 && !isSelected && (
+                              <Badge variant="secondary" className="text-xs">
+                                {horariosDodia.length} selecionado(s)
+                              </Badge>
+                            )}
+                            <ChevronRight className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                           </div>
                         </div>
-                        <div className="flex flex-wrap gap-1 max-w-[150px]">
-                          {dia.horarios.slice(0, 3).map(h => (
-                            <Badge key={h} variant="secondary" className="text-xs">{h}</Badge>
-                          ))}
-                          {dia.horarios.length > 3 && (
-                            <Badge variant="outline" className="text-xs">+{dia.horarios.length - 3}</Badge>
-                          )}
-                        </div>
-                      </label>
+                        
+                        {/* Horários expandidos */}
+                        {isExpanded && !isSelected && (
+                          <div className="p-3 bg-muted/50 border-t space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs">Selecione os horários para abrir:</Label>
+                              <div className="flex gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-xs"
+                                  onClick={() => setHorariosParaAbrir(prev => ({
+                                    ...prev,
+                                    [dia.data]: [...dia.horarios]
+                                  }))}
+                                >
+                                  Todos
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-xs"
+                                  onClick={() => setHorariosParaAbrir(prev => {
+                                    const newState = { ...prev };
+                                    delete newState[dia.data];
+                                    return newState;
+                                  })}
+                                >
+                                  Limpar
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2">
+                              {dia.horarios.map((horario) => (
+                                <label
+                                  key={horario}
+                                  className={`flex items-center justify-center px-2 py-1.5 rounded border cursor-pointer transition-colors text-xs ${
+                                    horariosDodia.includes(horario)
+                                      ? "bg-emerald-500 text-white border-emerald-500"
+                                      : "border-border hover:bg-accent bg-white dark:bg-zinc-900"
+                                  }`}
+                                >
+                                  <Checkbox
+                                    checked={horariosDodia.includes(horario)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setHorariosParaAbrir(prev => ({
+                                          ...prev,
+                                          [dia.data]: [...(prev[dia.data] || []), horario].sort()
+                                        }));
+                                      } else {
+                                        setHorariosParaAbrir(prev => ({
+                                          ...prev,
+                                          [dia.data]: (prev[dia.data] || []).filter(h => h !== horario)
+                                        }));
+                                      }
+                                    }}
+                                    className="sr-only"
+                                  />
+                                  {horario}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
 
-                {diasSelecionadosParaAbrir.length > 0 && (
+                {(diasSelecionadosParaAbrir.length > 0 || Object.keys(horariosParaAbrir).some(k => horariosParaAbrir[k]?.length > 0)) && (
                   <div className="p-3 bg-muted rounded-lg text-sm">
                     <p className="font-medium mb-1">Resumo:</p>
-                    <p className="text-muted-foreground">
-                      {diasSelecionadosParaAbrir.length} dia(s) selecionado(s) para abertura
-                    </p>
+                    {diasSelecionadosParaAbrir.length > 0 && (
+                      <p className="text-muted-foreground">
+                        {diasSelecionadosParaAbrir.length} dia(s) para abrir completamente
+                      </p>
+                    )}
+                    {Object.keys(horariosParaAbrir).filter(k => horariosParaAbrir[k]?.length > 0 && !diasSelecionadosParaAbrir.includes(k)).length > 0 && (
+                      <p className="text-muted-foreground">
+                        {Object.keys(horariosParaAbrir).filter(k => horariosParaAbrir[k]?.length > 0 && !diasSelecionadosParaAbrir.includes(k)).length} dia(s) com horários específicos
+                      </p>
+                    )}
                   </div>
                 )}
               </>
@@ -2650,11 +2816,12 @@ const Agenda = () => {
               Cancelar
             </Button>
             <Button
-              disabled={diasSelecionadosParaAbrir.length === 0 || salvandoAberturaLote}
+              disabled={(diasSelecionadosParaAbrir.length === 0 && Object.keys(horariosParaAbrir).every(k => !horariosParaAbrir[k]?.length)) || salvandoAberturaLote}
               onClick={async () => {
                 try {
                   setSalvandoAberturaLote(true);
                   
+                  // Abrir dias inteiros
                   for (const dataStr of diasSelecionadosParaAbrir) {
                     await updateConfig(dataStr, {
                       horarios_bloqueados: [],
@@ -2662,9 +2829,26 @@ const Agenda = () => {
                     });
                   }
                   
-                  toast.success(`Horários abertos em ${diasSelecionadosParaAbrir.length} dia(s)`);
+                  // Abrir horários específicos
+                  for (const [dataStr, horarios] of Object.entries(horariosParaAbrir)) {
+                    if (horarios.length > 0 && !diasSelecionadosParaAbrir.includes(dataStr)) {
+                      const diaInfo = diasBloqueados.find(d => d.data === dataStr);
+                      if (diaInfo) {
+                        const novosHorariosBloqueados = diaInfo.horarios.filter(h => !horarios.includes(h));
+                        await updateConfig(dataStr, {
+                          horarios_bloqueados: novosHorariosBloqueados,
+                          fechado: diaInfo.fechado && novosHorariosBloqueados.length === diaInfo.horarios.length,
+                        });
+                      }
+                    }
+                  }
+                  
+                  const totalDias = diasSelecionadosParaAbrir.length + Object.keys(horariosParaAbrir).filter(k => horariosParaAbrir[k]?.length > 0 && !diasSelecionadosParaAbrir.includes(k)).length;
+                  toast.success(`Horários abertos em ${totalDias} dia(s)`);
                   setOpenAberturaLoteDialog(false);
                   setDiasSelecionadosParaAbrir([]);
+                  setHorariosParaAbrir({});
+                  setDiaExpandido(null);
                   refetchConfig();
                 } catch (error) {
                   console.error('Erro ao abrir horários:', error);
