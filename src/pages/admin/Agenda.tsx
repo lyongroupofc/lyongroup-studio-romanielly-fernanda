@@ -535,30 +535,15 @@ const Agenda = () => {
     
     const novoStatusFechado = !gerenciarData.fechado;
     
-    // Se está REABRINDO o dia (fechado -> aberto), adicionar automaticamente horários de 08:00 às 19:00
+    // Se está REABRINDO o dia (fechado -> aberto), apenas mudar o status
     if (!novoStatusFechado) {
-      // Gerar horários de 08:00 às 19:00 em intervalos de 30 minutos
-      const horariosParaAdicionar: string[] = [];
-      for (let h = 8; h <= 19; h++) {
-        for (let m = 0; m < 60; m += 30) {
-          if (h === 19 && m === 30) continue; // Não adicionar 19:30
-          const hh = String(h).padStart(2, "0");
-          const mm = String(m).padStart(2, "0");
-          horariosParaAdicionar.push(`${hh}:${mm}`);
-        }
-      }
-      
-      // Adicionar horários ao campo horariosExtras (evitando duplicados)
-      const horariosAtuais = new Set(gerenciarData.horariosExtras);
-      horariosParaAdicionar.forEach(h => horariosAtuais.add(h));
-      
       setGerenciarData({
         ...gerenciarData,
         fechado: novoStatusFechado,
-        horariosExtras: Array.from(horariosAtuais).sort(),
+        horariosExtras: [], // Limpar horários extras quando reabre o dia
       });
       
-      toast.success("✅ Dia reaberto com horários de 08:00 às 19:00");
+      toast.success("✅ Dia reaberto");
     } else {
       // Se está FECHANDO o dia, apenas atualiza o status
       setGerenciarData({
@@ -1134,16 +1119,33 @@ const Agenda = () => {
           if (!selectedDate) return;
           const dateStr = fmtKey(selectedDate);
           const config = getConfig(dateStr);
-          const horariosAtuais = config?.horarios_bloqueados || [];
-          const novosHorarios = horariosAtuais.filter(h => h !== horario);
           
-          await updateConfig(dateStr, {
-            horarios_bloqueados: novosHorarios,
-            fechado: config?.fechado || false,
-            horarios_extras: config?.horarios_extras || [],
-          });
+          // Se o dia está fechado, adicionar aos horários extras (mantém fechado)
+          if (config?.fechado) {
+            const horariosExtrasAtuais = config?.horarios_extras || [];
+            if (!horariosExtrasAtuais.includes(horario)) {
+              await updateConfig(dateStr, {
+                fechado: true,
+                horarios_extras: [...horariosExtrasAtuais, horario].sort(),
+                horarios_bloqueados: config?.horarios_bloqueados || [],
+              });
+              toast.success(`Horário ${horario} aberto para agendamento!`);
+            } else {
+              toast.info(`Horário ${horario} já está aberto`);
+            }
+          } else {
+            // Dia aberto: remover dos bloqueados
+            const horariosAtuais = config?.horarios_bloqueados || [];
+            const novosHorarios = horariosAtuais.filter(h => h !== horario);
+            
+            await updateConfig(dateStr, {
+              horarios_bloqueados: novosHorarios,
+              fechado: false,
+              horarios_extras: config?.horarios_extras || [],
+            });
+            toast.success(`Horário ${horario} liberado!`);
+          }
           
-          toast.success(`Horário ${horario} liberado!`);
           refetchConfig();
         }}
         highlightedAgendamento={highlightedAgendamento}
