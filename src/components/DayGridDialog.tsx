@@ -351,7 +351,7 @@ export function DayGridDialog({
                                 Bloqueado
                               </span>
                             </div>
-                            {onLiberarHorario && !isDiaFechado && (
+                            {onLiberarHorario && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -362,7 +362,7 @@ export function DayGridDialog({
                                 }}
                               >
                                 <Unlock className="w-2.5 h-2.5 mr-0.5" />
-                                Liberar
+                                {dayConfig.fechado ? "Abrir" : "Liberar"}
                               </Button>
                             )}
                           </div>
