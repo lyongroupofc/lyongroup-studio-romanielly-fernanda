@@ -361,6 +361,33 @@ Seja sempre curta, natural e acolhedora! 💜`;
                     continue;
                   }
                   
+                  // Verificar configuração do dia (fechado/horários especiais)
+                  const { data: agendaConfig } = await supabase
+                    .from("agenda_config")
+                    .select("fechado, horarios_extras, horarios_bloqueados")
+                    .eq("data", args.data)
+                    .maybeSingle();
+                  
+                  if (agendaConfig?.fechado) {
+                    const horariosExtras = agendaConfig.horarios_extras || [];
+                    const horarioEstaEmExtras = horariosExtras.includes(args.horario);
+                    
+                    if (!horarioEstaEmExtras) {
+                      console.error("Horário não disponível em dia fechado:", args.data, args.horario);
+                      const horariosDisponiveis = horariosExtras.length > 0 
+                        ? horariosExtras.sort().join(', ') 
+                        : 'Nenhum horário disponível';
+                      controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                        choices: [{
+                          delta: {
+                            content: `\n\n❌ Esse dia está fechado, bunita 💜 Horários especiais disponíveis: ${horariosDisponiveis}. Quer um desses?`
+                          }
+                        }]
+                      })}\n\n`));
+                      continue;
+                    }
+                  }
+                  
                   const { error } = await supabase
                     .from("agendamentos")
                     .insert({
@@ -375,6 +402,12 @@ Seja sempre curta, natural e acolhedora! 💜`;
                       status: "Confirmado",
                       origem: "whatsapp_bot"
                     });
+                  
+                  if (error) {
+                    console.error("Erro ao criar agendamento:", error);
+                  } else {
+                    console.log("Agendamento criado com sucesso!");
+                  }
                   
                   if (error) {
                     console.error("Erro ao criar agendamento:", error);

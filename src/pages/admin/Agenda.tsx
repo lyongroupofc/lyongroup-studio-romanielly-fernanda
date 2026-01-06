@@ -1127,7 +1127,7 @@ const Agenda = () => {
               await updateConfig(dateStr, {
                 fechado: true,
                 horarios_extras: [...horariosExtrasAtuais, horario].sort(),
-                horarios_bloqueados: config?.horarios_bloqueados || [],
+                horarios_bloqueados: [], // LIMPAR - irrelevante em dia fechado
               });
               toast.success(`Horário ${horario} aberto para agendamento!`);
             } else {

@@ -55,8 +55,11 @@ export function DayGridDialog({
   // Estado para toggle de visibilidade do valor estimado
   const [valorVisivel, setValorVisivel] = useState(true);
   
-  // Verificar se o dia está fechado (fechado=true E sem horariosExtras)
-  const isDiaFechado = dayConfig.fechado && (!dayConfig.horariosExtras || dayConfig.horariosExtras.length === 0);
+  // Dia está fechado para exibição de aviso (fechado=true E sem horariosExtras)
+  const isDiaFechadoTotal = dayConfig.fechado && (!dayConfig.horariosExtras || dayConfig.horariosExtras.length === 0);
+  
+  // Dia tem horários especiais abertos (fechado=true MAS com horariosExtras)
+  const isDiaComHorariosEspeciais = dayConfig.fechado && dayConfig.horariosExtras && dayConfig.horariosExtras.length > 0;
 
   // Filtrar apenas agendamentos ativos
   const agendamentosAtivos = useMemo(() => {
@@ -109,7 +112,19 @@ export function DayGridDialog({
 
   // Calcular status de cada slot
   const getSlotStatus = (horario: string): 'disponivel' | 'agendado' | 'bloqueado' | 'ocupado' => {
-    if (isDiaFechado) return 'bloqueado';
+    // Se dia está FECHADO, verificar se este horário está nos extras
+    if (dayConfig.fechado) {
+      const estaEmExtras = dayConfig.horariosExtras?.includes(horario) || false;
+      if (!estaEmExtras) {
+        return 'bloqueado'; // Não está nos extras = bloqueado
+      }
+      // Está nos extras, verificar se tem agendamento
+      if (agendamentosPorHorario.has(horario)) return 'agendado';
+      if (horariosOcupadosPorAgendamento.has(horario) && !agendamentosPorHorario.has(horario)) return 'ocupado';
+      return 'disponivel';
+    }
+    
+    // Dia ABERTO normal
     if (dayConfig.horariosBloqueados.includes(horario)) return 'bloqueado';
     if (agendamentosPorHorario.has(horario)) return 'agendado';
     if (horariosOcupadosPorAgendamento.has(horario) && !agendamentosPorHorario.has(horario)) return 'ocupado';
@@ -146,14 +161,14 @@ export function DayGridDialog({
 
   // Contar totais
   const totais = useMemo(() => {
-    if (isDiaFechado) {
+    if (isDiaFechadoTotal) {
       return { disponivel: 0, agendado: 0, bloqueado: todosHorarios.length };
     }
     const disponivel = todosHorarios.filter(h => getSlotStatus(h) === 'disponivel').length;
     const agendado = agendamentosAtivos.length;
-    const bloqueado = dayConfig.horariosBloqueados.length;
+    const bloqueado = todosHorarios.filter(h => getSlotStatus(h) === 'bloqueado').length;
     return { disponivel, agendado, bloqueado };
-  }, [todosHorarios, agendamentosAtivos, dayConfig, isDiaFechado]);
+  }, [todosHorarios, agendamentosAtivos, dayConfig, isDiaFechadoTotal]);
 
   // Calcular valor total estimado - busca por ID ou nome do serviço
   const valorTotal = useMemo(() => {
@@ -236,11 +251,21 @@ export function DayGridDialog({
             </div>
           </header>
 
-          {/* Aviso de dia fechado */}
-          {isDiaFechado && (
+          {/* Aviso de dia fechado TOTAL */}
+          {isDiaFechadoTotal && (
             <div className="mx-4 mt-3 px-3 py-2 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
               <Lock className="w-4 h-4 text-red-500" />
               <span className="text-sm text-red-700 dark:text-red-300 font-medium">Dia fechado</span>
+            </div>
+          )}
+          
+          {/* Aviso de dia fechado COM horários especiais */}
+          {isDiaComHorariosEspeciais && (
+            <div className="mx-4 mt-3 px-3 py-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-2">
+              <Unlock className="w-4 h-4 text-amber-500" />
+              <span className="text-sm text-amber-700 dark:text-amber-300 font-medium">
+                Dia fechado com {dayConfig.horariosExtras.length} horário(s) especial(is)
+              </span>
             </div>
           )}
 
