@@ -4,7 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Settings, Lock, User, Clock, DollarSign, CalendarCheck, Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Settings, Lock, User, Clock, DollarSign, CalendarCheck, Eye, EyeOff, Unlock } from "lucide-react";
 import { type Agendamento } from "@/hooks/useAgendamentos";
 
 interface Servico {
@@ -31,6 +31,7 @@ interface DayGridDialogProps {
   onReservar: () => void;
   onGerenciar: () => void;
   onSelectAgendamento: (ag: Agendamento) => void;
+  onLiberarHorario?: (horario: string) => void;
   highlightedAgendamento?: string | null;
 }
 
@@ -47,6 +48,7 @@ export function DayGridDialog({
   onReservar,
   onGerenciar,
   onSelectAgendamento,
+  onLiberarHorario,
   highlightedAgendamento,
 }: DayGridDialogProps) {
   
@@ -342,11 +344,27 @@ export function DayGridDialog({
                         
                         {/* SLOT BLOQUEADO - VERMELHO */}
                         {status === 'bloqueado' && (
-                          <div className="h-full min-h-[28px] rounded border border-red-100 dark:border-red-900 bg-red-50/30 dark:bg-red-950/10 flex items-center gap-1.5 px-2">
-                            <Lock className="w-2.5 h-2.5 text-red-300" />
-                            <span className="text-[10px] text-red-400 dark:text-red-500">
-                              Bloqueado
-                            </span>
+                          <div className="h-full min-h-[28px] rounded border border-red-100 dark:border-red-900 bg-red-50/30 dark:bg-red-950/10 flex items-center justify-between gap-1.5 px-2 group">
+                            <div className="flex items-center gap-1.5">
+                              <Lock className="w-2.5 h-2.5 text-red-300" />
+                              <span className="text-[10px] text-red-400 dark:text-red-500">
+                                Bloqueado
+                              </span>
+                            </div>
+                            {onLiberarHorario && !isDiaFechado && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 px-1.5 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity bg-emerald-500 hover:bg-emerald-600 text-white"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onLiberarHorario(horario);
+                                }}
+                              >
+                                <Unlock className="w-2.5 h-2.5 mr-0.5" />
+                                Liberar
+                              </Button>
+                            )}
                           </div>
                         )}
                         
