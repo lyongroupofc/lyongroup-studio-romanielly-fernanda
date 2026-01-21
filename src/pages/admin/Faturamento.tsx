@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, TrendingDown, Calendar, CalendarIcon, Plus, Trash2, Lock, Package, BarChart3, Scale, Receipt, Users, Pencil } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Calendar, CalendarIcon, Plus, Trash2, Lock, Package, BarChart3, Scale, Receipt, Users, Pencil, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,7 +19,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 const Faturamento = () => {
   const navigate = useNavigate();
   const [showTotal, setShowTotal] = useState(true);
@@ -137,15 +138,53 @@ const Faturamento = () => {
     );
   }
 
-  const agendamentosPendentes = agendamentos.filter(
-    (ag) => !pagamentos.some((pag) => pag.agendamento_id === ag.id)
-  );
+  // Agendamentos pendentes: sem nenhum pagamento OU com pagamento parcial
+  const agendamentosPendentes = agendamentos.filter((ag) => {
+    const temPagamento = pagamentos.some((pag) => pag.agendamento_id === ag.id);
+    // Sem nenhum pagamento = pendente total
+    if (!temPagamento) return true;
+    // Com pagamento parcial = ainda pendente
+    if (ag.status_pagamento === 'parcial') return true;
+    return false;
+  });
+
+  // Pagamentos completos: só mostra no histórico quando status = 'pago'
+  const pagamentosCompletos = pagamentos.filter((pag) => {
+    const agendamento = agendamentos.find((ag) => ag.id === pag.agendamento_id);
+    // Se não tem agendamento associado, mostrar no histórico
+    if (!agendamento) return true;
+    // Se agendamento está totalmente pago, mostrar no histórico
+    return agendamento.status_pagamento === 'pago';
+  });
+
+  // Calcula valor já pago para um agendamento
+  const calcularValorPago = (agendamentoId: string): number => {
+    return pagamentos
+      .filter((p) => p.agendamento_id === agendamentoId && p.status === 'Pago')
+      .reduce((sum, p) => sum + Number(p.valor), 0);
+  };
+
+  // Calcula valor restante de um agendamento
+  const calcularValorRestante = (agendamento: any): number => {
+    const servico = servicos.find((s) => s.id === agendamento.servico_id);
+    const precoTotal = (servico?.preco || 0) - (agendamento.desconto_aplicado || 0);
+    const valorPago = calcularValorPago(agendamento.id);
+    return Math.max(0, precoTotal - valorPago);
+  };
 
   const abrirDialogPagamento = (agendamento: any) => {
     setAgendamentoSelecionado(agendamento);
     setMetodoSelecionado("PIX");
     setServicoSelecionado(agendamento.servico_nome || "");
-    setValorEditado("");
+    
+    // Se é pagamento parcial, pré-preencher com valor restante
+    if (agendamento.status_pagamento === 'parcial') {
+      const valorRestante = calcularValorRestante(agendamento);
+      setValorEditado(valorRestante.toFixed(2));
+    } else {
+      setValorEditado("");
+    }
+    
     setObservacoes("");
     setOpenPagamentoDialog(true);
   };
@@ -191,6 +230,19 @@ const Faturamento = () => {
       await updateAgendamento(agendamentoSelecionado.id, {
         servico_nome: servicoFinal,
         servico_id: servicoEncontrado?.id || null,
+      });
+    }
+
+    // Verifica se é complemento de pagamento parcial
+    const isParcial = agendamentoSelecionado.status_pagamento === 'parcial';
+    const valorRestante = calcularValorRestante(agendamentoSelecionado);
+    
+    // Se está pagando valor >= restante, status vira 'pago'
+    const novoStatus = isParcial && valorFinal >= valorRestante ? 'pago' : agendamentoSelecionado.status_pagamento;
+    
+    if (isParcial && valorFinal >= valorRestante) {
+      await updateAgendamento(agendamentoSelecionado.id, {
+        status_pagamento: 'pago'
       });
     }
 
@@ -645,9 +697,9 @@ const Faturamento = () => {
         ) : despesas.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">Nenhuma despesa registrada</p>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollArea className="h-[350px]">
             <table className="w-full">
-              <thead>
+              <thead className="sticky top-0 bg-card z-10">
                 <tr className="border-b">
                   <th className="text-left p-3">Descrição</th>
                   <th className="text-left p-3">Categoria</th>
@@ -680,7 +732,7 @@ const Faturamento = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollArea>
         )}
       </Card>
 
@@ -697,9 +749,9 @@ const Faturamento = () => {
         ) : pagamentos.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">Nenhum pagamento registrado</p>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollArea className="h-[350px]">
             <table className="w-full">
-              <thead>
+              <thead className="sticky top-0 bg-card z-10">
                 <tr className="border-b">
                   <th className="text-left p-3">Cliente</th>
                   <th className="text-left p-3">Serviço</th>
@@ -710,7 +762,7 @@ const Faturamento = () => {
                 </tr>
               </thead>
               <tbody>
-                {pagamentos.map((pag) => (
+                {pagamentosCompletos.map((pag) => (
                   <tr key={pag.id} className="border-b hover:bg-muted/50">
                     <td className="p-3">{pag.cliente_nome}</td>
                     <td className="p-3">{pag.servico}</td>
@@ -741,7 +793,7 @@ const Faturamento = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollArea>
         )}
       </Card>
 
@@ -752,42 +804,71 @@ const Faturamento = () => {
         ) : agendamentosPendentes.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">Nenhum agendamento pendente</p>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollArea className="h-[350px]">
             <table className="w-full">
-              <thead>
+              <thead className="sticky top-0 bg-card z-10">
                 <tr className="border-b">
                   <th className="text-left p-3">Cliente</th>
                   <th className="text-left p-3">Serviço</th>
+                  <th className="text-left p-3">Valor</th>
+                  <th className="text-left p-3">Status</th>
                   <th className="text-left p-3">Data</th>
-                  <th className="text-left p-3">Horário</th>
                   <th className="text-left p-3">Ação</th>
                 </tr>
               </thead>
               <tbody>
-                {agendamentosPendentes.map((ag) => (
-                  <tr key={ag.id} className="border-b hover:bg-muted/50">
-                    <td 
-                      className="p-3 text-primary hover:underline cursor-pointer"
-                      onClick={() => navigate(`/admin/agenda?date=${ag.data}&highlight=${ag.id}`)}
-                    >
-                      {ag.cliente_nome}
-                    </td>
-                    <td className="p-3">{ag.servico_nome}</td>
-                    <td className="p-3">{format(parseISO(ag.data), "dd/MM/yyyy")}</td>
-                    <td className="p-3">{ag.horario ? ag.horario.substring(0, 5) : "-"}</td>
-                    <td className="p-3">
-                      <Button
-                        size="sm"
-                        onClick={() => abrirDialogPagamento(ag)}
+                {agendamentosPendentes.map((ag) => {
+                  const servico = servicos.find((s) => s.id === ag.servico_id);
+                  const precoTotal = (servico?.preco || 0) - (ag.desconto_aplicado || 0);
+                  const valorPago = calcularValorPago(ag.id);
+                  const valorRestante = precoTotal - valorPago;
+                  const isParcial = ag.status_pagamento === 'parcial';
+
+                  return (
+                    <tr key={ag.id} className="border-b hover:bg-muted/50">
+                      <td 
+                        className="p-3 text-primary hover:underline cursor-pointer"
+                        onClick={() => navigate(`/admin/agenda?date=${ag.data}&highlight=${ag.id}`)}
                       >
-                        Registrar Pagamento
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                        {ag.cliente_nome}
+                      </td>
+                      <td className="p-3">{ag.servico_nome}</td>
+                      <td className="p-3">
+                        R$ {precoTotal.toFixed(2).replace('.', ',')}
+                      </td>
+                      <td className="p-3">
+                        {isParcial ? (
+                          <div className="space-y-1">
+                            <Badge className="bg-amber-500 hover:bg-amber-500 animate-pulse text-white">
+                              Sinal Pago
+                            </Badge>
+                            <p className="text-xs text-muted-foreground">
+                              Pago: R$ {valorPago.toFixed(2).replace('.', ',')}
+                            </p>
+                            <p className="text-xs font-semibold text-amber-600">
+                              Falta: R$ {valorRestante.toFixed(2).replace('.', ',')}
+                            </p>
+                          </div>
+                        ) : (
+                          <Badge variant="outline">Pendente</Badge>
+                        )}
+                      </td>
+                      <td className="p-3">{format(parseISO(ag.data), "dd/MM/yyyy")}</td>
+                      <td className="p-3">
+                        <Button
+                          size="sm"
+                          onClick={() => abrirDialogPagamento(ag)}
+                          className={isParcial ? "bg-amber-500 hover:bg-amber-600" : ""}
+                        >
+                          {isParcial ? 'Receber Restante' : 'Registrar Pagamento'}
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
-          </div>
+          </ScrollArea>
         )}
       </Card>
 
@@ -804,9 +885,9 @@ const Faturamento = () => {
         ) : comissoesPagas.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">Nenhuma comissão paga registrada</p>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollArea className="h-[350px]">
             <table className="w-full">
-              <thead>
+              <thead className="sticky top-0 bg-card z-10">
                 <tr className="border-b">
                   <th className="text-left p-3">Profissional</th>
                   <th className="text-left p-3">Período</th>
@@ -833,7 +914,7 @@ const Faturamento = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollArea>
         )}
       </Card>
 
