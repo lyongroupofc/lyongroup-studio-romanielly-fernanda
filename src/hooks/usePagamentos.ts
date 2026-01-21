@@ -115,7 +115,10 @@ export const usePagamentos = () => {
     }
   };
 
-  const addPagamento = async (pagamento: Omit<Pagamento, "id" | "created_at">) => {
+  const addPagamento = async (
+    pagamento: Omit<Pagamento, "id" | "created_at">,
+    isParcial: boolean = false
+  ) => {
     try {
       const { data, error } = await supabase
         .from("pagamentos")
@@ -129,7 +132,7 @@ export const usePagamentos = () => {
       if (pagamento.agendamento_id && pagamento.status === 'Pago') {
         await supabase
           .from("agendamentos")
-          .update({ status_pagamento: 'pago' })
+          .update({ status_pagamento: isParcial ? 'parcial' : 'pago' })
           .eq("id", pagamento.agendamento_id);
       }
 
@@ -137,7 +140,7 @@ export const usePagamentos = () => {
       sessionStorage.removeItem(CACHE_KEY);
       await refetch();
       
-      toast.success("Pagamento registrado com sucesso!");
+      toast.success(isParcial ? "Sinal registrado com sucesso!" : "Pagamento registrado com sucesso!");
       return data;
     } catch (error) {
       console.error("Erro ao adicionar pagamento:", error);

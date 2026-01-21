@@ -424,7 +424,7 @@ export function DayGridDialog({
                                   </Badge>
                                 )}
                                 {agendamento.status_pagamento === 'parcial' && (
-                                  <Badge className="text-[8px] px-1 py-0 h-3.5 bg-yellow-500 text-white border-0">
+                                  <Badge className="text-[8px] px-1 py-0 h-3.5 bg-amber-500 text-white border-0 animate-pulse">
                                     $?
                                   </Badge>
                                 )}

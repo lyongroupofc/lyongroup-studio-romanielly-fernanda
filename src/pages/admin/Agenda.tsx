@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2, ChevronLeft, ChevronRight, DollarSign, Timer, PlusCircle, RefreshCw, CalendarDays, Lock, Unlock } from "lucide-react";
+import { Plus, Loader2, Clock, User, Phone, Scissors, Search, X, Bot, Link2, UserPlus, UserCheck, CheckCircle2, ChevronLeft, ChevronRight, DollarSign, Timer, PlusCircle, RefreshCw, CalendarDays, Lock, Unlock, AlertCircle, CircleDollarSign } from "lucide-react";
 import { addDays, eachDayOfInterval, getDay, parseISO } from "date-fns";
 import { DayGridDialog } from "@/components/DayGridDialog";
 import { toast } from "sonner";
@@ -51,13 +51,14 @@ const Agenda = () => {
   const { profissionais, loading: loadingProfissionais, refetch: refetchProfissionais } = useProfissionais();
   const { clientes } = useClientes();
   const { promocoes } = usePromocoes();
-  const { addPagamento } = usePagamentos();
+  const { pagamentos, addPagamento } = usePagamentos();
 
   // Estados para funcionalidades extras
   const [openPagamentoDialog, setOpenPagamentoDialog] = useState(false);
   const [openEstenderDialog, setOpenEstenderDialog] = useState(false);
   const [openAdicionarServicoDialog, setOpenAdicionarServicoDialog] = useState(false);
   const [pagamentoData, setPagamentoData] = useState({ valor: "", metodo: "PIX" });
+  const [tipoPagamento, setTipoPagamento] = useState<'total' | 'parcial' | 'restante'>('total');
   const [extensaoMinutos, setExtensaoMinutos] = useState(30);
   const [servicoAdicionalId, setServicoAdicionalId] = useState<string>("");
 
@@ -1814,11 +1815,49 @@ const Agenda = () => {
                 </Button>
               </div>
 
+              {/* Seção de Pagamento Parcial Pendente */}
+              {selectedAgendamento.status_pagamento === 'parcial' && (() => {
+                const servico = servicos.find(s => s.id === selectedAgendamento.servico_id);
+                const precoTotal = (servico?.preco || 0) - (selectedAgendamento.desconto_aplicado || 0);
+                const valorJaPago = pagamentos
+                  .filter(p => p.agendamento_id === selectedAgendamento.id && p.status === 'Pago')
+                  .reduce((sum, p) => sum + p.valor, 0);
+                const valorRestante = Math.max(0, precoTotal - valorJaPago);
+                
+                return (
+                  <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg space-y-3">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-amber-500" />
+                      <span className="font-semibold text-amber-700 dark:text-amber-300">Pagamento Pendente</span>
+                    </div>
+                    
+                    <div className="text-sm text-amber-600 dark:text-amber-400 space-y-1">
+                      <p>Valor do serviço: <span className="font-medium">R$ {precoTotal.toFixed(2)}</span></p>
+                      <p>Já pago (sinal): <span className="font-medium">R$ {valorJaPago.toFixed(2)}</span></p>
+                      <p className="font-bold text-amber-800 dark:text-amber-200">Restante: R$ {valorRestante.toFixed(2)}</p>
+                    </div>
+                    
+                    <Button 
+                      onClick={() => {
+                        setPagamentoData({ valor: valorRestante.toFixed(2), metodo: "PIX" });
+                        setTipoPagamento('restante');
+                        setOpenPagamentoDialog(true);
+                      }}
+                      className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white"
+                    >
+                      <DollarSign className="w-4 h-4" />
+                      Receber Restante (R$ {valorRestante.toFixed(2)})
+                    </Button>
+                  </div>
+                );
+              })()}
+
               {/* Botão Registrar Pagamento - Item 10 */}
               <Button 
                 onClick={() => {
                   const servico = servicos.find(s => s.id === selectedAgendamento.servico_id);
                   setPagamentoData({ valor: servico?.preco?.toString() || "", metodo: "PIX" });
+                  setTipoPagamento('total');
                   setOpenPagamentoDialog(true);
                 }}
                 className="w-full gap-2"
@@ -1874,70 +1913,164 @@ const Agenda = () => {
       </Dialog>
 
       {/* Dialog Registrar Pagamento no card - Item 10 */}
-      <Dialog open={openPagamentoDialog} onOpenChange={setOpenPagamentoDialog}>
+      <Dialog open={openPagamentoDialog} onOpenChange={(open) => {
+        setOpenPagamentoDialog(open);
+        if (!open) setTipoPagamento('total');
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Registrar Pagamento</DialogTitle>
+            <DialogTitle>
+              {tipoPagamento === 'restante' ? 'Receber Valor Restante' : 'Registrar Pagamento'}
+            </DialogTitle>
           </DialogHeader>
-          {selectedAgendamento && (
-            <div className="space-y-4">
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Cliente</p>
-                <p className="font-medium">{selectedAgendamento.cliente_nome}</p>
+          {selectedAgendamento && (() => {
+            const servico = servicos.find(s => s.id === selectedAgendamento.servico_id);
+            const precoTotal = (servico?.preco || 0) - (selectedAgendamento.desconto_aplicado || 0);
+            const valorJaPago = pagamentos
+              .filter(p => p.agendamento_id === selectedAgendamento.id && p.status === 'Pago')
+              .reduce((sum, p) => sum + p.valor, 0);
+            const valorRestante = Math.max(0, precoTotal - valorJaPago);
+            
+            return (
+              <div className="space-y-4">
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground">Cliente</p>
+                  <p className="font-medium">{selectedAgendamento.cliente_nome}</p>
+                </div>
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground">Serviço</p>
+                  <p className="font-medium">{selectedAgendamento.servico_nome}</p>
+                  <p className="text-xs text-muted-foreground">Valor: R$ {precoTotal.toFixed(2)}</p>
+                </div>
+                
+                {/* Tipo de Pagamento - não mostrar se for 'restante' */}
+                {tipoPagamento !== 'restante' && (
+                  <div className="space-y-2">
+                    <Label>Tipo de Pagamento</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        type="button"
+                        variant={tipoPagamento === 'total' ? 'default' : 'outline'}
+                        onClick={() => {
+                          setTipoPagamento('total');
+                          setPagamentoData({ ...pagamentoData, valor: precoTotal.toFixed(2) });
+                        }}
+                        className="gap-2"
+                      >
+                        <DollarSign className="w-4 h-4" />
+                        Pagamento Total
+                      </Button>
+                      <Button 
+                        type="button"
+                        variant={tipoPagamento === 'parcial' ? 'default' : 'outline'}
+                        onClick={() => {
+                          setTipoPagamento('parcial');
+                          setPagamentoData({ ...pagamentoData, valor: "" });
+                        }}
+                        className="gap-2"
+                      >
+                        <CircleDollarSign className="w-4 h-4" />
+                        Sinal (Parcial)
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Info de pagamento parcial */}
+                {tipoPagamento === 'parcial' && pagamentoData.valor && parseFloat(pagamentoData.valor) > 0 && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      Valor total do serviço: <span className="font-medium">R$ {precoTotal.toFixed(2)}</span>
+                    </p>
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                      Restará: R$ {Math.max(0, precoTotal - parseFloat(pagamentoData.valor)).toFixed(2)}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Info de pagamento restante */}
+                {tipoPagamento === 'restante' && (
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                    <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                      Valor já pago (sinal): <span className="font-medium">R$ {valorJaPago.toFixed(2)}</span>
+                    </p>
+                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                      Valor restante: R$ {valorRestante.toFixed(2)}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label>Valor *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={pagamentoData.valor}
+                    onChange={(e) => setPagamentoData({ ...pagamentoData, valor: e.target.value })}
+                    placeholder={tipoPagamento === 'parcial' ? "Digite o valor do sinal" : "0,00"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Método de Pagamento</Label>
+                  <Select value={pagamentoData.metodo} onValueChange={(v) => setPagamentoData({ ...pagamentoData, metodo: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PIX">PIX</SelectItem>
+                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
+                      <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => {
+                    setOpenPagamentoDialog(false);
+                    setTipoPagamento('total');
+                  }}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={async () => {
+                    if (!pagamentoData.valor) {
+                      toast.error("Informe o valor do pagamento");
+                      return;
+                    }
+                    
+                    const valorPago = parseFloat(pagamentoData.valor);
+                    const isParcial = tipoPagamento === 'parcial';
+                    const isRestante = tipoPagamento === 'restante';
+                    
+                    // Determinar se pagamento completa o valor total
+                    const novoTotalPago = valorJaPago + valorPago;
+                    const pagamentoCompleto = novoTotalPago >= precoTotal;
+                    
+                    await addPagamento({
+                      agendamento_id: selectedAgendamento.id,
+                      cliente_nome: selectedAgendamento.cliente_nome,
+                      servico: selectedAgendamento.servico_nome,
+                      valor: valorPago,
+                      metodo_pagamento: pagamentoData.metodo,
+                      status: "Pago",
+                      data: selectedAgendamento.data,
+                    }, isParcial && !pagamentoCompleto);
+                    
+                    // Se era restante ou completou o pagamento, atualizar para pago
+                    if (isRestante || pagamentoCompleto) {
+                      await updateAgendamento(selectedAgendamento.id, { status_pagamento: 'pago' });
+                    }
+                    
+                    setOpenPagamentoDialog(false);
+                    setOpenDetalhesDialog(false);
+                    setTipoPagamento('total');
+                    refetchAgendamentos();
+                  }}>
+                    {tipoPagamento === 'parcial' ? 'Registrar Sinal' : tipoPagamento === 'restante' ? 'Registrar Restante' : 'Registrar'}
+                  </Button>
+                </div>
               </div>
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Serviço</p>
-                <p className="font-medium">{selectedAgendamento.servico_nome}</p>
-              </div>
-              <div className="space-y-2">
-                <Label>Valor *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={pagamentoData.valor}
-                  onChange={(e) => setPagamentoData({ ...pagamentoData, valor: e.target.value })}
-                  placeholder="0,00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Método de Pagamento</Label>
-                <Select value={pagamentoData.metodo} onValueChange={(v) => setPagamentoData({ ...pagamentoData, metodo: v })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PIX">PIX</SelectItem>
-                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                    <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
-                    <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setOpenPagamentoDialog(false)}>Cancelar</Button>
-                <Button onClick={async () => {
-                  if (!pagamentoData.valor) {
-                    toast.error("Informe o valor do pagamento");
-                    return;
-                  }
-                  await addPagamento({
-                    agendamento_id: selectedAgendamento.id,
-                    cliente_nome: selectedAgendamento.cliente_nome,
-                    servico: selectedAgendamento.servico_nome,
-                    valor: parseFloat(pagamentoData.valor),
-                    metodo_pagamento: pagamentoData.metodo,
-                    status: "Pago",
-                    data: selectedAgendamento.data,
-                  });
-                  toast.success("Pagamento registrado com sucesso!");
-                  setOpenPagamentoDialog(false);
-                  setOpenDetalhesDialog(false);
-                }}>
-                  Registrar
-                </Button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
